@@ -64,4 +64,5 @@ public class ClientController {
     public List<Client> getByCivilStatus(@PathVariable String civilStatus) {
         return clientService.getClientsByCivilStatus(civilStatus);
     }
+    
 }

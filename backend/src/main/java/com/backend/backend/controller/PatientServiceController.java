@@ -23,48 +23,50 @@ public class PatientServiceController {
 
     @Autowired
     private PatientServiceService patientServiceService;
-
+ @CrossOrigin(origins = "*")
     @PostMapping
     public PatientService addPatientService(@RequestBody PatientService patientService) {
         return patientServiceService.addPatientService(patientService);
     }
-
+ @CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public PatientService getPatientService(@PathVariable Integer id) {
         return patientServiceService.getPatientServiceById(id);
     }
-
+ @CrossOrigin(origins = "*")
     @GetMapping
     public List<PatientService> getPatientServices() {
         return patientServiceService.getPatientServices();
     }
-
+ @CrossOrigin(origins = "*")
     @PutMapping
     public PatientService updatePatientService(@RequestBody PatientService patientService) {
         return patientServiceService.updatePatientService(patientService);
     }
-
+ @CrossOrigin(origins = "*")
     @DeleteMapping("/{id}")
     public String deletePatientService(@PathVariable Integer id) {
         patientServiceService.deletePatientService(id);
         return "PatientService deleted.";
     }
-
+ @CrossOrigin(origins = "*")
     @GetMapping("/patient/{patientID}")
     public List<PatientService> getByPatientID(@PathVariable Integer patientID) {
         return patientServiceService.getPatientServicesByPatientID(patientID);
     }
 
+    @CrossOrigin(origins = "*")
     @GetMapping("/service/{serviceID}")
     public List<PatientService> getByServiceID(@PathVariable Integer serviceID) {
         return patientServiceService.getPatientServicesByServiceID(serviceID);
     }
 
+    @CrossOrigin(origins = "*")
     @GetMapping("/employee/{employeeID}")
     public List<PatientService> getByEmployeeID(@PathVariable Integer employeeID) {
         return patientServiceService.getPatientServicesByEmployeeID(employeeID);
     }
-
+ @CrossOrigin(origins = "*")
     @GetMapping("/ward/{wardID}")
     public List<PatientService> getByWardID(@PathVariable Integer wardID) {
         return patientServiceService.getPatientServicesByWardID(wardID);
