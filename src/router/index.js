@@ -41,7 +41,7 @@ const routes = [
             { path: 'uikit/viewListOfRevenue', component: () => import('@/views/uikit/viewListOfRevenue.vue') },
             { path: 'uikit/viewListOfSOA', component: () => import('@/views/uikit/viewListOfSOA.vue') },
             { path: 'uikit/AdminCalendar', component: () => import('@/views/uikit/AdminCalendar.vue') },
-            { path: 'uikit/MidwifeDashboard', component: () => import('@/views/Dashboard/MidwifeDashboard.vue') }, // ✅ add this
+            { path: 'uikit/MidwifeDashboard', component: () => import('@/views/Dashboard/MidwifeDashboard.vue') }, 
         ]
     },
     {

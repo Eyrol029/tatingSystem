@@ -1,7 +1,9 @@
 com\backend\backend\controller\FamilyPlanning\ClientController.class
 com\backend\backend\repository\FamilyPlanning\FamilyPlanningRecordRepository.class
+com\backend\backend\repository\FamilyPlanning\MedicalHistoryRepository.class
 com\backend\backend\repository\EmployeeRepository.class
 com\backend\backend\model\FamilyPlanning\Spouse.class
+com\backend\backend\controller\FamilyPlanning\MedicalHistoryController.class
 com\backend\backend\controller\PatientController.class
 com\backend\backend\repository\PatientServiceRepository.class
 com\backend\backend\service\FamilyPlanning\TypeOfClientService.class
@@ -18,10 +20,12 @@ com\backend\backend\model\PatientService.class
 com\backend\backend\model\FamilyPlanning\Client.class
 com\backend\backend\service\EmployeeServiceImpl.class
 com\backend\backend\model\FamilyPlanning\FamilyPlanningRecord.class
+com\backend\backend\service\FamilyPlanning\MedicalHistoryService.class
 com\backend\backend\service\FamilyPlanning\MethodCurrentlyUsedService.class
 com\backend\backend\service\FamilyPlanning\MethodCurrentlyUsedServiceImpl.class
 com\backend\backend\model\FamilyPlanning\TypeOfClient.class
 com\backend\backend\service\FamilyPlanning\SpouseServiceImpl.class
+com\backend\backend\service\FamilyPlanning\MedicalHistoryServiceImpl.class
 com\backend\backend\service\FamilyPlanning\FamilyPlanningRecordServiceImpl.class
 com\backend\backend\controller\PatientServiceController.class
 com\backend\backend\service\EmployeeService.class
@@ -39,3 +43,4 @@ com\backend\backend\controller\FamilyPlanning\TypeOfClientController.class
 com\backend\backend\repository\FamilyPlanning\ClientRepository.class
 com\backend\backend\service\FamilyPlanning\SpouseService.class
 com\backend\backend\model\Employee.class
+com\backend\backend\model\FamilyPlanning\MedicalHistory.class
