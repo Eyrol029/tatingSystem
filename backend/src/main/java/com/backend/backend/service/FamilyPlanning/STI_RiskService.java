@@ -1,8 +1,8 @@
-package com.backend.backend.service.familyplanning;
+package com.backend.backend.service.FamilyPlanning;
 
 import java.util.List;
 
-import com.backend.backend.model.familyplanning.STI_Risk;
+import com.backend.backend.model.FamilyPlanning.STI_Risk;
 
 public interface STI_RiskService {
 

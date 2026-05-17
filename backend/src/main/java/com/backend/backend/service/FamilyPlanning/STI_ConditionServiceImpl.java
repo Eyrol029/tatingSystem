@@ -1,12 +1,12 @@
-package com.backend.backend.service.familyplanning;
+package com.backend.backend.service.FamilyPlanning;
 
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.backend.backend.model.familyplanning.STI_Condition;
-import com.backend.backend.repository.familyplanning.STI_ConditionRepository;
+import com.backend.backend.model.FamilyPlanning.STI_Condition;
+import com.backend.backend.repository.FamilyPlanning.STI_ConditionRepository;
 
 @Service
 public class STI_ConditionServiceImpl implements STI_ConditionService {

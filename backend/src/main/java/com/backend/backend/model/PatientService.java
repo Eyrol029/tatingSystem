@@ -21,14 +21,14 @@ public class PatientService {
     @Column(name = "patientID", nullable = false)
     private Integer patientID;
 
-    @Column(name = "serviceID", nullable = false)
-    private Integer serviceID;
+    @Column(name = "serviceName", nullable = false)
+    private String serviceName;
 
-    @Column(name = "employeeID")
-    private Integer employeeID;
+    @Column(name = "employeeName")
+    private String employeeName;
 
-    @Column(name = "wardID")
-    private Integer wardID;
+    @Column(name = "wardName")
+    private String wardName;
 
     @Column(name = "dateAvailed", nullable = false)
     private LocalDate dateAvailed;
@@ -53,28 +53,28 @@ public class PatientService {
         this.patientID = patientID;
     }
 
-    public Integer getServiceID() {
-        return serviceID;
+    public String getServiceName() {
+        return serviceName;
     }
 
-    public void setServiceID(Integer serviceID) {
-        this.serviceID = serviceID;
+    public void setServiceName(String serviceName) {
+        this.serviceName = serviceName;
     }
 
-    public Integer getEmployeeID() {
-        return employeeID;
+    public String getEmployeeName() {
+        return employeeName;
     }
 
-    public void setEmployeeID(Integer employeeID) {
-        this.employeeID = employeeID;
+    public void setEmployeeName(String employeeName) {
+        this.employeeName = employeeName;
     }
 
-    public Integer getWardID() {
-        return wardID;
+    public String getWardName() {
+        return wardName;
     }
 
-    public void setWardID(Integer wardID) {
-        this.wardID = wardID;
+    public void setWardName(String wardName) {
+        this.wardName = wardName;
     }
 
     public LocalDate getDateAvailed() {

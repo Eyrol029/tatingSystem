@@ -23,33 +23,33 @@ public class ObstetricRiskFactorController {
 
     @Autowired
     private ObstetricRiskFactorService service;
-
+@CrossOrigin(origins = "*")
     @PostMapping
     public ObstetricRiskFactor add(@RequestBody ObstetricRiskFactor data) {
         return service.add(data);
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public ObstetricRiskFactor get(@PathVariable Integer id) {
         return service.getById(id);
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping
     public List<ObstetricRiskFactor> getAll() {
         return service.getAll();
     }
-
+@CrossOrigin(origins = "*")
     @PutMapping
     public ObstetricRiskFactor update(@RequestBody ObstetricRiskFactor data) {
         return service.update(data);
     }
-
+@CrossOrigin(origins = "*")
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {
         service.delete(id);
         return "Deleted successfully.";
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/clinical/{clinicalHistoryID}")
     public List<ObstetricRiskFactor> getByClinical(@PathVariable Integer clinicalHistoryID) {
         return service.getByClinicalHistoryID(clinicalHistoryID);

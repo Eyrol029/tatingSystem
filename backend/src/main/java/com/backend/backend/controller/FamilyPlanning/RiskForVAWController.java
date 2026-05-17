@@ -23,33 +23,33 @@ public class RiskForVAWController {
 
     @Autowired
     private RiskForVAWService riskForVAWService;
-
+@CrossOrigin(origins = "*")
     @PostMapping
     public RiskForVAW addRisk(@RequestBody RiskForVAW risk) {
         return riskForVAWService.addRisk(risk);
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public RiskForVAW getRisk(@PathVariable Integer id) {
         return riskForVAWService.getRiskById(id);
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping
     public List<RiskForVAW> getAll() {
         return riskForVAWService.getAllRisks();
     }
-
+@CrossOrigin(origins = "*")
     @PutMapping
     public RiskForVAW update(@RequestBody RiskForVAW risk) {
         return riskForVAWService.updateRisk(risk);
     }
-
+@CrossOrigin(origins = "*")
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {
         riskForVAWService.deleteRisk(id);
         return "RiskForVAW deleted.";
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/client/{clientID}")
     public List<RiskForVAW> getByClient(@PathVariable Integer clientID) {
         return riskForVAWService.getByClientID(clientID);

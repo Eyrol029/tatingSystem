@@ -1,12 +1,12 @@
-package com.backend.backend.service.familyplanning;
+package com.backend.backend.service.FamilyPlanning;
 
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.backend.backend.model.familyplanning.STI_RiskDetail;
-import com.backend.backend.repository.familyplanning.STI_RiskDetailRepository;
+import com.backend.backend.model.FamilyPlanning.STI_RiskDetail;
+import com.backend.backend.repository.FamilyPlanning.STI_RiskDetailRepository;
 
 @Service
 public class STI_RiskDetailServiceImpl implements STI_RiskDetailService {

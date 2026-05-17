@@ -23,33 +23,33 @@ public class LaboratoryResultsController {
 
     @Autowired
     private LaboratoryResultsService service;
-
+@CrossOrigin(origins = "*")
     @PostMapping
     public LaboratoryResults add(@RequestBody LaboratoryResults result) {
         return service.add(result);
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public LaboratoryResults getById(@PathVariable Integer id) {
         return service.getById(id);
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping
     public List<LaboratoryResults> getAll() {
         return service.getAll();
     }
-
+@CrossOrigin(origins = "*")
     @PutMapping
     public LaboratoryResults update(@RequestBody LaboratoryResults result) {
         return service.update(result);
     }
-
+@CrossOrigin(origins = "*")
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {
         service.delete(id);
         return "LaboratoryResults deleted successfully.";
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/prenatal/{prenatalRecordID}")
     public List<LaboratoryResults> getByPrenatalRecord(@PathVariable Integer prenatalRecordID) {
         return service.getByPrenatalRecordID(prenatalRecordID);

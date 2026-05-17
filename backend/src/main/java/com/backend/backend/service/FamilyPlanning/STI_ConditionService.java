@@ -1,8 +1,8 @@
-package com.backend.backend.service.familyplanning;
+package com.backend.backend.service.FamilyPlanning;
 
 import java.util.List;
 
-import com.backend.backend.model.familyplanning.STI_Condition;
+import com.backend.backend.model.FamilyPlanning.STI_Condition;
 
 public interface STI_ConditionService {
 

@@ -23,27 +23,27 @@ public class MedicalConditionController {
 
     @Autowired
     private MedicalConditionService medicalConditionService;
-
+    @CrossOrigin(origins = "*")
     @PostMapping
     public MedicalCondition addMedicalCondition(@RequestBody MedicalCondition medicalCondition) {
         return medicalConditionService.addMedicalCondition(medicalCondition);
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public MedicalCondition getMedicalCondition(@PathVariable Integer id) {
         return medicalConditionService.getMedicalConditionById(id);
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping
     public List<MedicalCondition> getMedicalConditions() {
         return medicalConditionService.getMedicalConditions();
     }
-
+    @CrossOrigin(origins = "*")
     @PutMapping
     public MedicalCondition updateMedicalCondition(@RequestBody MedicalCondition medicalCondition) {
         return medicalConditionService.updateMedicalCondition(medicalCondition);
     }
-
+    @CrossOrigin(origins = "*")
     @DeleteMapping("/{id}")
     public String deleteMedicalCondition(@PathVariable Integer id) {
         medicalConditionService.deleteMedicalCondition(id);

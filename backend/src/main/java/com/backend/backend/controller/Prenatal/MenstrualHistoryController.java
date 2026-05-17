@@ -23,38 +23,38 @@ public class MenstrualHistoryController {
 
     @Autowired
     private MenstrualHistoryService service;
-
+@CrossOrigin(origins = "*")
     // CREATE
     @PostMapping
     public MenstrualHistory add(@RequestBody MenstrualHistory record) {
         return service.addRecord(record);
     }
-
+@CrossOrigin(origins = "*")
     // GET BY ID
     @GetMapping("/{id}")
     public MenstrualHistory get(@PathVariable Integer id) {
         return service.getRecordById(id);
     }
-
+@CrossOrigin(origins = "*")
     // GET ALL
     @GetMapping
     public List<MenstrualHistory> getAll() {
         return service.getRecords();
     }
-
+@CrossOrigin(origins = "*")
     // UPDATE
     @PutMapping
     public MenstrualHistory update(@RequestBody MenstrualHistory record) {
         return service.updateRecord(record);
     }
-
+@CrossOrigin(origins = "*")
     // DELETE
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {
         service.deleteRecord(id);
         return "MenstrualHistory deleted successfully.";
     }
-
+@CrossOrigin(origins = "*")
     // BY CLINICAL HISTORY ID
     @GetMapping("/clinical/{clinicalHistoryID}")
     public List<MenstrualHistory> getByClinicalHistory(@PathVariable Integer clinicalHistoryID) {

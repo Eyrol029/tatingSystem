@@ -23,38 +23,38 @@ public class AscertainPregnancyLowRiskController {
 
     @Autowired
     private AscertainPregnancyLowRiskService service;
-
+@CrossOrigin(origins = "*")
     // CREATE
     @PostMapping
     public AscertainPregnancyLowRisk add(@RequestBody AscertainPregnancyLowRisk record) {
         return service.addRecord(record);
     }
-
+@CrossOrigin(origins = "*")
     // GET BY ID
     @GetMapping("/{id}")
     public AscertainPregnancyLowRisk get(@PathVariable Integer id) {
         return service.getRecordById(id);
     }
-
+@CrossOrigin(origins = "*")
     // GET ALL
     @GetMapping
     public List<AscertainPregnancyLowRisk> getAll() {
         return service.getRecords();
     }
-
+@CrossOrigin(origins = "*")
     // UPDATE
     @PutMapping
     public AscertainPregnancyLowRisk update(@RequestBody AscertainPregnancyLowRisk record) {
         return service.updateRecord(record);
     }
-
+@CrossOrigin(origins = "*")
     // DELETE
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {
         service.deleteRecord(id);
         return "AscertainPregnancyLowRisk deleted successfully.";
     }
-
+@CrossOrigin(origins = "*")
     // BY CLINICAL HISTORY ID
     @GetMapping("/clinical/{clinicalHistoryID}")
     public List<AscertainPregnancyLowRisk> getByClinicalHistory(@PathVariable Integer clinicalHistoryID) {

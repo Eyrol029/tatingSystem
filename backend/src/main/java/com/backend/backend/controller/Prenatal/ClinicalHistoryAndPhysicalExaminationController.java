@@ -23,41 +23,41 @@ public class ClinicalHistoryAndPhysicalExaminationController {
 
     @Autowired
     private ClinicalHistoryAndPhysicalExaminationService service;
-
+@CrossOrigin(origins = "*")
     // CREATE
     @PostMapping
     public ClinicalHistoryAndPhysicalExamination addRecord(
             @RequestBody ClinicalHistoryAndPhysicalExamination record) {
         return service.addRecord(record);
     }
-
+@CrossOrigin(origins = "*")
     // GET BY ID
     @GetMapping("/{id}")
     public ClinicalHistoryAndPhysicalExamination getRecord(
             @PathVariable Integer id) {
         return service.getRecordById(id);
     }
-
+@CrossOrigin(origins = "*")
     // GET ALL
     @GetMapping
     public List<ClinicalHistoryAndPhysicalExamination> getRecords() {
         return service.getRecords();
     }
-
+@CrossOrigin(origins = "*")
     // UPDATE
     @PutMapping
     public ClinicalHistoryAndPhysicalExamination updateRecord(
             @RequestBody ClinicalHistoryAndPhysicalExamination record) {
         return service.updateRecord(record);
     }
-
+@CrossOrigin(origins = "*")
     // DELETE
     @DeleteMapping("/{id}")
     public String deleteRecord(@PathVariable Integer id) {
         service.deleteRecord(id);
         return "ClinicalHistoryAndPhysicalExamination deleted successfully.";
     }
-
+@CrossOrigin(origins = "*")
     // GET BY PRENATAL RECORD ID
     @GetMapping("/prenatal/{prenatalrecordID}")
     public List<ClinicalHistoryAndPhysicalExamination> getByPrenatalrecordID(

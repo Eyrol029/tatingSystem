@@ -23,33 +23,33 @@ public class PregnancyExclusionChecklistController {
 
     @Autowired
     private PregnancyExclusionChecklistService service;
-
+@CrossOrigin(origins = "*")
     @PostMapping
     public PregnancyExclusionChecklist add(@RequestBody PregnancyExclusionChecklist checklist) {
         return service.add(checklist);
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public PregnancyExclusionChecklist get(@PathVariable Integer id) {
         return service.getById(id);
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping
     public List<PregnancyExclusionChecklist> getAll() {
         return service.getAll();
     }
-
+@CrossOrigin(origins = "*")
     @PutMapping
     public PregnancyExclusionChecklist update(@RequestBody PregnancyExclusionChecklist checklist) {
         return service.update(checklist);
     }
-
+@CrossOrigin(origins = "*")
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {
         service.delete(id);
         return "Checklist deleted successfully.";
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/client/{clientID}")
     public List<PregnancyExclusionChecklist> getByClient(@PathVariable Integer clientID) {
         return service.getByClientID(clientID);

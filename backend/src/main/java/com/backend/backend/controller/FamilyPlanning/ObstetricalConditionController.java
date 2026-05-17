@@ -1,4 +1,4 @@
-package com.backend.backend.controller.familyplanning;
+package com.backend.backend.controller.FamilyPlanning;
 
 import java.util.List;
 
@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.backend.backend.model.familyplanning.ObstetricalCondition;
-import com.backend.backend.service.familyplanning.ObstetricalConditionService;
+import com.backend.backend.model.FamilyPlanning.ObstetricalCondition;
+import com.backend.backend.service.FamilyPlanning.ObstetricalConditionService;
 
 @CrossOrigin(origins = "*")
 @RestController
@@ -23,27 +23,27 @@ public class ObstetricalConditionController {
 
     @Autowired
     private ObstetricalConditionService service;
-
+    @CrossOrigin(origins = "*")
     @PostMapping
     public ObstetricalCondition add(@RequestBody ObstetricalCondition condition) {
         return service.addCondition(condition);
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public ObstetricalCondition getById(@PathVariable Integer id) {
         return service.getById(id);
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping
     public List<ObstetricalCondition> getAll() {
         return service.getAll();
     }
-
+    @CrossOrigin(origins = "*")
     @PutMapping
     public ObstetricalCondition update(@RequestBody ObstetricalCondition condition) {
         return service.update(condition);
     }
-
+    @CrossOrigin(origins = "*")
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {
         service.delete(id);

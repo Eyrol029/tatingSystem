@@ -23,33 +23,33 @@ public class CompleteDiagnosisController {
 
     @Autowired
     private CompleteDiagnosisService service;
-
+@CrossOrigin(origins = "*")
     @PostMapping
     public CompleteDiagnosis add(@RequestBody CompleteDiagnosis data) {
         return service.add(data);
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public CompleteDiagnosis get(@PathVariable Integer id) {
         return service.getById(id);
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping
     public List<CompleteDiagnosis> getAll() {
         return service.getAll();
     }
-
+@CrossOrigin(origins = "*")
     @PutMapping
     public CompleteDiagnosis update(@RequestBody CompleteDiagnosis data) {
         return service.update(data);
     }
-
+@CrossOrigin(origins = "*")
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {
         service.delete(id);
         return "Deleted successfully.";
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/clinical/{clinicalHistoryID}")
     public List<CompleteDiagnosis> getByClinical(@PathVariable Integer clinicalHistoryID) {
         return service.getByClinicalHistoryID(clinicalHistoryID);

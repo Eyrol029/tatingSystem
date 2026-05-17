@@ -46,17 +46,17 @@ public class PatientServiceServiceImpl implements PatientServiceService {
     }
 
     @Override
-    public List<PatientService> getPatientServicesByServiceID(Integer serviceID) {
-        return patientServiceRepository.findByServiceID(serviceID);
+    public List<PatientService> getPatientServicesByServiceName(String serviceName) {
+        return patientServiceRepository.findByServiceName(serviceName);
     }
 
     @Override
-    public List<PatientService> getPatientServicesByEmployeeID(Integer employeeID) {
-        return patientServiceRepository.findByEmployeeID(employeeID);
+    public List<PatientService> getPatientServicesByEmployeeName(String employeeName) {
+        return patientServiceRepository.findByEmployeeName(employeeName);
     }
 
     @Override
-    public List<PatientService> getPatientServicesByWardID(Integer wardID) {
-        return patientServiceRepository.findByWardID(wardID);
+    public List<PatientService> getPatientServicesByWardName(String wardName) {
+        return patientServiceRepository.findByWardName(wardName);
     }
 }

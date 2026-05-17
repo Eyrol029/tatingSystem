@@ -18,9 +18,9 @@ public interface PatientServiceService {
 
     List<PatientService> getPatientServicesByPatientID(Integer patientID);
 
-    List<PatientService> getPatientServicesByServiceID(Integer serviceID);
+    List<PatientService> getPatientServicesByServiceName(String serviceName);
 
-    List<PatientService> getPatientServicesByEmployeeID(Integer employeeID);
+    List<PatientService> getPatientServicesByEmployeeName(String employeeName);
 
-    List<PatientService> getPatientServicesByWardID(Integer wardID);
+    List<PatientService> getPatientServicesByWardName(String wardName);
 }

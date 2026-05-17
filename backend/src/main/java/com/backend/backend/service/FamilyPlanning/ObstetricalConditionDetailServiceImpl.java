@@ -1,12 +1,12 @@
-package com.backend.backend.service.familyplanning;
+package com.backend.backend.service.FamilyPlanning;
 
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.backend.backend.model.familyplanning.ObstetricalConditionDetail;
-import com.backend.backend.repository.familyplanning.ObstetricalConditionDetailRepository;
+import com.backend.backend.model.FamilyPlanning.ObstetricalConditionDetail;
+import com.backend.backend.repository.FamilyPlanning.ObstetricalConditionDetailRepository;
 
 @Service
 public class ObstetricalConditionDetailServiceImpl implements ObstetricalConditionDetailService {

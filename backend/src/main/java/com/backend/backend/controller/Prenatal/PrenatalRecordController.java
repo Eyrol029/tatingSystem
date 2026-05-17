@@ -23,38 +23,38 @@ public class PrenatalRecordController {
 
     @Autowired
     private PrenatalRecordService service;
-
+@CrossOrigin(origins = "*")
     // CREATE
     @PostMapping
     public PrenatalRecord addRecord(@RequestBody PrenatalRecord record) {
         return service.addRecord(record);
     }
-
+@CrossOrigin(origins = "*")
     // GET BY ID
     @GetMapping("/{id}")
     public PrenatalRecord getRecord(@PathVariable Integer id) {
         return service.getRecordById(id);
     }
-
+@CrossOrigin(origins = "*")
     // GET ALL
     @GetMapping
     public List<PrenatalRecord> getRecords() {
         return service.getRecords();
     }
-
+@CrossOrigin(origins = "*")
     // UPDATE
     @PutMapping
     public PrenatalRecord updateRecord(@RequestBody PrenatalRecord record) {
         return service.updateRecord(record);
     }
-
+@CrossOrigin(origins = "*")
     // DELETE
     @DeleteMapping("/{id}")
     public String deleteRecord(@PathVariable Integer id) {
         service.deleteRecord(id);
         return "PrenatalRecord deleted successfully.";
     }
-
+@CrossOrigin(origins = "*")
     // GET BY SERVICE ID
     @GetMapping("/service/{serviceID}")
     public List<PrenatalRecord> getByServiceID(@PathVariable Integer serviceID) {

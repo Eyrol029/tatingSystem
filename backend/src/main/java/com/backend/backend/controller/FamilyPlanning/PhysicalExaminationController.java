@@ -23,33 +23,33 @@ public class PhysicalExaminationController {
 
     @Autowired
     private PhysicalExaminationService physicalExaminationService;
-
+    @CrossOrigin(origins = "*")
     @PostMapping
     public PhysicalExamination addExam(@RequestBody PhysicalExamination exam) {
         return physicalExaminationService.addExam(exam);
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public PhysicalExamination getExam(@PathVariable Integer id) {
         return physicalExaminationService.getExamById(id);
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping
     public List<PhysicalExamination> getAll() {
         return physicalExaminationService.getAllExams();
     }
-
+    @CrossOrigin(origins = "*")
     @PutMapping
     public PhysicalExamination update(@RequestBody PhysicalExamination exam) {
         return physicalExaminationService.updateExam(exam);
     }
-
+    @CrossOrigin(origins = "*")
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {
         physicalExaminationService.deleteExam(id);
         return "PhysicalExamination deleted.";
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping("/client/{clientID}")
     public List<PhysicalExamination> getByClient(@PathVariable Integer clientID) {
         return physicalExaminationService.getByClientID(clientID);

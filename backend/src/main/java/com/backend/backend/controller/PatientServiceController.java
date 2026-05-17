@@ -56,19 +56,19 @@ public class PatientServiceController {
     }
 
     @CrossOrigin(origins = "*")
-    @GetMapping("/service/{serviceID}")
-    public List<PatientService> getByServiceID(@PathVariable Integer serviceID) {
-        return patientServiceService.getPatientServicesByServiceID(serviceID);
+    @GetMapping("/service/{serviceName}")
+    public List<PatientService> getByServiceName(@PathVariable String serviceName) {
+        return patientServiceService.getPatientServicesByServiceName(serviceName);
     }
 
     @CrossOrigin(origins = "*")
-    @GetMapping("/employee/{employeeID}")
-    public List<PatientService> getByEmployeeID(@PathVariable Integer employeeID) {
-        return patientServiceService.getPatientServicesByEmployeeID(employeeID);
+    @GetMapping("/employee/{employeeName}")
+    public List<PatientService> getByEmployeeName(@PathVariable String employeeName) {
+        return patientServiceService.getPatientServicesByEmployeeName(employeeName);
     }
  @CrossOrigin(origins = "*")
-    @GetMapping("/ward/{wardID}")
-    public List<PatientService> getByWardID(@PathVariable Integer wardID) {
-        return patientServiceService.getPatientServicesByWardID(wardID);
+    @GetMapping("/ward/{wardName}")
+    public List<PatientService> getByWardName(@PathVariable String wardName) {
+        return patientServiceService.getPatientServicesByWardName(wardName);
     }
 }

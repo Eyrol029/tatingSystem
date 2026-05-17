@@ -23,33 +23,33 @@ public class VitalSignsController {
 
     @Autowired
     private VitalSignsService service;
-
+@CrossOrigin(origins = "*")
     @PostMapping
     public VitalSigns add(@RequestBody VitalSigns vitalSigns) {
         return service.add(vitalSigns);
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public VitalSigns getById(@PathVariable Integer id) {
         return service.getById(id);
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping
     public List<VitalSigns> getAll() {
         return service.getAll();
     }
-
+@CrossOrigin(origins = "*")
     @PutMapping
     public VitalSigns update(@RequestBody VitalSigns vitalSigns) {
         return service.update(vitalSigns);
     }
-
+@CrossOrigin(origins = "*")
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {
         service.delete(id);
         return "VitalSigns deleted successfully.";
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/consultation/{consultationRecordID}")
     public List<VitalSigns> getByConsultation(@PathVariable Integer consultationRecordID) {
         return service.getByConsultationRecordID(consultationRecordID);

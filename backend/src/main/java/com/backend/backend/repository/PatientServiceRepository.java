@@ -12,9 +12,9 @@ public interface PatientServiceRepository extends CrudRepository<PatientService,
 
     List<PatientService> findByPatientID(Integer patientID);
 
-    List<PatientService> findByServiceID(Integer serviceID);
+    List<PatientService> findByServiceName(String serviceName);
 
-    List<PatientService> findByEmployeeID(Integer employeeID);
+    List<PatientService> findByEmployeeName(String employeeName);
 
-    List<PatientService> findByWardID(Integer wardID);
+    List<PatientService> findByWardName(String wardName);
 }

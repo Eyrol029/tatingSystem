@@ -1,22 +1,39 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { createFamilyPlanningRecord } from '../../service/FamilyPlanningService.js';
+import axios from 'axios';
+
+const route = useRoute();
+const router = useRouter();
+const isViewMode = ref(false);
+const existingRecordId = ref(null);
+
+function goBack() {
+    router.back();
+}
+
+const submitStatus = ref({
+    loading: false,
+    error: '',
+    success: ''
+});
 
 const formData = ref({
-    // Header Information
     clientId: '',
     philhealthNo: '',
     spouseName: '',
     birthDate: '',
     age: '',
     occupation: '',
+    civilStatus: '',
+    serviceID: 1,
     nhtsYes: false,
     nhtsNo: false,
     _4psMember: false,
     averageMonthlyIncome: '',
     numLivingChildren: '',
     planMoreChildren: null,
-    
-    // Type of Client
     clientType: {
         newAcceptor: false,
         currentUser: false,
@@ -24,17 +41,11 @@ const formData = ref({
         changingClinic: false,
         dropoutRestart: false
     },
-    
-    // Reason for FP
     reasonSpacing: false,
     reasonLimiting: false,
     reasonOthers: '',
-    
-    // Reason
     medicalCondition: false,
     sideEffects: '',
-    
-    // Method Currently Used
     currentMethod: {
         coc: false,
         iud: false,
@@ -51,8 +62,6 @@ const formData = ref({
         lam: false,
         others: ''
     },
-    
-    // Medical History
     medicalHistory: {
         severeHeadache: null,
         strokeHistory: null,
@@ -69,8 +78,6 @@ const formData = ref({
         disability: null,
         disabilitySpecify: ''
     },
-    
-    // Obstetric History
     obstetric: {
         numPregnancies: '',
         fullTerm: '',
@@ -87,8 +94,6 @@ const formData = ref({
         hydatidiformMole: false,
         ectopicPregnancy: false
     },
-    
-    // VAW Risk
     vaw: {
         unpleasantRelationship: null,
         partnerDisapproval: null,
@@ -100,96 +105,580 @@ const formData = ref({
             othersSpecify: ''
         }
     },
-    
-    // Physical Examination
     physical: {
         weight: '',
         bloodPressure: '',
         height: '',
         pulseRate: '',
-        
-        skin: {
-            normal: false,
-            pale: false,
-            yellowish: false,
-            hematoma: false
-        },
-        
-        conjunctiva: {
-            normal: false,
-            pale: false,
-            yellowish: false
-        },
-        
-        neck: {
-            normal: false,
-            neckMass: false,
-            enlargedLymphNodes: false
-        },
-        
-        breast: {
-            normal: false,
-            mass: false,
-            nippleDischarge: false
-        },
-        
-        abdomen: {
-            normal: false,
-            abdominalMass: false,
-            varicosities: false
-        },
-        
-        extremities: {
-            normal: false,
-            edema: false,
-            varicosities: false
-        },
-        
+        skin: { normal: false, pale: false, yellowish: false, hematoma: false },
+        conjunctiva: { normal: false, pale: false, yellowish: false },
+        neck: { normal: false, neckMass: false, enlargedLymphNodes: false },
+        breast: { normal: false, mass: false, nippleDischarge: false },
+        abdomen: { normal: false, abdominalMass: false, varicosities: false },
+        extremities: { normal: false, edema: false, varicosities: false },
         pelvicExam: {
-            normal: false,
-            mass: false,
-            abnormalDischarge: false,
-            warts: false,
-            polypCyst: false,
-            inflammationErosion: false,
-            bloodyDischarge: false,
-            cervicalConsistency: null,
-            cervicalTenderness: false,
-            adnexalMass: false,
-            uterinePosition: null,
-            uterineDepth: ''
+            normal: false, mass: false, abnormalDischarge: false,
+            warts: false, polypCyst: false, inflammationErosion: false,
+            bloodyDischarge: false, cervicalConsistency: null,
+            cervicalTenderness: false, adnexalMass: false,
+            uterinePosition: null, uterineDepth: ''
         },
         sideB: {
-    dateOfVisit: '2025-12-29',
-    serviceProvider: '',
-    medicalFindings: '',
-    methodAccepted: '',
-    followUpDate: '',
-    // Pregnancy Checklist
-    pregnancyCheck: {
-        isFullyBreastfeeding: false,
-        abstinence: false,
-        babyInLast4Weeks: false,
-        mensesInPast7Days: false,
-        miscarriageInPast7Days: false,
-        reliableContraceptive: false
-    }
-}
-
+            dateOfVisit: new Date().toISOString().split('T')[0],
+            serviceProvider: '',
+            medicalFindings: '',
+            methodAccepted: '',
+            followUpDate: '',
+            pregnancyCheck: {
+                isFullyBreastfeeding: false,
+                abstinence: false,
+                babyInLast4Weeks: false,
+                mensesInPast7Days: false,
+                miscarriageInPast7Days: false,
+                reliableContraceptive: false
+            }
+        }
     }
 });
 
-function submitForm() {
-    console.log('Form submitted:', formData.value);
-    alert('Form submitted successfully!');
-}
+async function submitForm() {
+    submitStatus.value.loading = true;
+    submitStatus.value.error = '';
+    submitStatus.value.success = '';
 
+    // ✅ Auto-get patientID from route if clientId is empty
+    if (!formData.value.clientId) {
+        const patientID = route.params.patientID;
+        if (patientID) {
+            formData.value.clientId = String(patientID);
+        }
+    }
+
+    const clientID = Number(formData.value.clientId) || null;
+    const today = new Date().toISOString().split('T')[0];
+
+    if (!clientID) {
+        submitStatus.value.error = 'Client ID is required.';
+        submitStatus.value.loading = false;
+        return;
+    }
+
+    try {
+        // ============================
+        // 1. Save Client (NHTS, 4PS)
+        // ============================
+        try {
+            await axios.post('http://localhost:8080/api/familyplanning/clients', {
+                clientID,
+                nhts: formData.value.nhtsYes ? 'Y' : 'N',
+                is4PSMember: formData.value._4psMember ? 'Y' : 'N',
+                civilStatus: formData.value.civilStatus || null
+            });
+        } catch (e) { console.error('Client save error:', e); }
+
+        // ============================
+        // 2. Save Spouse
+        // ============================
+        try {
+            if (formData.value.spouseName) {
+                const nameParts = formData.value.spouseName.trim().split(' ');
+                await axios.post('http://localhost:8080/api/familyplanning/spouse', {
+                    clientID,
+                    fName: nameParts[0] || '',
+                    lName: nameParts[nameParts.length - 1] || '',
+                    midInitial: nameParts.length > 2 ? nameParts[1] : '',
+                    dateOfBirth: formData.value.birthDate || null,
+                    age: formData.value.age ? Number(formData.value.age) : null,
+                    occupation: formData.value.occupation || null
+                });
+            }
+        } catch (e) { console.error('Spouse save error:', e); }
+
+        // ============================
+        // 3. Save FamilyPlanningRecord
+        // ============================
+        const savedRecord = await createFamilyPlanningRecord({
+            serviceID: formData.value.serviceID || 1,
+            clientID,
+            philHealthNumber: formData.value.philhealthNo || null,
+            civilStatus: formData.value.civilStatus || null,
+            averageMonthlyIncome: formData.value.averageMonthlyIncome ? Number(formData.value.averageMonthlyIncome) : null,
+            planToHaveMoreChildren:
+                formData.value.planMoreChildren === true ? 'Y' :
+                formData.value.planMoreChildren === false ? 'N' : null,
+            noOfLivingChildren: formData.value.numLivingChildren ? String(formData.value.numLivingChildren) : null,
+            dateRegistered: today
+        });
+        submitStatus.value.success = '✅ Record saved successfully. ID: ' + savedRecord.fpRecordID;
+
+        // ============================
+        // 4. Save TypeOfClient
+        // ============================
+        let typeID = null;
+        try {
+            const reasonFp = formData.value.reasonSpacing ? 'Spacing' :
+                             formData.value.reasonLimiting ? 'Limiting' : 'Others';
+            const typeRes = await axios.post('http://localhost:8080/api/familyplanning/typeofclient', {
+                clientID,
+                isNewAcceptor: formData.value.clientType.newAcceptor,
+                isCurrentUser: formData.value.clientType.currentUser,
+                isChangingMethod: formData.value.clientType.changingMethod,
+                isChangingClinic: formData.value.clientType.changingClinic,
+                isDropOutRestart: formData.value.clientType.dropoutRestart,
+                reasonForFp: reasonFp,
+                reasonOtherDetails: formData.value.reasonOthers || '',
+                changeReason: formData.value.sideEffects || '',
+                changeReasonOthers: ''
+            });
+            typeID = typeRes.data.typeID;
+
+            // ============================
+            // 5. Save MethodCurrentlyUsed
+            // ============================
+            try {
+                await axios.post('http://localhost:8080/api/familyplanning/methods', {
+                    typeID,
+                    coc: formData.value.currentMethod.coc,
+                    pop: formData.value.currentMethod.pop,
+                    injectable: formData.value.currentMethod.injectable,
+                    implant: formData.value.currentMethod.implant,
+                    iudInterval: formData.value.currentMethod.interval,
+                    iudPostpartum: formData.value.currentMethod.postPartum,
+                    condom: formData.value.currentMethod.condom,
+                    bomCmm: formData.value.currentMethod.bom_ccm,
+                    bbt: formData.value.currentMethod.bbt,
+                    stm: formData.value.currentMethod.stm,
+                    sdm: formData.value.currentMethod.sdm,
+                    lam: formData.value.currentMethod.lam,
+                    otherMethod: formData.value.currentMethod.others || ''
+                });
+            } catch (e) { console.error('MethodCurrentlyUsed save error:', e); }
+        } catch (e) { console.error('TypeOfClient save error:', e); }
+
+        // ============================
+        // 6. Save MedicalHistory
+        // ============================
+        let medicalHistoryID = null;
+        try {
+            const mhRes = await axios.post('http://localhost:8080/api/familyplanning/medicalhistory', {
+                clientID,
+                hasDisability: formData.value.medicalHistory.disability === true,
+                disabilityDescription: formData.value.medicalHistory.disabilitySpecify || '',
+                dateRecorded: today
+            });
+            medicalHistoryID = mhRes.data.medicalHistoryid;
+
+            // ============================
+            // 7. Save MedicalHistoryDetails
+            // (severeHeadache=1, strokeHistory=2, hematoma=3,
+            //  breastCancer=4, chestPain=5, cough=6, jaundice=7,
+            //  vaginalBleeding=8, abnormalVaginalDischarge=9,
+            //  abnormalPenileDischarge=10, phenobarbital=11,
+            //  smoker=12)
+            // ============================
+            const medicalConditions = [
+                { id: 1, value: formData.value.medicalHistory.severeHeadache },
+                { id: 2, value: formData.value.medicalHistory.strokeHistory },
+                { id: 3, value: formData.value.medicalHistory.hematoma },
+                { id: 4, value: formData.value.medicalHistory.breastCancer },
+                { id: 5, value: formData.value.medicalHistory.chestPain },
+                { id: 6, value: formData.value.medicalHistory.cough },
+                { id: 7, value: formData.value.medicalHistory.jaundice },
+                { id: 8, value: formData.value.medicalHistory.vaginalBleeding },
+                { id: 9, value: formData.value.medicalHistory.abnormalVaginalDischarge },
+                { id: 10, value: formData.value.medicalHistory.abnormalPenileDischarge },
+                { id: 11, value: formData.value.medicalHistory.phenobarbital },
+                { id: 12, value: formData.value.medicalHistory.smoker },
+            ];
+
+            for (const cond of medicalConditions) {
+                if (cond.value === true) {
+                    try {
+                        await axios.post('http://localhost:8080/api/familyplanning/medicalhistory/detail', {
+                            medicalHistoryid: medicalHistoryID,
+                            medicalConditionID: cond.id
+                        });
+                    } catch (e) { console.error(`MedicalHistoryDetail ${cond.id} error:`, e); }
+                }
+            }
+        } catch (e) { console.error('MedicalHistory save error:', e); }
+
+        // ============================
+        // 8. Save ObstetricalHistory
+        // ============================
+        let obstetricalHistoryID = null;
+        try {
+            const ohRes = await axios.post('http://localhost:8080/api/familyplanning/obstetrical-history', {
+                clientID,
+                gravida: formData.value.obstetric.numPregnancies ? Number(formData.value.obstetric.numPregnancies) : null,
+                para: null,
+                fullTerm: formData.value.obstetric.fullTerm ? Number(formData.value.obstetric.fullTerm) : null,
+                premature: formData.value.obstetric.premature ? Number(formData.value.obstetric.premature) : null,
+                abortion: formData.value.obstetric.abortion ? Number(formData.value.obstetric.abortion) : null,
+                livingChildren: formData.value.obstetric.livingChildren ? Number(formData.value.obstetric.livingChildren) : null,
+                dateOfLastDelivery: formData.value.obstetric.lastDeliveryDate || null,
+                typeOfLastDelivery: formData.value.obstetric.deliveryType || null,
+                lastMenstrualPeriod: formData.value.obstetric.lastMenstrualStart || null,
+                previousMenstrualPeriod: formData.value.obstetric.previousMenstrualPeriod || null,
+                menstrualFlowType: formData.value.obstetric.menstrualFlow || null
+            });
+            obstetricalHistoryID = ohRes.data.obstetricalHistoryID;
+
+            // ============================
+            // 9. Save ObstetricalConditionDetails
+            // (dysmenorrhea=1, hydatidiformMole=2, ectopicPregnancy=3)
+            // ============================
+            const obstetricConditions = [
+                { id: 1, value: formData.value.obstetric.dysmenorrhea },
+                { id: 2, value: formData.value.obstetric.hydatidiformMole },
+                { id: 3, value: formData.value.obstetric.ectopicPregnancy },
+            ];
+
+            for (const cond of obstetricConditions) {
+                if (cond.value === true) {
+                    try {
+                        await axios.post('http://localhost:8080/api/familyplanning/obstetrical-condition-detail', {
+                            obstetricalHistoryID,
+                            obstetricConditionID: cond.id
+                        });
+                    } catch (e) { console.error(`ObstetricalConditionDetail ${cond.id} error:`, e); }
+                }
+            }
+        } catch (e) { console.error('ObstetricalHistory save error:', e); }
+
+        // ============================
+        // 10. Save RiskForVAW
+        // ============================
+        try {
+            const referredAgencies = [
+                formData.value.vaw.referredTo.dswd ? 'DSWD' : '',
+                formData.value.vaw.referredTo.wcpu ? 'WCPU' : '',
+                formData.value.vaw.referredTo.ngos ? "NGO's" : '',
+                formData.value.vaw.referredTo.othersSpecify || ''
+            ].filter(Boolean).join(', ');
+
+            await axios.post('http://localhost:8080/api/familyplanning/risk-vaw', {
+                clientID,
+                hasUnpleasantSituation: formData.value.vaw.unpleasantRelationship === true,
+                partnerDisapproveVisit: formData.value.vaw.partnerDisapproval === true,
+                historyOfDomesticViolence: formData.value.vaw.domesticViolence === true,
+                referredToAgency: referredAgencies
+            });
+        } catch (e) { console.error('RiskForVAW save error:', e); }
+
+        // ============================
+        // 11. Save PhysicalExamination
+        // ============================
+        let pExamID = null;
+        try {
+            const peRes = await axios.post('http://localhost:8080/api/familyplanning/physical-examination', {
+                clientID,
+                weight: formData.value.physical.weight ? Number(formData.value.physical.weight) : null,
+                height: formData.value.physical.height ? Number(formData.value.physical.height) : null,
+                bloodPressure: formData.value.physical.bloodPressure || null,
+                pulseRate: formData.value.physical.pulseRate ? Number(formData.value.physical.pulseRate) : null,
+                dateExamined: today,
+                examinerName: formData.value.physical.sideB.serviceProvider || null
+            });
+            pExamID = peRes.data.pExamID;
+
+            // ============================
+            // 12. Save Skin conditions
+            // ============================
+            const skinConditions = [
+                { condition: 'normal', value: formData.value.physical.skin.normal },
+                { condition: 'pale', value: formData.value.physical.skin.pale },
+                { condition: 'yellowish', value: formData.value.physical.skin.yellowish },
+                { condition: 'hematoma', value: formData.value.physical.skin.hematoma },
+            ];
+            for (const s of skinConditions) {
+                if (s.value) {
+                    try {
+                        await axios.post('http://localhost:8080/api/familyplanning/skin', {
+                            pExamID, condition: s.condition
+                        });
+                    } catch (e) { console.error('Skin save error:', e); }
+                }
+            }
+
+            // ============================
+            // 13. Save Conjunctiva conditions
+            // ============================
+            const conjunctivaConditions = [
+                { condition: 'normal', value: formData.value.physical.conjunctiva.normal },
+                { condition: 'pale', value: formData.value.physical.conjunctiva.pale },
+                { condition: 'yellowish', value: formData.value.physical.conjunctiva.yellowish },
+            ];
+            for (const c of conjunctivaConditions) {
+                if (c.value) {
+                    try {
+                        await axios.post('http://localhost:8080/api/familyplanning/conjunctiva', {
+                            pExamID, condition: c.condition
+                        });
+                    } catch (e) { console.error('Conjunctiva save error:', e); }
+                }
+            }
+
+            // ============================
+            // 14. Save Neck conditions
+            // ============================
+            const neckConditions = [
+                { condition: 'normal', value: formData.value.physical.neck.normal },
+                { condition: 'neck mass', value: formData.value.physical.neck.neckMass },
+                { condition: 'enlarged lymph nodes', value: formData.value.physical.neck.enlargedLymphNodes },
+            ];
+            for (const n of neckConditions) {
+                if (n.value) {
+                    try {
+                        await axios.post('http://localhost:8080/api/familyplanning/neck', {
+                            pExamID, condition: n.condition
+                        });
+                    } catch (e) { console.error('Neck save error:', e); }
+                }
+            }
+
+            // ============================
+            // 15. Save Breast conditions
+            // ============================
+            const breastConditions = [
+                { condition: 'normal', value: formData.value.physical.breast.normal },
+                { condition: 'mass', value: formData.value.physical.breast.mass },
+                { condition: 'nipple discharge', value: formData.value.physical.breast.nippleDischarge },
+            ];
+            for (const b of breastConditions) {
+                if (b.value) {
+                    try {
+                        await axios.post('http://localhost:8080/api/familyplanning/breast', {
+                            pExamID, condition: b.condition
+                        });
+                    } catch (e) { console.error('Breast save error:', e); }
+                }
+            }
+
+            // ============================
+            // 16. Save Abdomen conditions
+            // ============================
+            const abdomenConditions = [
+                { condition: 'normal', value: formData.value.physical.abdomen.normal },
+                { condition: 'abdominal mass', value: formData.value.physical.abdomen.abdominalMass },
+                { condition: 'varicosities', value: formData.value.physical.abdomen.varicosities },
+            ];
+            for (const a of abdomenConditions) {
+                if (a.value) {
+                    try {
+                        await axios.post('http://localhost:8080/api/familyplanning/abdomen', {
+                            pExamID, condition: a.condition
+                        });
+                    } catch (e) { console.error('Abdomen save error:', e); }
+                }
+            }
+
+            // ============================
+            // 17. Save Extremities conditions
+            // ============================
+            const extremitiesConditions = [
+                { condition: 'normal', value: formData.value.physical.extremities.normal },
+                { condition: 'edema', value: formData.value.physical.extremities.edema },
+                { condition: 'varicosities', value: formData.value.physical.extremities.varicosities },
+            ];
+            for (const ex of extremitiesConditions) {
+                if (ex.value) {
+                    try {
+                        await axios.post('http://localhost:8080/api/familyplanning/extremities', {
+                            pExamID, condition: ex.condition
+                        });
+                    } catch (e) { console.error('Extremities save error:', e); }
+                }
+            }
+
+            // ============================
+            // 18. Save PelvicExamination
+            // ============================
+            const pelvicConditions = [
+                formData.value.physical.pelvicExam.normal ? 'normal' : '',
+                formData.value.physical.pelvicExam.mass ? 'mass' : '',
+                formData.value.physical.pelvicExam.abnormalDischarge ? 'abnormal discharge' : '',
+                formData.value.physical.pelvicExam.warts ? 'warts' : '',
+                formData.value.physical.pelvicExam.polypCyst ? 'polyp or cyst' : '',
+                formData.value.physical.pelvicExam.inflammationErosion ? 'inflammation or erosion' : '',
+                formData.value.physical.pelvicExam.bloodyDischarge ? 'bloody discharge' : '',
+            ].filter(Boolean).join(', ');
+
+            try {
+                await axios.post('http://localhost:8080/api/familyplanning/pelvic-examination', {
+                    pExamID,
+                    condition: pelvicConditions || null,
+                    cervicalConsistency: formData.value.physical.pelvicExam.cervicalConsistency || null,
+                    cervicalTenderness: formData.value.physical.pelvicExam.cervicalTenderness,
+                    adnexalMassTenderness: formData.value.physical.pelvicExam.adnexalMass,
+                    uterinePosition: formData.value.physical.pelvicExam.uterinePosition || null,
+                    uterineDepth: formData.value.physical.pelvicExam.uterineDepth ? Number(formData.value.physical.pelvicExam.uterineDepth) : null
+                });
+            } catch (e) { console.error('PelvicExamination save error:', e); }
+
+        } catch (e) { console.error('PhysicalExamination save error:', e); }
+
+        // ============================
+        // 19. Save FpAssessmentRecord (Side B)
+        // ============================
+        try {
+            await axios.post('http://localhost:8080/api/familyplanning/assessment-records', {
+                clientID,
+                dateOfVisit: formData.value.physical.sideB.dateOfVisit || today,
+                medicalFindings: formData.value.physical.sideB.medicalFindings || null,
+                methodAccepted: formData.value.physical.sideB.methodAccepted || null,
+                dateOfFollowUpVisit: formData.value.physical.sideB.followUpDate || null
+            });
+        } catch (e) { console.error('FpAssessmentRecord save error:', e); }
+
+        // ============================
+        // 20. Save PregnancyExclusionChecklist
+        // ============================
+        try {
+            await axios.post('http://localhost:8080/api/familyplanning/pregnancy-checklist', {
+                clientID,
+                dateRecorded: today,
+                question1: formData.value.physical.sideB.pregnancyCheck.isFullyBreastfeeding,
+                question2: formData.value.physical.sideB.pregnancyCheck.abstinence,
+                question3: formData.value.physical.sideB.pregnancyCheck.babyInLast4Weeks,
+                question4: formData.value.physical.sideB.pregnancyCheck.mensesInPast7Days,
+                question5: formData.value.physical.sideB.pregnancyCheck.miscarriageInPast7Days,
+                question6: formData.value.physical.sideB.pregnancyCheck.reliableContraceptive
+            });
+        } catch (e) { console.error('PregnancyChecklist save error:', e); }
+
+        submitStatus.value.success = '✅ All records saved successfully!';
+
+    } catch (error) {
+        const msg = error?.response?.data?.message || error?.response?.data || error?.message || 'Unknown error';
+        submitStatus.value.error = '❌ Save failed: ' + msg;
+        console.error('Family Planning save error:', error?.response?.data || error);
+    } finally {
+        submitStatus.value.loading = false;
+    }
+}
 function resetForm() {
     if (confirm('Are you sure you want to reset the form?')) {
-        // Reset logic here
         location.reload();
     }
 }
+
+function printForm() {
+    window.print();
+}
+
+onMounted(async () => {
+    // ✅ Get patientID from route params
+    const patientID = route.params.patientID;
+
+    if (patientID) {
+        formData.value.clientId = String(patientID);
+    }
+
+    const clientId = formData.value.clientId;
+    if (!clientId) return;
+
+    isViewMode.value = true;
+
+    // 1. Load main FP record
+    try {
+        const res = await axios.get(`http://localhost:8080/api/familyplanning/records/client/${clientId}`);
+        if (res.data && res.data.length > 0) {
+            const record = res.data[res.data.length - 1];
+            existingRecordId.value = record.fpRecordID;
+            formData.value.philhealthNo = record.philHealthNumber || '';
+            formData.value.civilStatus = record.civilStatus || '';
+            formData.value.averageMonthlyIncome = record.averageMonthlyIncome || '';
+            formData.value.numLivingChildren = record.noOfLivingChildren || '';
+            if (record.planToHaveMoreChildren === 'Y') formData.value.planMoreChildren = true;
+            else if (record.planToHaveMoreChildren === 'N') formData.value.planMoreChildren = false;
+            submitStatus.value.success = `Viewing record #${record.fpRecordID} for Client ID ${clientId}`;
+        }
+    } catch (e) { console.error('Failed to load FP record', e); }
+
+    // 2. Load TypeOfClient
+    try {
+        const res = await axios.get(`http://localhost:8080/api/familyplanning/typeofclient/client/${clientId}`);
+        if (res.data && res.data.length > 0) {
+            const t = res.data[res.data.length - 1];
+            formData.value.clientType.newAcceptor = t.isNewAcceptor || false;
+            formData.value.clientType.currentUser = t.isCurrentUser || false;
+            formData.value.clientType.changingMethod = t.isChangingMethod || false;
+            formData.value.clientType.changingClinic = t.isChangingClinic || false;
+            formData.value.clientType.dropoutRestart = t.isDropOutRestart || false;
+            formData.value.reasonSpacing = t.reasonForFp === 'Spacing';
+            formData.value.reasonLimiting = t.reasonForFp === 'Limiting';
+            formData.value.reasonOthers = t.reasonOtherDetails || '';
+            formData.value.sideEffects = t.changeReason || '';
+
+            // 3. Load MethodCurrentlyUsed
+            try {
+                const mRes = await axios.get(`http://localhost:8080/api/familyplanning/methods/type/${t.typeID}`);
+                if (mRes.data) {
+                    const m = Array.isArray(mRes.data) ? mRes.data[0] : mRes.data;
+                    if (m) {
+                        formData.value.currentMethod.coc = m.coc || false;
+                        formData.value.currentMethod.pop = m.pop || false;
+                        formData.value.currentMethod.injectable = m.injectable || false;
+                        formData.value.currentMethod.implant = m.implant || false;
+                        formData.value.currentMethod.interval = m.iudInterval || false;
+                        formData.value.currentMethod.postPartum = m.iudPostpartum || false;
+                        formData.value.currentMethod.condom = m.condom || false;
+                        formData.value.currentMethod.bom_ccm = m.bomCmm || false;
+                        formData.value.currentMethod.bbt = m.bbt || false;
+                        formData.value.currentMethod.stm = m.stm || false;
+                        formData.value.currentMethod.sdm = m.sdm || false;
+                        formData.value.currentMethod.lam = m.lam || false;
+                        formData.value.currentMethod.others = m.otherMethod || '';
+                    }
+                }
+            } catch (e) { console.error('Failed to load MethodCurrentlyUsed', e); }
+        }
+    } catch (e) { console.error('Failed to load TypeOfClient', e); }
+
+    // 4. Load MedicalHistory
+    try {
+        const res = await axios.get(`http://localhost:8080/api/familyplanning/medicalhistory/client/${clientId}`);
+        if (res.data && res.data.length > 0) {
+            const m = res.data[res.data.length - 1];
+            formData.value.medicalHistory.disability = m.hasDisability || false;
+            formData.value.medicalHistory.disabilitySpecify = m.disabilityDescription || '';
+        }
+    } catch (e) { console.error('Failed to load MedicalHistory', e); }
+
+    // 5. Load ObstetricalHistory
+    try {
+        const res = await axios.get(`http://localhost:8080/api/familyplanning/obstetrical-history/client/${clientId}`);
+        if (res.data && res.data.length > 0) {
+            const o = res.data[res.data.length - 1];
+            formData.value.obstetric.numPregnancies = o.gravida || '';
+            formData.value.obstetric.fullTerm = o.fullTerm || '';
+            formData.value.obstetric.premature = o.premature || '';
+            formData.value.obstetric.abortion = o.abortion || '';
+            formData.value.obstetric.livingChildren = o.livingChildren || '';
+            formData.value.obstetric.lastDeliveryDate = o.dateOfLastDelivery || '';
+            formData.value.obstetric.deliveryType = o.typeOfLastDelivery || '';
+            formData.value.obstetric.lastMenstrualStart = o.lastMenstrualPeriod || '';
+            formData.value.obstetric.previousMenstrualPeriod = o.previousMenstrualPeriod || '';
+            formData.value.obstetric.menstrualFlow = o.menstrualFlowType || '';
+        }
+    } catch (e) { console.error('Failed to load ObstetricalHistory', e); }
+
+    // 6. Load RiskForVAW
+    try {
+        const res = await axios.get(`http://localhost:8080/api/familyplanning/risk-vaw/client/${clientId}`);
+        if (res.data && res.data.length > 0) {
+            const v = res.data[res.data.length - 1];
+            formData.value.vaw.unpleasantRelationship = v.hasUnpleasantSituation || false;
+            formData.value.vaw.partnerDisapproval = v.partnerDisapproveVisit || false;
+            formData.value.vaw.domesticViolence = v.historyOfDomesticViolence || false;
+            const agencies = v.referredToAgency || '';
+            formData.value.vaw.referredTo.dswd = agencies.includes('DSWD');
+            formData.value.vaw.referredTo.wcpu = agencies.includes('WCPU');
+            formData.value.vaw.referredTo.ngos = agencies.includes("NGO's");
+        }
+    } catch (e) { console.error('Failed to load RiskForVAW', e); }
+});
 </script>
 
 <template>
@@ -197,6 +686,18 @@ function resetForm() {
         <div class="max-w-screen mx-auto bg-white rounded-lg shadow-lg p-8">
             <!-- Header -->
             <div class="border-b-2 border-gray-800 pb-4 mb-6">
+                <!-- Back Button -->
+                <div class="mb-4">
+                    <button
+                        @click="goBack"
+                        class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow transition"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Back
+                    </button>
+                </div>
                 <h1 class="text-2xl font-bold text-center mb-2">FAMILY PLANNING CLIENT ASSESSMENT RECORD</h1>
                 <div class="bg-yellow-50 border border-yellow-300 rounded p-3 text-sm">
                     <p><strong>Instructions for Physician, Nurses and Midwife:</strong> Make sure that the client is not Pregnant by using the questions Listed by Side B. Completely fill out or check the required information; refer accordingly for any abnormal history or medical evaluation</p>
@@ -204,12 +705,24 @@ function resetForm() {
             </div>
 
             <form @submit.prevent="submitForm" class="space-y-8">
+                <div class="space-y-2">
+                    <div v-if="submitStatus.error" class="text-sm text-red-700 bg-red-100 border border-red-200 rounded p-3">
+                        {{ submitStatus.error }}
+                    </div>
+                    <div v-if="submitStatus.success" class="text-sm text-green-700 bg-green-100 border border-green-200 rounded p-3">
+                        {{ submitStatus.success }}
+                    </div>
+                </div>
+
                 <!-- Client Information -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Client ID</label>
-                        <input v-model="formData.clientId" type="text" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                    </div>
+                  <!-- To this: -->
+<div>
+    <label class="block text-sm font-medium mb-1">Client ID</label>
+    <input v-model="formData.clientId" type="text" 
+        readonly
+        class="w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded cursor-not-allowed" />
+</div>
                     <div>
                         <label class="block text-sm font-medium mb-1">PHILHEALTH NO</label>
                         <input v-model="formData.philhealthNo" type="text" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
@@ -233,6 +746,17 @@ function resetForm() {
                         <label class="block text-sm font-medium mb-1">Occupation</label>
                         <input v-model="formData.occupation" type="text" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Civil Status</label>
+                        <select v-model="formData.civilStatus" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Select status</option>
+                            <option value="Single">Single</option>
+                            <option value="Married">Married</option>
+                            <option value="Widowed">Widowed</option>
+                            <option value="Separated">Separated</option>
+                            <option value="Divorced">Divorced</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="flex items-center gap-6">
@@ -250,7 +774,10 @@ function resetForm() {
                         <input v-model="formData._4psMember" type="checkbox" class="w-4 h-4" />
                         <span>YES</span>
                     </label>
-                    <span>NO</span>
+                    <label class="flex items-center gap-2">
+                        <input v-model="formData.no_4psMember" type="checkbox" class="w-4 h-4" />
+                        <span>NO</span>
+                    </label>
                 </div>
 
                 <!-- Average Monthly Income -->
@@ -1052,9 +1579,14 @@ function resetForm() {
                             </div>
                         </div>
 
-                        <div class="flex gap-4 mt-8">
-                            <button type="submit" class="bg-blue-600 text-white px-8 py-3 rounded font-bold hover:bg-blue-700">SUBMIT RECORD</button>
+                        <div class="flex gap-4 mt-8 no-print">
+                            <button type="submit" :disabled="submitStatus.loading" class="bg-blue-600 text-white px-8 py-3 rounded font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                            {{ submitStatus.loading ? 'Saving...' : 'SUBMIT RECORD' }}
+                        </button>
                             <button @click="resetForm" type="button" class="bg-gray-200 px-8 py-3 rounded font-bold">RESET</button>
+                            <button @click="printForm" type="button" class="bg-green-600 text-white px-8 py-3 rounded font-bold hover:bg-green-700 flex items-center gap-2">
+                                🖨️ PRINT / SAVE PDF
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1062,3 +1594,43 @@ function resetForm() {
         </div>
     </div>
 </template>
+
+<style>
+@media print {
+    /* Hide navigation, buttons, status messages */
+    .no-print,
+    nav,
+    aside,
+    header,
+    .sidebar,
+    #sidebar {
+        display: none !important;
+    }
+    /* Make the form fill the full printed page */
+    body, html {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+    }
+    .min-h-screen {
+        min-height: unset !important;
+        background: white !important;
+        padding: 0 !important;
+    }
+    .max-w-screen {
+        max-width: 100% !important;
+        box-shadow: none !important;
+        padding: 10px !important;
+    }
+    /* Ensure all text is black for printing */
+    * {
+        color: black !important;
+        background: white !important;
+    }
+    /* Keep borders and checkboxes visible */
+    input[type="checkbox"], input[type="radio"] {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+</style>

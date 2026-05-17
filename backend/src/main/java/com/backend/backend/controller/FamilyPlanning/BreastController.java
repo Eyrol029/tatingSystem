@@ -1,4 +1,4 @@
-package com.backend.backend.controller.familyplanning;
+package com.backend.backend.controller.FamilyPlanning;
 
 import java.util.List;
 
@@ -23,33 +23,33 @@ public class BreastController {
 
     @Autowired
     private BreastService breastService;
-
+    @CrossOrigin(origins = "*")
     @PostMapping
     public Breast addBreast(@RequestBody Breast breast) {
         return breastService.addBreast(breast);
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public Breast getBreast(@PathVariable Integer id) {
         return breastService.getBreastById(id);
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping
     public List<Breast> getBreasts() {
         return breastService.getBreasts();
     }
-
+    @CrossOrigin(origins = "*")
     @PutMapping
     public Breast updateBreast(@RequestBody Breast breast) {
         return breastService.updateBreast(breast);
     }
-
+    @CrossOrigin(origins = "*")
     @DeleteMapping("/{id}")
     public String deleteBreast(@PathVariable Integer id) {
         breastService.deleteBreast(id);
         return "Breast deleted.";
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping("/pExam/{pExamID}")
     public List<Breast> getByPExam(@PathVariable Integer pExamID) {
         return breastService.getByPExamID(pExamID);

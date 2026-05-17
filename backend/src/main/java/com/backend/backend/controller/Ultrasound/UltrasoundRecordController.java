@@ -23,31 +23,31 @@ public class UltrasoundRecordController {
 
     @Autowired
     private UltrasoundRecordService service;
-
+@CrossOrigin(origins = "*")
     // CREATE
     @PostMapping
     public UltrasoundRecord add(@RequestBody UltrasoundRecord record) {
         return service.add(record);
     }
-
+@CrossOrigin(origins = "*")
     // GET BY ID
     @GetMapping("/{id}")
     public UltrasoundRecord getById(@PathVariable Integer id) {
         return service.getById(id);
     }
-
+@CrossOrigin(origins = "*")
     // GET ALL
     @GetMapping
     public List<UltrasoundRecord> getAll() {
         return service.getAll();
     }
-
+@CrossOrigin(origins = "*")
     // UPDATE
     @PutMapping
     public UltrasoundRecord update(@RequestBody UltrasoundRecord record) {
         return service.update(record);
     }
-
+@CrossOrigin(origins = "*")
     // DELETE
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {

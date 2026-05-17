@@ -23,33 +23,33 @@ public class MedicalSurgicalFactorMeasurementsController {
 
     @Autowired
     private MedicalSurgicalFactorMeasurementsService service;
-
+@CrossOrigin(origins = "*")
     @PostMapping
     public MedicalSurgicalFactorMeasurements add(@RequestBody MedicalSurgicalFactorMeasurements data) {
         return service.add(data);
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public MedicalSurgicalFactorMeasurements get(@PathVariable Integer id) {
         return service.getById(id);
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping
     public List<MedicalSurgicalFactorMeasurements> getAll() {
         return service.getAll();
     }
-
+@CrossOrigin(origins = "*")
     @PutMapping
     public MedicalSurgicalFactorMeasurements update(@RequestBody MedicalSurgicalFactorMeasurements data) {
         return service.update(data);
     }
-
+@CrossOrigin(origins = "*")
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {
         service.delete(id);
         return "Deleted successfully.";
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/medsurg/{medsurgID}")
     public List<MedicalSurgicalFactorMeasurements> getByMedsurg(@PathVariable Integer medsurgID) {
         return service.getByMedsurgID(medsurgID);

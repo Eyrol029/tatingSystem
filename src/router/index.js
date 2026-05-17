@@ -16,7 +16,8 @@ const routes = [
         children: [
             { path: '', name: 'dashboard', component: Dashboard },
             { path: 'uikit/PrenatalAdmission', component: () => import('@/views/uikit/PrenatalAdmission.vue') },
-            { path: 'uikit/FamilyPlanningAdmission', component: () => import('@/views/uikit/FamilyPlanningAdmission.vue') },
+            { path: 'uikit/PrenatalAdmission/:clientId', component: () => import('@/views/uikit/PrenatalAdmission.vue') },
+            { path: 'uikit/FamilyPlanningAdmission/:patientID?', component: () => import('@/views/uikit/FamilyPlanningAdmission.vue') },
             { path: 'uikit/UserAccountPatient', component: () => import('@/views/uikit/UserAccountPatient.vue') },
             { path: 'uikit/Patient', component: () => import('@/views/uikit/Patient.vue') },
             { path: 'uikit/Staff', component: () => import('@/views/uikit/Staff.vue') },
@@ -41,7 +42,7 @@ const routes = [
             { path: 'uikit/viewListOfRevenue', component: () => import('@/views/uikit/viewListOfRevenue.vue') },
             { path: 'uikit/viewListOfSOA', component: () => import('@/views/uikit/viewListOfSOA.vue') },
             { path: 'uikit/AdminCalendar', component: () => import('@/views/uikit/AdminCalendar.vue') },
-            { path: 'uikit/MidwifeDashboard', component: () => import('@/views/Dashboard/MidwifeDashboard.vue') }, 
+            { path: 'uikit/MidwifeDashboard', component: () => import('@/views/Dashboard/MidwifeDashboard.vue') },
         ]
     },
     {

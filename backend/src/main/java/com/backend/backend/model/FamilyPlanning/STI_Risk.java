@@ -1,4 +1,4 @@
-package com.backend.backend.model.familyplanning;
+package com.backend.backend.model.FamilyPlanning;
 
 import java.util.Date;
 

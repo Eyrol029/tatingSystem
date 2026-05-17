@@ -23,33 +23,33 @@ public class MethodCurrentlyUsedController {
 
     @Autowired
     private MethodCurrentlyUsedService methodCurrentlyUsedService;
-
+    @CrossOrigin(origins = "*")
     @PostMapping
     public MethodCurrentlyUsed addMethod(@RequestBody MethodCurrentlyUsed method) {
         return methodCurrentlyUsedService.addMethod(method);
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public MethodCurrentlyUsed getMethod(@PathVariable Integer id) {
         return methodCurrentlyUsedService.getMethodById(id);
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping
     public List<MethodCurrentlyUsed> getMethods() {
         return methodCurrentlyUsedService.getMethods();
     }
-
+    @CrossOrigin(origins = "*")
     @PutMapping
     public MethodCurrentlyUsed updateMethod(@RequestBody MethodCurrentlyUsed method) {
         return methodCurrentlyUsedService.updateMethod(method);
     }
-
+    @CrossOrigin(origins = "*")
     @DeleteMapping("/{id}")
     public String deleteMethod(@PathVariable Integer id) {
         methodCurrentlyUsedService.deleteMethod(id);
         return "MethodCurrentlyUsed deleted.";
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping("/type/{typeID}")
     public List<MethodCurrentlyUsed> getByTypeID(@PathVariable Integer typeID) {
         return methodCurrentlyUsedService.getMethodsByTypeID(typeID);

@@ -23,33 +23,33 @@ public class ConsultationVisitsController {
 
     @Autowired
     private ConsultationVisitsService service;
-
+@CrossOrigin(origins = "*")
     @PostMapping
     public ConsultationVisits add(@RequestBody ConsultationVisits visit) {
         return service.add(visit);
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public ConsultationVisits getById(@PathVariable Integer id) {
         return service.getById(id);
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping
     public List<ConsultationVisits> getAll() {
         return service.getAll();
     }
-
+@CrossOrigin(origins = "*")
     @PutMapping
     public ConsultationVisits update(@RequestBody ConsultationVisits visit) {
         return service.update(visit);
     }
-
+@CrossOrigin(origins = "*")
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {
         service.delete(id);
         return "ConsultationVisits deleted successfully.";
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/consultation/{consultationRecordID}")
     public List<ConsultationVisits> getByConsultation(@PathVariable Integer consultationRecordID) {
         return service.getByConsultationRecordID(consultationRecordID);

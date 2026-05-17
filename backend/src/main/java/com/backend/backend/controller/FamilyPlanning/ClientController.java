@@ -23,43 +23,43 @@ public class ClientController {
 
     @Autowired
     private ClientService clientService;
-
+    @CrossOrigin(origins = "*")
     @PostMapping
     public Client addClient(@RequestBody Client client) {
         return clientService.addClient(client);
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public Client getClient(@PathVariable Integer id) {
         return clientService.getClientById(id);
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping
     public List<Client> getClients() {
         return clientService.getClients();
     }
-
+    @CrossOrigin(origins = "*")
     @PutMapping
     public Client updateClient(@RequestBody Client client) {
         return clientService.updateClient(client);
     }
-
+    @CrossOrigin(origins = "*")
     @DeleteMapping("/{id}")
     public String deleteClient(@PathVariable Integer id) {
         clientService.deleteClient(id);
         return "Client deleted.";
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping("/search/nhts/{nhts}")
     public List<Client> getByNhts(@PathVariable String nhts) {
         return clientService.getClientsByNhts(nhts);
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping("/search/4ps/{is4PSMember}")
     public List<Client> getBy4PS(@PathVariable String is4PSMember) {
         return clientService.getClientsByIs4PSMember(is4PSMember);
     }
-
+    @CrossOrigin(origins = "*")
     @GetMapping("/search/civilstatus/{civilStatus}")
     public List<Client> getByCivilStatus(@PathVariable String civilStatus) {
         return clientService.getClientsByCivilStatus(civilStatus);

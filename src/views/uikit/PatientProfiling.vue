@@ -8,7 +8,6 @@ const route = useRoute();
 
 const BASE_URL = 'http://localhost:8080/api/patients';
 
-// Patient Data
 const patientData = reactive({
     patientID: null,
     fName: '',
@@ -30,8 +29,8 @@ const patientData = reactive({
 
 const loading = ref(true);
 const error = ref('');
+const services = ref([]); // ✅ changed from reactive to ref
 
-// Fetch patient by ID from backend
 async function fetchPatient() {
     try {
         const id = route.params.id;
@@ -44,21 +43,28 @@ async function fetchPatient() {
     }
 }
 
-onMounted(() => fetchPatient());
-
-// Services (hardcoded for now)
-const services = reactive([
-    {
-        id: 1,
-        service: 'Prenatal',
-        employee: 'Rowena Roxa',
-        ward: 'Ward 1',
-        dateAvailed: '2025-12-14',
-        remarks: '---'
+async function fetchServices() {
+    try {
+        const id = route.params.id;
+        const res = await axios.get(`http://localhost:8080/api/patient-services/patient/${id}`);
+        services.value = res.data.map(item => ({ // ✅ use .value
+            id: item.patientServiceID,
+            service: item.serviceName,
+            employee: item.employeeName ?? '---',
+            ward: item.wardName ?? '---',
+            dateAvailed: item.dateAvailed,
+            remarks: item.remarks ?? '---'
+        }));
+    } catch (e) {
+        console.error('Failed to load services data.', e);
     }
-]);
+}
 
-// Modal & Form Logic
+onMounted(() => {
+    fetchPatient();
+    fetchServices();
+});
+
 const showModal = ref(false);
 const selectedType = ref('');
 const loadingSubmit = ref(false);
@@ -72,15 +78,46 @@ const form = reactive({
     remarks: ''
 });
 
-function selectType(type: string) {
+async function selectType(type: string) {
     if (type === 'Family Planning') {
-        router.push('/uikit/FamilyPlanningAdmission');
+        try {
+            await axios.post('http://localhost:8080/api/patient-services', {
+                patientID: Number(route.params.id),
+                serviceName: 'Family Planning',
+                employeeName: '---',
+                wardName: '---',
+                dateAvailed: new Date().toISOString().split('T')[0],
+                remarks: ''
+            });
+            await fetchServices();
+        } catch (e) {
+            console.error('Failed to save Family Planning service', e);
+        }
+        showModal.value = false;
+        step.value = 'select';
+        router.push(`/uikit/FamilyPlanningAdmission/${route.params.id}`); // ✅ has ID
         return;
     }
     if (type === 'Prenatal') {
-        router.push('/uikit/PrenatalAdmission');
+        try {
+            await axios.post('http://localhost:8080/api/patient-services', {
+                patientID: Number(route.params.id),
+                serviceName: 'Prenatal',
+                employeeName: '---',
+                wardName: '---',
+                dateAvailed: new Date().toISOString().split('T')[0],
+                remarks: ''
+            });
+            await fetchServices();
+        } catch (e) {
+            console.error('Failed to save Prenatal service', e);
+        }
+        showModal.value = false;
+        step.value = 'select';
+        router.push('/uikit/PrenatalAdmission'); // ✅ fixed route
         return;
     }
+
     selectedType.value = type;
     step.value = 'form';
     showModal.value = true;
@@ -95,17 +132,34 @@ function closeModal() {
     form.remarks = '';
 }
 
+function viewService(service) {
+    const name = service.service?.toLowerCase();
+    const patientId = route.params.id;
+    if (name === 'prenatal') {
+        router.push(`/uikit/PrenatalAdmission/${patientId}`);
+    } else if (name === 'family planning') {
+        router.push(`/uikit/FamilyPlanningAdmission/${patientId}`); // ✅ pass patientID
+    } else {
+        alert(`No dedicated view page for "${service.service}" yet.`);
+    }
+}
+
 async function handleSubmit() {
     loadingSubmit.value = true;
-    services.push({
-        id: services.length + 1,
-        service: selectedType.value,
-        employee: form.employee,
-        ward: form.ward,
-        dateAvailed: form.dateAvailed,
-        remarks: form.remarks
-    });
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+        await axios.post('http://localhost:8080/api/patient-services', {
+            patientID: Number(route.params.id),
+            serviceName: selectedType.value,
+            employeeName: form.employee,
+            wardName: form.ward,
+            dateAvailed: form.dateAvailed,
+            remarks: form.remarks
+        });
+        await fetchServices(); // ✅ refresh list
+    } catch (e) {
+        console.error('Failed to save service', e);
+        alert('Failed to save service: ' + e.message);
+    }
     loadingSubmit.value = false;
     closeModal();
 }
@@ -234,7 +288,7 @@ async function handleSubmit() {
                             <td class="td">{{ service.remarks }}</td>
                             <td class="td">
                                 <button
-                                    @click="router.push('/uikit/PatientIndividual')"
+                                    @click="viewService(service)"
                                     class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700">
                                     View
                                 </button>

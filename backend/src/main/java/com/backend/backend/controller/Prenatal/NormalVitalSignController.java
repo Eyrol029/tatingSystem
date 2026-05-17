@@ -23,38 +23,38 @@ public class NormalVitalSignController {
 
     @Autowired
     private NormalVitalSignService service;
-
+@CrossOrigin(origins = "*")
     // CREATE
     @PostMapping
     public NormalVitalSign add(@RequestBody NormalVitalSign record) {
         return service.addRecord(record);
     }
-
+@CrossOrigin(origins = "*")
     // GET BY ID
     @GetMapping("/{id}")
     public NormalVitalSign get(@PathVariable Integer id) {
         return service.getRecordById(id);
     }
-
+@CrossOrigin(origins = "*")
     // GET ALL
     @GetMapping
     public List<NormalVitalSign> getAll() {
         return service.getRecords();
     }
-
+@CrossOrigin(origins = "*")
     // UPDATE
     @PutMapping
     public NormalVitalSign update(@RequestBody NormalVitalSign record) {
         return service.updateRecord(record);
     }
-
+@CrossOrigin(origins = "*")
     // DELETE
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {
         service.deleteRecord(id);
         return "NormalVitalSign deleted successfully.";
     }
-
+@CrossOrigin(origins = "*")
     // GET BY CLINICAL HISTORY ID
     @GetMapping("/clinical/{clinicalHistoryID}")
     public List<NormalVitalSign> getByClinicalHistory(@PathVariable Integer clinicalHistoryID) {

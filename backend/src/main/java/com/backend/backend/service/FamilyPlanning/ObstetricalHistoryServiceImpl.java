@@ -1,12 +1,12 @@
-package com.backend.backend.service.familyplanning;
+package com.backend.backend.service.FamilyPlanning;
 
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.backend.backend.model.familyplanning.ObstetricalHistory;
-import com.backend.backend.repository.familyplanning.ObstetricalHistoryRepository;
+import com.backend.backend.model.FamilyPlanning.ObstetricalHistory;
+import com.backend.backend.repository.FamilyPlanning.ObstetricalHistoryRepository;
 
 @Service
 public class ObstetricalHistoryServiceImpl implements ObstetricalHistoryService {
