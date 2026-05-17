@@ -42,6 +42,6 @@ public class SkinServiceImpl implements SkinService {
 
     @Override
     public List<Skin> getByPExamID(Integer pExamID) {
-        return skinRepository.findByPExamID(pExamID);
+        return skinRepository.findBypExamID(pExamID);
     }
 }

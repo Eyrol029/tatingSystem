@@ -44,11 +44,11 @@ public class PhysicalExamination {
     private String examinerName;
 
     // Getters and Setters
-    public Integer getpExamID() {
+    public Integer getPExamID() {  // ✅ Fixed: capital P
         return pExamID;
     }
 
-    public void setpExamID(Integer pExamID) {
+    public void setPExamID(Integer pExamID) {  // ✅ Fixed: capital P
         this.pExamID = pExamID;
     }
 

@@ -42,6 +42,6 @@ public class AbdomenServiceImpl implements AbdomenService {
 
     @Override
     public List<Abdomen> getByPExamID(Integer pExamID) {
-        return abdomenRepository.findByPExamID(pExamID);
+        return abdomenRepository.findBypExamID(pExamID);
     }
 }

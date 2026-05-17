@@ -42,6 +42,6 @@ public class ConjunctivaServiceImpl implements ConjunctivaService {
 
     @Override
     public List<Conjunctiva> getByPExamID(Integer pExamID) {
-        return conjunctivaRepository.findByPExamID(pExamID);
+        return conjunctivaRepository.findBypExamID(pExamID);
     }
 }

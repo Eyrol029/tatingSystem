@@ -42,6 +42,6 @@ public class ExtremitiesServiceImpl implements ExtremitiesService {
 
     @Override
     public List<Extremities> getByPExamID(Integer pExamID) {
-        return extremitiesRepository.findByPExamID(pExamID);
+        return extremitiesRepository.findBypExamID(pExamID);
     }
 }

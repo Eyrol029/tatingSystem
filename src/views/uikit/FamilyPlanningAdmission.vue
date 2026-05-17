@@ -9,6 +9,8 @@ const router = useRouter();
 const isViewMode = ref(false);
 const existingRecordId = ref(null);
 
+const BASE = 'http://localhost:8080/api/familyplanning';
+
 function goBack() {
     router.back();
 }
@@ -146,12 +148,9 @@ async function submitForm() {
     submitStatus.value.error = '';
     submitStatus.value.success = '';
 
-    // ✅ Auto-get patientID from route if clientId is empty
     if (!formData.value.clientId) {
         const patientID = route.params.patientID;
-        if (patientID) {
-            formData.value.clientId = String(patientID);
-        }
+        if (patientID) formData.value.clientId = String(patientID);
     }
 
     const clientID = Number(formData.value.clientId) || null;
@@ -164,11 +163,9 @@ async function submitForm() {
     }
 
     try {
-        // ============================
-        // 1. Save Client (NHTS, 4PS)
-        // ============================
+        // 1. Save Client
         try {
-            await axios.post('http://localhost:8080/api/familyplanning/clients', {
+            await axios.post(`${BASE}/clients`, {
                 clientID,
                 nhts: formData.value.nhtsYes ? 'Y' : 'N',
                 is4PSMember: formData.value._4psMember ? 'Y' : 'N',
@@ -176,13 +173,11 @@ async function submitForm() {
             });
         } catch (e) { console.error('Client save error:', e); }
 
-        // ============================
         // 2. Save Spouse
-        // ============================
         try {
             if (formData.value.spouseName) {
                 const nameParts = formData.value.spouseName.trim().split(' ');
-                await axios.post('http://localhost:8080/api/familyplanning/spouse', {
+                await axios.post(`${BASE}/spouses`, {
                     clientID,
                     fName: nameParts[0] || '',
                     lName: nameParts[nameParts.length - 1] || '',
@@ -194,9 +189,7 @@ async function submitForm() {
             }
         } catch (e) { console.error('Spouse save error:', e); }
 
-        // ============================
         // 3. Save FamilyPlanningRecord
-        // ============================
         const savedRecord = await createFamilyPlanningRecord({
             serviceID: formData.value.serviceID || 1,
             clientID,
@@ -209,16 +202,13 @@ async function submitForm() {
             noOfLivingChildren: formData.value.numLivingChildren ? String(formData.value.numLivingChildren) : null,
             dateRegistered: today
         });
-        submitStatus.value.success = '✅ Record saved successfully. ID: ' + savedRecord.fpRecordID;
 
-        // ============================
         // 4. Save TypeOfClient
-        // ============================
         let typeID = null;
         try {
             const reasonFp = formData.value.reasonSpacing ? 'Spacing' :
                              formData.value.reasonLimiting ? 'Limiting' : 'Others';
-            const typeRes = await axios.post('http://localhost:8080/api/familyplanning/typeofclient', {
+            const typeRes = await axios.post(`${BASE}/typeofclient`, {
                 clientID,
                 isNewAcceptor: formData.value.clientType.newAcceptor,
                 isCurrentUser: formData.value.clientType.currentUser,
@@ -232,11 +222,9 @@ async function submitForm() {
             });
             typeID = typeRes.data.typeID;
 
-            // ============================
             // 5. Save MethodCurrentlyUsed
-            // ============================
             try {
-                await axios.post('http://localhost:8080/api/familyplanning/methods', {
+                await axios.post(`${BASE}/methods`, {
                     typeID,
                     coc: formData.value.currentMethod.coc,
                     pop: formData.value.currentMethod.pop,
@@ -252,30 +240,22 @@ async function submitForm() {
                     lam: formData.value.currentMethod.lam,
                     otherMethod: formData.value.currentMethod.others || ''
                 });
-            } catch (e) { console.error('MethodCurrentlyUsed save error:', e); }
+            } catch (e) { console.error('Method save error:', e); }
         } catch (e) { console.error('TypeOfClient save error:', e); }
 
-        // ============================
         // 6. Save MedicalHistory
-        // ============================
-        let medicalHistoryID = null;
-        try {
-            const mhRes = await axios.post('http://localhost:8080/api/familyplanning/medicalhistory', {
-                clientID,
-                hasDisability: formData.value.medicalHistory.disability === true,
-                disabilityDescription: formData.value.medicalHistory.disabilitySpecify || '',
-                dateRecorded: today
-            });
-            medicalHistoryID = mhRes.data.medicalHistoryid;
+      // 6. Save MedicalHistory
+let medicalHistoryID = null;
+try {
+    const mhRes = await axios.post(`${BASE}/medicalhistory`, {
+        clientID,
+        hasDisability: formData.value.medicalHistory.disability === true,
+        disabilityDescription: formData.value.medicalHistory.disabilitySpecify || '',
+        dateRecorded: today
+    });
+    medicalHistoryID = mhRes.data.medicalHistoryid;
 
-            // ============================
             // 7. Save MedicalHistoryDetails
-            // (severeHeadache=1, strokeHistory=2, hematoma=3,
-            //  breastCancer=4, chestPain=5, cough=6, jaundice=7,
-            //  vaginalBleeding=8, abnormalVaginalDischarge=9,
-            //  abnormalPenileDischarge=10, phenobarbital=11,
-            //  smoker=12)
-            // ============================
             const medicalConditions = [
                 { id: 1, value: formData.value.medicalHistory.severeHeadache },
                 { id: 2, value: formData.value.medicalHistory.strokeHistory },
@@ -290,25 +270,22 @@ async function submitForm() {
                 { id: 11, value: formData.value.medicalHistory.phenobarbital },
                 { id: 12, value: formData.value.medicalHistory.smoker },
             ];
-
-            for (const cond of medicalConditions) {
-                if (cond.value === true) {
-                    try {
-                        await axios.post('http://localhost:8080/api/familyplanning/medicalhistory/detail', {
-                            medicalHistoryid: medicalHistoryID,
-                            medicalConditionID: cond.id
-                        });
+           for (const cond of medicalConditions) {
+             if (cond.value === true) {
+                try {
+                    await axios.post(`${BASE}/medicalhistory/detail`, {
+                        medicalHistoryid: medicalHistoryID,
+                        medicalConditionID: cond.id
+                    });
                     } catch (e) { console.error(`MedicalHistoryDetail ${cond.id} error:`, e); }
                 }
             }
         } catch (e) { console.error('MedicalHistory save error:', e); }
 
-        // ============================
         // 8. Save ObstetricalHistory
-        // ============================
         let obstetricalHistoryID = null;
         try {
-            const ohRes = await axios.post('http://localhost:8080/api/familyplanning/obstetrical-history', {
+            const ohRes = await axios.post(`${BASE}/obstetrical-history`, {
                 clientID,
                 gravida: formData.value.obstetric.numPregnancies ? Number(formData.value.obstetric.numPregnancies) : null,
                 para: null,
@@ -324,20 +301,16 @@ async function submitForm() {
             });
             obstetricalHistoryID = ohRes.data.obstetricalHistoryID;
 
-            // ============================
             // 9. Save ObstetricalConditionDetails
-            // (dysmenorrhea=1, hydatidiformMole=2, ectopicPregnancy=3)
-            // ============================
             const obstetricConditions = [
                 { id: 1, value: formData.value.obstetric.dysmenorrhea },
                 { id: 2, value: formData.value.obstetric.hydatidiformMole },
                 { id: 3, value: formData.value.obstetric.ectopicPregnancy },
             ];
-
             for (const cond of obstetricConditions) {
                 if (cond.value === true) {
                     try {
-                        await axios.post('http://localhost:8080/api/familyplanning/obstetrical-condition-detail', {
+                        await axios.post(`${BASE}/obstetrical-condition-details`, {
                             obstetricalHistoryID,
                             obstetricConditionID: cond.id
                         });
@@ -346,9 +319,7 @@ async function submitForm() {
             }
         } catch (e) { console.error('ObstetricalHistory save error:', e); }
 
-        // ============================
         // 10. Save RiskForVAW
-        // ============================
         try {
             const referredAgencies = [
                 formData.value.vaw.referredTo.dswd ? 'DSWD' : '',
@@ -357,7 +328,7 @@ async function submitForm() {
                 formData.value.vaw.referredTo.othersSpecify || ''
             ].filter(Boolean).join(', ');
 
-            await axios.post('http://localhost:8080/api/familyplanning/risk-vaw', {
+            await axios.post(`${BASE}/risk-vaw`, {
                 clientID,
                 hasUnpleasantSituation: formData.value.vaw.unpleasantRelationship === true,
                 partnerDisapproveVisit: formData.value.vaw.partnerDisapproval === true,
@@ -366,25 +337,26 @@ async function submitForm() {
             });
         } catch (e) { console.error('RiskForVAW save error:', e); }
 
-        // ============================
-        // 11. Save PhysicalExamination
-        // ============================
-        let pExamID = null;
-        try {
-            const peRes = await axios.post('http://localhost:8080/api/familyplanning/physical-examination', {
-                clientID,
-                weight: formData.value.physical.weight ? Number(formData.value.physical.weight) : null,
-                height: formData.value.physical.height ? Number(formData.value.physical.height) : null,
-                bloodPressure: formData.value.physical.bloodPressure || null,
-                pulseRate: formData.value.physical.pulseRate ? Number(formData.value.physical.pulseRate) : null,
-                dateExamined: today,
-                examinerName: formData.value.physical.sideB.serviceProvider || null
-            });
-            pExamID = peRes.data.pExamID;
+// 11. Save PhysicalExamination
+let pExamID = null;
+try {
+    const existingPE = await axios.get(`${BASE}/physical-exam/client/${clientID}`);
+    if (existingPE.data && existingPE.data.length > 0) {
+        pExamID = existingPE.data[existingPE.data.length - 1].pExamID;
+    } else {
+        const peRes = await axios.post(`${BASE}/physical-exam`, {
+            clientID,
+            weight: formData.value.physical.weight ? Number(formData.value.physical.weight) : null,
+            height: formData.value.physical.height ? Number(formData.value.physical.height) : null,
+            bloodPressure: formData.value.physical.bloodPressure || null,
+            pulseRate: formData.value.physical.pulseRate ? Number(formData.value.physical.pulseRate) : null,
+            dateExamined: today,
+            examinerName: formData.value.physical.sideB.serviceProvider || null
+        });
+        pExamID = peRes.data.pExamID;
+    }
 
-            // ============================
-            // 12. Save Skin conditions
-            // ============================
+            // 12. Skin
             const skinConditions = [
                 { condition: 'normal', value: formData.value.physical.skin.normal },
                 { condition: 'pale', value: formData.value.physical.skin.pale },
@@ -394,16 +366,12 @@ async function submitForm() {
             for (const s of skinConditions) {
                 if (s.value) {
                     try {
-                        await axios.post('http://localhost:8080/api/familyplanning/skin', {
-                            pExamID, condition: s.condition
-                        });
+                        await axios.post(`${BASE}/skin`, { pExamID, condition: s.condition });
                     } catch (e) { console.error('Skin save error:', e); }
                 }
             }
 
-            // ============================
-            // 13. Save Conjunctiva conditions
-            // ============================
+            // 13. Conjunctiva
             const conjunctivaConditions = [
                 { condition: 'normal', value: formData.value.physical.conjunctiva.normal },
                 { condition: 'pale', value: formData.value.physical.conjunctiva.pale },
@@ -412,16 +380,12 @@ async function submitForm() {
             for (const c of conjunctivaConditions) {
                 if (c.value) {
                     try {
-                        await axios.post('http://localhost:8080/api/familyplanning/conjunctiva', {
-                            pExamID, condition: c.condition
-                        });
+                        await axios.post(`${BASE}/conjunctiva`, { pExamID, condition: c.condition });
                     } catch (e) { console.error('Conjunctiva save error:', e); }
                 }
             }
 
-            // ============================
-            // 14. Save Neck conditions
-            // ============================
+            // 14. Neck
             const neckConditions = [
                 { condition: 'normal', value: formData.value.physical.neck.normal },
                 { condition: 'neck mass', value: formData.value.physical.neck.neckMass },
@@ -430,16 +394,12 @@ async function submitForm() {
             for (const n of neckConditions) {
                 if (n.value) {
                     try {
-                        await axios.post('http://localhost:8080/api/familyplanning/neck', {
-                            pExamID, condition: n.condition
-                        });
+                        await axios.post(`${BASE}/neck`, { pExamID, condition: n.condition });
                     } catch (e) { console.error('Neck save error:', e); }
                 }
             }
 
-            // ============================
-            // 15. Save Breast conditions
-            // ============================
+            // 15. Breast
             const breastConditions = [
                 { condition: 'normal', value: formData.value.physical.breast.normal },
                 { condition: 'mass', value: formData.value.physical.breast.mass },
@@ -448,16 +408,12 @@ async function submitForm() {
             for (const b of breastConditions) {
                 if (b.value) {
                     try {
-                        await axios.post('http://localhost:8080/api/familyplanning/breast', {
-                            pExamID, condition: b.condition
-                        });
+                        await axios.post(`${BASE}/breast`, { pExamID, condition: b.condition });
                     } catch (e) { console.error('Breast save error:', e); }
                 }
             }
 
-            // ============================
-            // 16. Save Abdomen conditions
-            // ============================
+            // 16. Abdomen
             const abdomenConditions = [
                 { condition: 'normal', value: formData.value.physical.abdomen.normal },
                 { condition: 'abdominal mass', value: formData.value.physical.abdomen.abdominalMass },
@@ -466,16 +422,12 @@ async function submitForm() {
             for (const a of abdomenConditions) {
                 if (a.value) {
                     try {
-                        await axios.post('http://localhost:8080/api/familyplanning/abdomen', {
-                            pExamID, condition: a.condition
-                        });
+                        await axios.post(`${BASE}/abdomen`, { pExamID, condition: a.condition });
                     } catch (e) { console.error('Abdomen save error:', e); }
                 }
             }
 
-            // ============================
-            // 17. Save Extremities conditions
-            // ============================
+            // 17. Extremities
             const extremitiesConditions = [
                 { condition: 'normal', value: formData.value.physical.extremities.normal },
                 { condition: 'edema', value: formData.value.physical.extremities.edema },
@@ -484,16 +436,12 @@ async function submitForm() {
             for (const ex of extremitiesConditions) {
                 if (ex.value) {
                     try {
-                        await axios.post('http://localhost:8080/api/familyplanning/extremities', {
-                            pExamID, condition: ex.condition
-                        });
+                        await axios.post(`${BASE}/extremities`, { pExamID, condition: ex.condition });
                     } catch (e) { console.error('Extremities save error:', e); }
                 }
             }
 
-            // ============================
-            // 18. Save PelvicExamination
-            // ============================
+            // 18. PelvicExamination
             const pelvicConditions = [
                 formData.value.physical.pelvicExam.normal ? 'normal' : '',
                 formData.value.physical.pelvicExam.mass ? 'mass' : '',
@@ -505,7 +453,7 @@ async function submitForm() {
             ].filter(Boolean).join(', ');
 
             try {
-                await axios.post('http://localhost:8080/api/familyplanning/pelvic-examination', {
+                await axios.post(`${BASE}/pelvic-examination`, {
                     pExamID,
                     condition: pelvicConditions || null,
                     cervicalConsistency: formData.value.physical.pelvicExam.cervicalConsistency || null,
@@ -518,11 +466,9 @@ async function submitForm() {
 
         } catch (e) { console.error('PhysicalExamination save error:', e); }
 
-        // ============================
-        // 19. Save FpAssessmentRecord (Side B)
-        // ============================
+        // 19. FpAssessmentRecord
         try {
-            await axios.post('http://localhost:8080/api/familyplanning/assessment-records', {
+            await axios.post(`${BASE}/fpassessment`, {
                 clientID,
                 dateOfVisit: formData.value.physical.sideB.dateOfVisit || today,
                 medicalFindings: formData.value.physical.sideB.medicalFindings || null,
@@ -531,11 +477,9 @@ async function submitForm() {
             });
         } catch (e) { console.error('FpAssessmentRecord save error:', e); }
 
-        // ============================
-        // 20. Save PregnancyExclusionChecklist
-        // ============================
+        // 20. PregnancyExclusionChecklist
         try {
-            await axios.post('http://localhost:8080/api/familyplanning/pregnancy-checklist', {
+            await axios.post(`${BASE}/pregnancychecklist`, {
                 clientID,
                 dateRecorded: today,
                 question1: formData.value.physical.sideB.pregnancyCheck.isFullyBreastfeeding,
@@ -557,6 +501,7 @@ async function submitForm() {
         submitStatus.value.loading = false;
     }
 }
+
 function resetForm() {
     if (confirm('Are you sure you want to reset the form?')) {
         location.reload();
@@ -568,21 +513,17 @@ function printForm() {
 }
 
 onMounted(async () => {
-    // ✅ Get patientID from route params
     const patientID = route.params.patientID;
-
-    if (patientID) {
-        formData.value.clientId = String(patientID);
-    }
+    if (patientID) formData.value.clientId = String(patientID);
 
     const clientId = formData.value.clientId;
     if (!clientId) return;
 
     isViewMode.value = true;
 
-    // 1. Load main FP record
+    // 1. Load FP Record
     try {
-        const res = await axios.get(`http://localhost:8080/api/familyplanning/records/client/${clientId}`);
+        const res = await axios.get(`${BASE}/records/client/${clientId}`);
         if (res.data && res.data.length > 0) {
             const record = res.data[res.data.length - 1];
             existingRecordId.value = record.fpRecordID;
@@ -598,7 +539,7 @@ onMounted(async () => {
 
     // 2. Load TypeOfClient
     try {
-        const res = await axios.get(`http://localhost:8080/api/familyplanning/typeofclient/client/${clientId}`);
+        const res = await axios.get(`${BASE}/typeofclient/client/${clientId}`);
         if (res.data && res.data.length > 0) {
             const t = res.data[res.data.length - 1];
             formData.value.clientType.newAcceptor = t.isNewAcceptor || false;
@@ -613,7 +554,7 @@ onMounted(async () => {
 
             // 3. Load MethodCurrentlyUsed
             try {
-                const mRes = await axios.get(`http://localhost:8080/api/familyplanning/methods/type/${t.typeID}`);
+                const mRes = await axios.get(`${BASE}/methods/type/${t.typeID}`);
                 if (mRes.data) {
                     const m = Array.isArray(mRes.data) ? mRes.data[0] : mRes.data;
                     if (m) {
@@ -632,23 +573,44 @@ onMounted(async () => {
                         formData.value.currentMethod.others = m.otherMethod || '';
                     }
                 }
-            } catch (e) { console.error('Failed to load MethodCurrentlyUsed', e); }
+            } catch (e) { console.error('Failed to load Method', e); }
         }
     } catch (e) { console.error('Failed to load TypeOfClient', e); }
 
     // 4. Load MedicalHistory
     try {
-        const res = await axios.get(`http://localhost:8080/api/familyplanning/medicalhistory/client/${clientId}`);
+        const res = await axios.get(`${BASE}/medicalhistory/client/${clientId}`);
         if (res.data && res.data.length > 0) {
             const m = res.data[res.data.length - 1];
             formData.value.medicalHistory.disability = m.hasDisability || false;
             formData.value.medicalHistory.disabilitySpecify = m.disabilityDescription || '';
+
+            // ✅ Load MedicalHistoryDetails (conditions)
+            try {
+                const detailRes = await axios.get(`${BASE}/medicalhistory/detail/medicalHistory/${m.medicalHistoryid}`);
+                if (detailRes.data) {
+                    detailRes.data.forEach(d => {
+                        if (d.medicalConditionID === 1) formData.value.medicalHistory.severeHeadache = true;
+                        if (d.medicalConditionID === 2) formData.value.medicalHistory.strokeHistory = true;
+                        if (d.medicalConditionID === 3) formData.value.medicalHistory.hematoma = true;
+                        if (d.medicalConditionID === 4) formData.value.medicalHistory.breastCancer = true;
+                        if (d.medicalConditionID === 5) formData.value.medicalHistory.chestPain = true;
+                        if (d.medicalConditionID === 6) formData.value.medicalHistory.cough = true;
+                        if (d.medicalConditionID === 7) formData.value.medicalHistory.jaundice = true;
+                        if (d.medicalConditionID === 8) formData.value.medicalHistory.vaginalBleeding = true;
+                        if (d.medicalConditionID === 9) formData.value.medicalHistory.abnormalVaginalDischarge = true;
+                        if (d.medicalConditionID === 10) formData.value.medicalHistory.abnormalPenileDischarge = true;
+                        if (d.medicalConditionID === 11) formData.value.medicalHistory.phenobarbital = true;
+                        if (d.medicalConditionID === 12) formData.value.medicalHistory.smoker = true;
+                    });
+                }
+            } catch (e) { console.error('Failed to load MedicalHistoryDetails', e); }
         }
     } catch (e) { console.error('Failed to load MedicalHistory', e); }
 
     // 5. Load ObstetricalHistory
     try {
-        const res = await axios.get(`http://localhost:8080/api/familyplanning/obstetrical-history/client/${clientId}`);
+        const res = await axios.get(`${BASE}/obstetrical-history/client/${clientId}`);
         if (res.data && res.data.length > 0) {
             const o = res.data[res.data.length - 1];
             formData.value.obstetric.numPregnancies = o.gravida || '';
@@ -666,7 +628,7 @@ onMounted(async () => {
 
     // 6. Load RiskForVAW
     try {
-        const res = await axios.get(`http://localhost:8080/api/familyplanning/risk-vaw/client/${clientId}`);
+        const res = await axios.get(`${BASE}/risk-vaw/client/${clientId}`);
         if (res.data && res.data.length > 0) {
             const v = res.data[res.data.length - 1];
             formData.value.vaw.unpleasantRelationship = v.hasUnpleasantSituation || false;
@@ -678,6 +640,152 @@ onMounted(async () => {
             formData.value.vaw.referredTo.ngos = agencies.includes("NGO's");
         }
     } catch (e) { console.error('Failed to load RiskForVAW', e); }
+
+    // 7. Load Spouse
+    try {
+        const res = await axios.get(`${BASE}/spouses/client/${clientId}`);
+        if (res.data && res.data.length > 0) {
+            const s = res.data[res.data.length - 1];
+            formData.value.spouseName = `${s.fName || ''} ${s.midInitial || ''} ${s.lName || ''}`.trim();
+            formData.value.birthDate = s.dateOfBirth || '';
+            formData.value.age = s.age || '';
+            formData.value.occupation = s.occupation || '';
+        }
+    } catch (e) { console.error('Failed to load Spouse', e); }
+
+    // 8. Load PhysicalExamination ✅ fixed URL
+    try {
+        const res = await axios.get(`${BASE}/physical-exam/client/${clientId}`);
+        if (res.data && res.data.length > 0) {
+            const p = res.data[res.data.length - 1];
+            formData.value.physical.weight = p.weight || '';
+            formData.value.physical.height = p.height || '';
+            formData.value.physical.bloodPressure = p.bloodPressure || '';
+            formData.value.physical.pulseRate = p.pulseRate || '';
+
+            // ✅ Load Skin
+            try {
+                const skinRes = await axios.get(`${BASE}/skin/exam/${p.pExamID}`);
+                if (skinRes.data) {
+                    skinRes.data.forEach(s => {
+                        if (s.condition === 'normal') formData.value.physical.skin.normal = true;
+                        if (s.condition === 'pale') formData.value.physical.skin.pale = true;
+                        if (s.condition === 'yellowish') formData.value.physical.skin.yellowish = true;
+                        if (s.condition === 'hematoma') formData.value.physical.skin.hematoma = true;
+                    });
+                }
+            } catch (e) { console.error('Failed to load Skin', e); }
+
+            // ✅ Load Conjunctiva
+            try {
+                const conjRes = await axios.get(`${BASE}/conjunctiva/exam/${p.pExamID}`);
+                if (conjRes.data) {
+                    conjRes.data.forEach(c => {
+                        if (c.condition === 'normal') formData.value.physical.conjunctiva.normal = true;
+                        if (c.condition === 'pale') formData.value.physical.conjunctiva.pale = true;
+                        if (c.condition === 'yellowish') formData.value.physical.conjunctiva.yellowish = true;
+                    });
+                }
+            } catch (e) { console.error('Failed to load Conjunctiva', e); }
+
+            // ✅ Load Neck
+            try {
+                const neckRes = await axios.get(`${BASE}/neck/pExam/${p.pExamID}`);
+                if (neckRes.data) {
+                    neckRes.data.forEach(n => {
+                        if (n.condition === 'normal') formData.value.physical.neck.normal = true;
+                        if (n.condition === 'neck mass') formData.value.physical.neck.neckMass = true;
+                        if (n.condition === 'enlarged lymph nodes') formData.value.physical.neck.enlargedLymphNodes = true;
+                    });
+                }
+            } catch (e) { console.error('Failed to load Neck', e); }
+
+            // ✅ Load Breast
+            try {
+                const breastRes = await axios.get(`${BASE}/breast/pExam/${p.pExamID}`);
+                if (breastRes.data) {
+                    breastRes.data.forEach(b => {
+                        if (b.condition === 'normal') formData.value.physical.breast.normal = true;
+                        if (b.condition === 'mass') formData.value.physical.breast.mass = true;
+                        if (b.condition === 'nipple discharge') formData.value.physical.breast.nippleDischarge = true;
+                    });
+                }
+            } catch (e) { console.error('Failed to load Breast', e); }
+
+            // ✅ Load Abdomen
+            try {
+                const abdRes = await axios.get(`${BASE}/abdomen/pExam/${p.pExamID}`);
+                if (abdRes.data) {
+                    abdRes.data.forEach(a => {
+                        if (a.condition === 'normal') formData.value.physical.abdomen.normal = true;
+                        if (a.condition === 'abdominal mass') formData.value.physical.abdomen.abdominalMass = true;
+                        if (a.condition === 'varicosities') formData.value.physical.abdomen.varicosities = true;
+                    });
+                }
+            } catch (e) { console.error('Failed to load Abdomen', e); }
+
+            // ✅ Load Extremities
+            try {
+                const extRes = await axios.get(`${BASE}/extremities/pExam/${p.pExamID}`);
+                if (extRes.data) {
+                    extRes.data.forEach(e => {
+                        if (e.condition === 'normal') formData.value.physical.extremities.normal = true;
+                        if (e.condition === 'edema') formData.value.physical.extremities.edema = true;
+                        if (e.condition === 'varicosities') formData.value.physical.extremities.varicosities = true;
+                    });
+                }
+            } catch (e) { console.error('Failed to load Extremities', e); }
+
+            // ✅ Load PelvicExamination
+            try {
+                const pelvicRes = await axios.get(`${BASE}/pelvic-examination/pExam/${p.pExamID}`);
+                if (pelvicRes.data && pelvicRes.data.length > 0) {
+                    const pv = pelvicRes.data[0];
+                    formData.value.physical.pelvicExam.cervicalConsistency = pv.cervicalConsistency || null;
+                    formData.value.physical.pelvicExam.cervicalTenderness = pv.cervicalTenderness || false;
+                    formData.value.physical.pelvicExam.adnexalMass = pv.adnexalMassTenderness || false;
+                    formData.value.physical.pelvicExam.uterinePosition = pv.uterinePosition || null;
+                    formData.value.physical.pelvicExam.uterineDepth = pv.uterineDepth || '';
+                    const conditions = pv.condition ? pv.condition.split(', ') : [];
+                    conditions.forEach(c => {
+                        if (c === 'normal') formData.value.physical.pelvicExam.normal = true;
+                        if (c === 'mass') formData.value.physical.pelvicExam.mass = true;
+                        if (c === 'abnormal discharge') formData.value.physical.pelvicExam.abnormalDischarge = true;
+                        if (c === 'warts') formData.value.physical.pelvicExam.warts = true;
+                        if (c === 'polyp or cyst') formData.value.physical.pelvicExam.polypCyst = true;
+                        if (c === 'inflammation or erosion') formData.value.physical.pelvicExam.inflammationErosion = true;
+                        if (c === 'bloody discharge') formData.value.physical.pelvicExam.bloodyDischarge = true;
+                    });
+                }
+            } catch (e) { console.error('Failed to load PelvicExamination', e); }
+        }
+    } catch (e) { console.error('Failed to load PhysicalExamination', e); }
+
+    // 9. Load FpAssessmentRecord
+    try {
+        const res = await axios.get(`${BASE}/fpassessment/client/${clientId}`);
+        if (res.data && res.data.length > 0) {
+            const a = res.data[res.data.length - 1];
+            formData.value.physical.sideB.dateOfVisit = a.dateOfVisit || '';
+            formData.value.physical.sideB.medicalFindings = a.medicalFindings || '';
+            formData.value.physical.sideB.methodAccepted = a.methodAccepted || '';
+            formData.value.physical.sideB.followUpDate = a.dateOfFollowUpVisit || '';
+        }
+    } catch (e) { console.error('Failed to load FpAssessmentRecord', e); }
+
+    // 10. Load PregnancyChecklist
+    try {
+        const res = await axios.get(`${BASE}/pregnancychecklist/client/${clientId}`);
+        if (res.data && res.data.length > 0) {
+            const p = res.data[res.data.length - 1];
+            formData.value.physical.sideB.pregnancyCheck.isFullyBreastfeeding = p.question1 || false;
+            formData.value.physical.sideB.pregnancyCheck.abstinence = p.question2 || false;
+            formData.value.physical.sideB.pregnancyCheck.babyInLast4Weeks = p.question3 || false;
+            formData.value.physical.sideB.pregnancyCheck.mensesInPast7Days = p.question4 || false;
+            formData.value.physical.sideB.pregnancyCheck.miscarriageInPast7Days = p.question5 || false;
+            formData.value.physical.sideB.pregnancyCheck.reliableContraceptive = p.question6 || false;
+        }
+    } catch (e) { console.error('Failed to load PregnancyChecklist', e); }
 });
 </script>
 

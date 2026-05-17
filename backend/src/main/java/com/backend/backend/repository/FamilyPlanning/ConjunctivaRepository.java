@@ -10,5 +10,5 @@ public interface ConjunctivaRepository extends CrudRepository<Conjunctiva, Integ
 
     List<Conjunctiva> findAll();
 
-    List<Conjunctiva> findByPExamID(Integer pExamID);
+    List<Conjunctiva> findBypExamID(Integer pExamID);
 }

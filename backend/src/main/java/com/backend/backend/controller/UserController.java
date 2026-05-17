@@ -63,7 +63,7 @@ public class UserController {
         return "User Deleted";
     }
 
-    // ✅ NEW - Login endpoint
+    @CrossOrigin(origins = "*")
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {

@@ -24,30 +24,31 @@ public class ConsultationRecordController {
     @Autowired
     private ConsultationRecordService service;
 
+@CrossOrigin(origins = "*")
     // CREATE
     @PostMapping
     public ConsultationRecord add(@RequestBody ConsultationRecord record) {
         return service.add(record);
     }
-
+@CrossOrigin(origins = "*")
     // GET BY ID
     @GetMapping("/{id}")
     public ConsultationRecord getById(@PathVariable Integer id) {
         return service.getById(id);
     }
-
+@CrossOrigin(origins = "*")
     // GET ALL
     @GetMapping
     public List<ConsultationRecord> getAll() {
         return service.getAll();
     }
-
+@CrossOrigin(origins = "*")
     // UPDATE
     @PutMapping
     public ConsultationRecord update(@RequestBody ConsultationRecord record) {
         return service.update(record);
     }
-
+@CrossOrigin(origins = "*")
     // DELETE
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {

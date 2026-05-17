@@ -7,8 +7,6 @@ import org.springframework.data.repository.CrudRepository;
 import com.backend.backend.model.FamilyPlanning.Neck;
 
 public interface NeckRepository extends CrudRepository<Neck, Integer> {
-
     List<Neck> findAll();
-
-    List<Neck> findByPExamID(Integer pExamID);
+    List<Neck> findBypExamID(Integer pExamID);
 }

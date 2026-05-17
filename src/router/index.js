@@ -17,6 +17,7 @@ const routes = [
             { path: '', name: 'dashboard', component: Dashboard },
             { path: 'uikit/PrenatalAdmission', component: () => import('@/views/uikit/PrenatalAdmission.vue') },
             { path: 'uikit/PrenatalAdmission/:clientId', component: () => import('@/views/uikit/PrenatalAdmission.vue') },
+            { path: 'uikit/FamilyPlanningAdmission', component: () => import('@/views/uikit/FamilyPlanningAdmission.vue') },
             { path: 'uikit/FamilyPlanningAdmission/:patientID?', component: () => import('@/views/uikit/FamilyPlanningAdmission.vue') },
             { path: 'uikit/UserAccountPatient', component: () => import('@/views/uikit/UserAccountPatient.vue') },
             { path: 'uikit/Patient', component: () => import('@/views/uikit/Patient.vue') },

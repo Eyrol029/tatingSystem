@@ -42,6 +42,6 @@ public class PelvicExaminationServiceImpl implements PelvicExaminationService {
 
     @Override
     public List<PelvicExamination> getByPExamID(Integer pExamID) {
-        return pelvicExaminationRepository.findByPExamID(pExamID);
+        return pelvicExaminationRepository.findBypExamID(pExamID);
     }
 }

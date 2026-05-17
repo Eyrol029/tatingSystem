@@ -42,6 +42,6 @@ public class NeckServiceImpl implements NeckService {
 
     @Override
     public List<Neck> getByPExamID(Integer pExamID) {
-        return neckRepository.findByPExamID(pExamID);
+        return neckRepository.findBypExamID(pExamID);
     }
 }

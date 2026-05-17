@@ -42,6 +42,6 @@ public class BreastServiceImpl implements BreastService {
 
     @Override
     public List<Breast> getByPExamID(Integer pExamID) {
-        return breastRepository.findByPExamID(pExamID);
+        return breastRepository.findBypExamID(pExamID);
     }
 }

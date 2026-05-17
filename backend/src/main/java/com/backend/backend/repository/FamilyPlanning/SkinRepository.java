@@ -10,5 +10,5 @@ public interface SkinRepository extends CrudRepository<Skin, Integer> {
 
     List<Skin> findAll();
 
-    List<Skin> findByPExamID(Integer pExamID);
+    List<Skin> findBypExamID(Integer pExamID);
 }
