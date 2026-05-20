@@ -25,6 +25,7 @@ const routes = [
             { path: 'uikit/Wards', component: () => import('@/views/uikit/Wards.vue') },
             { path: 'uikit/PatientsMain', component: () => import('@/views/uikit/PatientsMain.vue') },
             { path: 'uikit/Service', component: () => import('@/views/uikit/Service.vue') },
+            { path: 'uikit/Inventory', component: () => import('@/views/uikit/Inventory.vue') },
             { path: 'uikit/PaymentDashboard', component: () => import('@/views/uikit/PaymentDashboard.vue') },
             { path: 'uikit/UserAccount', component: () => import('@/views/uikit/UserAccount.vue') },
             { path: 'uikit/PatientProfiling/:id', component: () => import('@/views/uikit/PatientProfiling.vue') },

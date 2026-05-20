@@ -19,6 +19,7 @@ const model = [
             { label: 'Staff', icon: 'pi pi-fw pi-user', to: '/uikit/Staff', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
             { label: 'Wards', icon: 'pi pi-fw pi-warehouse', to: '/uikit/Wards', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
             { label: 'Service', icon: 'pi pi-fw pi-book', to: '/uikit/Service', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
+            { label: 'Inventory', icon: 'pi pi-fw pi-box', to: '/uikit/Inventory', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
             { label: 'Payment Dashboard', icon: 'pi pi-fw pi-money-bill', to: '/uikit/PaymentDashboard', roles: [UserRole.ADMIN] },
             { label: 'List of Patients', icon: 'pi pi-fw pi-chart-line', to: '/uikit/PatientsMain', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
             { label: 'User Account', icon: 'pi pi-fw pi-users', to: '/uikit/UserAccount', roles: [UserRole.ADMIN] },
