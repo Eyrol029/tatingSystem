@@ -68,7 +68,7 @@ onMounted(() => {
 const showModal = ref(false);
 const selectedType = ref('');
 const loadingSubmit = ref(false);
-const types = ['Prenatal', 'Family Planning', 'Other Services'];
+const types = ['Prenatal', 'Family Planning', 'Ultrasound Service', 'Other Services'];
 const step = ref<'select' | 'form'>('select');
 
 const form = reactive({

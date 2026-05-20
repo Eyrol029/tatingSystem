@@ -1,12 +1,24 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
+
+const router = useRouter();
 
 const BASE_URL = 'http://localhost:8080/api/patients';
 
 const searchQuery = ref('');
 const showAddPatientModal = ref(false); // ✅ fixed syntax error (removed extra quote)
 const patients = ref([]);
+const patientServices = ref([]);
+const selectedServiceType = ref('All');
+
+// Watch to route to Prenatal list when selectedServiceType is 'Prenatal'
+watch(selectedServiceType, (newVal) => {
+    if (newVal === 'Prenatal') {
+        router.push('/uikit/Patient');
+    }
+});
 
 const formData = ref({
     fName: '',
@@ -35,18 +47,48 @@ async function fetchPatients() {
     }
 }
 
-onMounted(() => fetchPatients());
+async function fetchPatientServices() {
+    try {
+        const res = await axios.get('http://localhost:8080/api/patient-services');
+        patientServices.value = res.data;
+    } catch (e) {
+        console.error('Failed to fetch patient services:', e);
+    }
+}
+
+onMounted(async () => {
+    await fetchPatients();
+    await fetchPatientServices();
+});
 
 const filteredPatients = computed(() => {
-    if (!searchQuery.value) return patients.value;
+    let result = patients.value;
+
+    // Filter by Service Availed first
+    if (selectedServiceType.value !== 'All') {
+        const patientIdsWithService = patientServices.value
+            .filter(ps => ps.serviceName === selectedServiceType.value)
+            .map(ps => ps.patientID);
+        
+        result = result.filter(patient => patientIdsWithService.includes(patient.patientID));
+    }
+
+    if (!searchQuery.value) return result;
     const query = searchQuery.value.toLowerCase();
-    return patients.value.filter(patient =>
+    return result.filter(patient =>
         (patient.patientID?.toString() || '').includes(query) ||
         (patient.fName || '').toLowerCase().includes(query) ||
         (patient.lName || '').toLowerCase().includes(query) ||
         (patient.contactNumber || '').includes(query)
     );
 });
+
+function getAvailedServicesForPatient(patientID) {
+    const list = patientServices.value
+        .filter(ps => ps.patientID === patientID)
+        .map(ps => ps.serviceName);
+    return [...new Set(list)];
+}
 
 function addPatient() {
     showAddPatientModal.value = true;
@@ -132,24 +174,33 @@ async function deletePatient(patient) {
         </div>
 
         <!-- Search and Action Buttons -->
-        <div class="flex items-center gap-4 mb-6">
+        <div class="flex flex-wrap items-center gap-4 mb-6">
             <input
                 v-model="searchQuery"
                 type="text"
                 placeholder="Search by Name, ID, or Contact Number"
-                class="flex-1 px-4 py-2 bg-gray-100 border-0 rounded-full focus:ring-2 focus:ring-purple-500 focus:bg-white"
+                class="flex-grow min-w-[200px] px-4 py-2 bg-gray-100 border-0 rounded-full focus:ring-2 focus:ring-purple-500 focus:bg-white"
             />
+            
+            <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-gray-700 whitespace-nowrap">Service Availed:</span>
+                <select
+                    v-model="selectedServiceType"
+                    class="px-4 py-2 bg-gray-100 border border-gray-200 rounded-full focus:ring-2 focus:ring-purple-500 focus:bg-white font-medium text-gray-700 focus:outline-none"
+                >
+                    <option value="All">All Patients</option>
+                    <option value="Prenatal">Prenatal</option>
+                    <option value="Family Planning">Family Planning</option>
+                    <option value="Ultrasound Service">Ultrasound Service</option>
+                    <option value="Other Services">Other Services</option>
+                </select>
+            </div>
+
             <button
                 @click="$router.push('/uikit/Admission')"
                 class="px-6 py-2 bg-purple-700 text-white rounded-full hover:bg-purple-800 transition-colors"
             >
                 Admission
-            </button>
-            <button
-                @click="$router.push('/uikit/Patient')"
-                class="px-6 py-2 bg-purple-700 text-white rounded-full hover:bg-purple-800 transition-colors"
-            >
-                View list of Prenatal
             </button>
             <button
                 @click="addPatient"
@@ -168,6 +219,7 @@ async function deletePatient(patient) {
                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Patient Name</th>
                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Contact No.</th>
                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Services Availed</th>
                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Action</th>
                     </tr>
                 </thead>
@@ -180,13 +232,25 @@ async function deletePatient(patient) {
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-900">{{ patient.contactNumber }}</td>
                         <td class="px-6 py-4 text-sm text-gray-900">{{ patient.email ?? '—' }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900">
+                            <div class="flex flex-wrap gap-1">
+                                <span 
+                                    v-for="srv in getAvailedServicesForPatient(patient.patientID)" 
+                                    :key="srv"
+                                    class="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800"
+                                >
+                                    {{ srv }}
+                                </span>
+                                <span v-if="!getAvailedServicesForPatient(patient.patientID).length" class="text-gray-400">—</span>
+                            </div>
+                        </td>
                         <td class="px-6 py-4">
                             <div class="flex gap-2">
                                 <button
                                     @click="$router.push(`/uikit/PatientProfiling/${patient.patientID}`)"
                                     class="px-4 py-1 bg-purple-200 text-gray-800 rounded hover:bg-purple-300 text-sm">
                                     View
-                                    </button>
+                                </button>
                                 <button
                                     @click="deletePatient(patient)"
                                     class="px-4 py-1 bg-red-200 text-gray-800 rounded hover:bg-red-300 text-sm">

@@ -171,6 +171,12 @@ function getRiskStatusClass(status) {
             <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
+                        <button
+                            @click="router.push('/uikit/PatientsMain')"
+                            class="text-purple-700 hover:text-purple-900 font-bold flex items-center gap-1.5 transition-colors mb-3"
+                        >
+                            ← Back to Patient Management
+                        </button>
                         <h1 class="text-3xl font-bold text-gray-900">Patient Dashboard</h1>
                         <p class="text-gray-600 mt-2">Manage prenatal patients and monitor high-risk cases</p>
                     </div>
