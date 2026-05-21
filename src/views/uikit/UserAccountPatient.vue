@@ -325,7 +325,6 @@ function handleDeleteUser(id) {
               <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">ID</th>
               <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Username</th>
               <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Full Name</th>
-
               <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Email</th>
               <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
               <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Actions</th>

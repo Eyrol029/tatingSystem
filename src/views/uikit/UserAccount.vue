@@ -326,7 +326,7 @@ async function handleDeleteUser(userID) {
                 <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Email</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Role</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Employee ID</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Patient ID</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700"></th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
                 <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Actions</th>
               </tr>
@@ -339,7 +339,7 @@ async function handleDeleteUser(userID) {
                 <td class="px-6 py-4 text-sm text-gray-900">{{ user.email }}</td>
                 <td class="px-6 py-4 text-sm text-gray-900">{{ user.role }}</td>
                 <td class="px-6 py-4 text-sm text-gray-900">{{ user.employeeID ?? '—' }}</td>
-                <td class="px-6 py-4 text-sm text-gray-900">{{ user.patientID ?? '—' }}</td>
+                <td class="px-6 py-4 text-sm text-gray-900">{{  ' ' }}</td>
                 <td class="px-6 py-4">
                   <span
                     :class="[
