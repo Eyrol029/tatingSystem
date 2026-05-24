@@ -1,245 +1,248 @@
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\BackendApplication.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Billing\BillingController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Billing\ExpenseController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Billing\StatementOfAccountController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\EmployeeController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\AbdomenController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\BreastController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\ClientController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\ConjunctivaController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\ExtremitiesController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\FamilyPlanningRecordController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\FpAssessmentRecordController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\MedicalConditionController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\MedicalHistoryController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\MethodCurrentlyUsedController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\NeckController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\ObstetricalConditionController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\ObstetricalConditionDetailController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\ObstetricalHistoryController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\PelvicExaminationController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\PhysicalExaminationController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\PregnancyExclusionChecklistController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\RiskForVAWController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\SkinController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\SpouseController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\STI_ConditionController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\STI_RiskController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\STI_RiskDetailController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\TypeOfClientController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\PatientController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\PatientServiceController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\AscertainPregnancyLowRiskController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\ClinicalHistoryAndPhysicalExaminationController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\CompleteDiagnosisController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\ConsultationRecordController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\ConsultationVisitsController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\LaboratoryResultsController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\MedicalSurgicalFactorMeasurementsController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\MedicalSurgicalFactorMedConditionsController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\MedicalSurgicalFactorsController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\MenstrualHistoryController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\NormalVitalSignController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\ObstetricRiskFactorController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\PrenatalRecordController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\TreatmentManagementController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\VitalSignsController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\Ultrasound\UltrasoundRecordController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\controller\UserController.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Appointment\Appointment.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Billing\Billing.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Billing\Expense.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Billing\StatementOfAccount.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Employee.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Abdomen.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Breast.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Client.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Conjunctiva.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Extremities.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\FamilyPlanningRecord.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\FpAssessmentRecord.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\MedicalCondition.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\MedicalHistory.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\MedicalHistoryDetail.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\MethodCurrentlyUsed.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Neck.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\ObstetricalCondition.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\ObstetricalConditionDetail.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\ObstetricalHistory.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\PelvicExamination.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\PhysicalExamination.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\PregnancyExclusionChecklist.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\RiskForVAW.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Skin.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Spouse.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\STI_Condition.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\STI_Risk.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\STI_RiskDetail.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\TypeOfClient.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\LoginRequest.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Patient.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\PatientService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\AscertainPregnancyLowRisk.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\ClinicalHistoryAndPhysicalExamination.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\CompleteDiagnosis.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\ConsultationRecord.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\ConsultationVisits.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\LaboratoryResults.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\MedicalSurgicalFactorMeasurements.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\MedicalSurgicalFactorMedConditions.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\MedicalSurgicalFactors.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\MenstrualHistory.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\NormalVitalSign.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\ObstetricRiskFactor.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\PrenatalRecord.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\TreatmentManagement.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\VitalSigns.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\Ultrasound\UltrasoundRecord.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\model\User.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Appointment\AppointmentRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Billing\BillingRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Billing\ExpenseRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Billing\StatementOfAccountRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\EmployeeRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\AbdomenRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\BreastRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\ClientRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\ConjunctivaRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\ExtremitiesRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\FamilyPlanningRecordRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\FpAssessmentRecordRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\MedicalConditionRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\MedicalHistoryDetailRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\MedicalHistoryRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\MethodCurrentlyUsedRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\NeckRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\ObstetricalConditionDetailRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\ObstetricalConditionRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\ObstetricalHistoryRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\PelvicExaminationRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\PhysicalExaminationRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\PregnancyExclusionChecklistRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\RiskForVAWRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\SkinRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\SpouseRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\STI_ConditionRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\STI_RiskDetailRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\STI_RiskRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\TypeOfClientRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\PatientRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\PatientServiceRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\AscertainPregnancyLowRiskRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\ClinicalHistoryAndPhysicalExaminationRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\CompleteDiagnosisRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\ConsultationRecordRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\ConsultationVisitsRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\LaboratoryResultsRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\MedicalSurgicalFactorMeasurementsRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\MedicalSurgicalFactorMedConditionsRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\MedicalSurgicalFactorsRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\MenstrualHistoryRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\NormalVitalSignRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\ObstetricRiskFactorRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\PrenatalRecordRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\TreatmentManagementRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\VitalSignsRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\Ultrasound\UltrasoundRecordRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\repository\UserRepository.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Appointment\AppointmentService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Appointment\AppointmentServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Billing\BillingService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Billing\BillingServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Billing\ExpenseService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Billing\ExpenseServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Billing\StatementOfAccountService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Billing\StatementOfAccountServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\EmployeeService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\EmployeeServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\AbdomenService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\AbdomenServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\BreastService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\BreastServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ClientService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ClientServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ConjunctivaService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ConjunctivaServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ExtremitiesService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ExtremitiesServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\FamilyPlanningRecordService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\FamilyPlanningRecordServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\FpAssessmentRecordService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\FpAssessmentRecordServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\MedicalConditionService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\MedicalConditionServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\MedicalHistoryDetailService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\MedicalHistoryDetailServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\MedicalHistoryService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\MedicalHistoryServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\MethodCurrentlyUsedService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\MethodCurrentlyUsedServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\NeckService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\NeckServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ObstetricalConditionDetailService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ObstetricalConditionDetailServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ObstetricalConditionService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ObstetricalConditionServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ObstetricalHistoryService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ObstetricalHistoryServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\PelvicExaminationService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\PelvicExaminationServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\PhysicalExaminationService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\PhysicalExaminationServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\PregnancyExclusionChecklistService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\PregnancyExclusionChecklistServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\RiskForVAWService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\RiskForVAWServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\SkinService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\SkinServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\SpouseService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\SpouseServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\STI_ConditionService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\STI_ConditionServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\STI_RiskDetailService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\STI_RiskDetailServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\STI_RiskService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\STI_RiskServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\TypeOfClientService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\TypeOfClientServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\PatientService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\PatientServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\PatientServiceService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\PatientServiceServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\AscertainPregnancyLowRiskService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\AscertainPregnancyLowRiskServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\ClinicalHistoryAndPhysicalExaminationService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\ClinicalHistoryAndPhysicalExaminationServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\CompleteDiagnosisService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\CompleteDiagnosisServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\ConsultationRecordService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\ConsultationRecordServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\ConsultationVisitsService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\ConsultationVisitsServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\LaboratoryResultsService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\LaboratoryResultsServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\MedicalSurgicalFactorMeasurementsService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\MedicalSurgicalFactorMeasurementsServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\MedicalSurgicalFactorMedConditionsService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\MedicalSurgicalFactorMedConditionsServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\MedicalSurgicalFactorsService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\MedicalSurgicalFactorsServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\MenstrualHistoryService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\MenstrualHistoryServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\NormalVitalSignService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\NormalVitalSignServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\ObstetricRiskFactorService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\ObstetricRiskFactorServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\PrenatalRecordService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\PrenatalRecordServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\TreatmentManagementService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\TreatmentManagementServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\VitalSignsService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\VitalSignsServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Ultrasound\UltrasoundRecordService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\Ultrasound\UltrasoundRecordServiceImpl.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\UserService.java
-C:\Users\ansin\Capstone\TatingSystem\backend\src\main\java\com\backend\backend\service\UserServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\BackendApplication.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\config\CorsConfig.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Billing\BillingController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Billing\ExpenseController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Billing\StatementOfAccountController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\EmployeeController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\AbdomenController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\BreastController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\ClientController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\ConjunctivaController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\ExtremitiesController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\FamilyPlanningRecordController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\FpAssessmentRecordController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\MedicalConditionController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\MedicalHistoryController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\MedicalHistoryDetailController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\MethodCurrentlyUsedController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\NeckController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\ObstetricalConditionController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\ObstetricalConditionDetailController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\ObstetricalHistoryController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\PelvicExaminationController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\PhysicalExaminationController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\PregnancyExclusionChecklistController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\RiskForVAWController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\SkinController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\SpouseController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\STI_ConditionController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\STI_RiskController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\STI_RiskDetailController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\TypeOfClientController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\PatientController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\PatientServiceController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\AscertainPregnancyLowRiskController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\ClinicalHistoryAndPhysicalExaminationController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\CompleteDiagnosisController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\ConsultationRecordController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\ConsultationVisitsController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\LaboratoryResultsController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\MedicalSurgicalFactorMeasurementsController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\MedicalSurgicalFactorMedConditionsController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\MedicalSurgicalFactorsController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\MenstrualHistoryController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\NormalVitalSignController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\ObstetricRiskFactorController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\PrenatalRecordController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\TreatmentManagementController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Prenatal\VitalSignsController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Ultrasound\UltrasoundRecordController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\UserController.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\DatabaseMigration.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Appointment\Appointment.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Billing\Billing.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Billing\Expense.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Billing\StatementOfAccount.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Employee.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Abdomen.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Breast.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Client.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Conjunctiva.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Extremities.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\FamilyPlanningRecord.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\FpAssessmentRecord.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\MedicalCondition.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\MedicalHistory.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\MedicalHistoryDetail.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\MethodCurrentlyUsed.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Neck.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\ObstetricalCondition.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\ObstetricalConditionDetail.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\ObstetricalHistory.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\PelvicExamination.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\PhysicalExamination.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\PregnancyExclusionChecklist.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\RiskForVAW.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Skin.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Spouse.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\STI_Condition.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\STI_Risk.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\STI_RiskDetail.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\TypeOfClient.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\LoginRequest.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Patient.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\PatientService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\AscertainPregnancyLowRisk.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\ClinicalHistoryAndPhysicalExamination.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\CompleteDiagnosis.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\ConsultationRecord.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\ConsultationVisits.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\LaboratoryResults.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\MedicalSurgicalFactorMeasurements.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\MedicalSurgicalFactorMedConditions.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\MedicalSurgicalFactors.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\MenstrualHistory.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\NormalVitalSign.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\ObstetricRiskFactor.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\PrenatalRecord.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\TreatmentManagement.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Prenatal\VitalSigns.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Ultrasound\UltrasoundRecord.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\User.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Appointment\AppointmentRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Billing\BillingRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Billing\ExpenseRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Billing\StatementOfAccountRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\EmployeeRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\AbdomenRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\BreastRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\ClientRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\ConjunctivaRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\ExtremitiesRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\FamilyPlanningRecordRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\FpAssessmentRecordRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\MedicalConditionRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\MedicalHistoryDetailRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\MedicalHistoryRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\MethodCurrentlyUsedRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\NeckRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\ObstetricalConditionDetailRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\ObstetricalConditionRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\ObstetricalHistoryRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\PelvicExaminationRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\PhysicalExaminationRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\PregnancyExclusionChecklistRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\RiskForVAWRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\SkinRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\SpouseRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\STI_ConditionRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\STI_RiskDetailRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\STI_RiskRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\FamilyPlanning\TypeOfClientRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\PatientRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\PatientServiceRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\AscertainPregnancyLowRiskRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\ClinicalHistoryAndPhysicalExaminationRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\CompleteDiagnosisRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\ConsultationRecordRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\ConsultationVisitsRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\LaboratoryResultsRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\MedicalSurgicalFactorMeasurementsRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\MedicalSurgicalFactorMedConditionsRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\MedicalSurgicalFactorsRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\MenstrualHistoryRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\NormalVitalSignRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\ObstetricRiskFactorRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\PrenatalRecordRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\TreatmentManagementRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Prenatal\VitalSignsRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Ultrasound\UltrasoundRecordRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\UserRepository.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Appointment\AppointmentService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Appointment\AppointmentServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Billing\BillingService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Billing\BillingServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Billing\ExpenseService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Billing\ExpenseServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Billing\StatementOfAccountService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Billing\StatementOfAccountServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\EmployeeService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\EmployeeServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\AbdomenService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\AbdomenServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\BreastService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\BreastServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ClientService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ClientServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ConjunctivaService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ConjunctivaServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ExtremitiesService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ExtremitiesServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\FamilyPlanningRecordService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\FamilyPlanningRecordServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\FpAssessmentRecordService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\FpAssessmentRecordServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\MedicalConditionService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\MedicalConditionServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\MedicalHistoryDetailService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\MedicalHistoryDetailServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\MedicalHistoryService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\MedicalHistoryServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\MethodCurrentlyUsedService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\MethodCurrentlyUsedServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\NeckService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\NeckServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ObstetricalConditionDetailService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ObstetricalConditionDetailServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ObstetricalConditionService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ObstetricalConditionServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ObstetricalHistoryService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\ObstetricalHistoryServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\PelvicExaminationService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\PelvicExaminationServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\PhysicalExaminationService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\PhysicalExaminationServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\PregnancyExclusionChecklistService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\PregnancyExclusionChecklistServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\RiskForVAWService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\RiskForVAWServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\SkinService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\SkinServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\SpouseService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\SpouseServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\STI_ConditionService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\STI_ConditionServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\STI_RiskDetailService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\STI_RiskDetailServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\STI_RiskService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\STI_RiskServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\TypeOfClientService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\TypeOfClientServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\PatientService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\PatientServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\PatientServiceService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\PatientServiceServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\AscertainPregnancyLowRiskService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\AscertainPregnancyLowRiskServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\ClinicalHistoryAndPhysicalExaminationService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\ClinicalHistoryAndPhysicalExaminationServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\CompleteDiagnosisService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\CompleteDiagnosisServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\ConsultationRecordService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\ConsultationRecordServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\ConsultationVisitsService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\ConsultationVisitsServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\LaboratoryResultsService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\LaboratoryResultsServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\MedicalSurgicalFactorMeasurementsService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\MedicalSurgicalFactorMeasurementsServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\MedicalSurgicalFactorMedConditionsService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\MedicalSurgicalFactorMedConditionsServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\MedicalSurgicalFactorsService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\MedicalSurgicalFactorsServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\MenstrualHistoryService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\MenstrualHistoryServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\NormalVitalSignService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\NormalVitalSignServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\ObstetricRiskFactorService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\ObstetricRiskFactorServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\PrenatalRecordService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\PrenatalRecordServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\TreatmentManagementService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\TreatmentManagementServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\VitalSignsService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Prenatal\VitalSignsServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Ultrasound\UltrasoundRecordService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\Ultrasound\UltrasoundRecordServiceImpl.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\UserService.java
+C:\Users\Dwight Junio\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\UserServiceImpl.java
