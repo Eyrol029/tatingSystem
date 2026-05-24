@@ -29,7 +29,7 @@ const patientData = reactive({
 
 const loading = ref(true);
 const error = ref('');
-const services = ref([]); // ✅ changed from reactive to ref
+const services = ref([]);
 
 async function fetchPatient() {
     try {
@@ -47,7 +47,7 @@ async function fetchServices() {
     try {
         const id = route.params.id;
         const res = await axios.get(`http://localhost:8080/api/patient-services/patient/${id}`);
-        services.value = res.data.map(item => ({ // ✅ use .value
+        services.value = res.data.map(item => ({
             id: item.patientServiceID,
             service: item.serviceName,
             employee: item.employeeName ?? '---',
@@ -95,9 +95,10 @@ async function selectType(type: string) {
         }
         showModal.value = false;
         step.value = 'select';
-        router.push(`/uikit/FamilyPlanningAdmission/${route.params.id}`); // ✅ has ID
+        router.push(`/uikit/FamilyPlanningAdmission/${route.params.id}`);
         return;
     }
+
     if (type === 'Prenatal') {
         try {
             await axios.post('http://localhost:8080/api/patient-services', {
@@ -114,7 +115,8 @@ async function selectType(type: string) {
         }
         showModal.value = false;
         step.value = 'select';
-        router.push('/uikit/PrenatalAdmission'); // ✅ fixed route
+        // ✅ Fixed - now passes patient ID
+        router.push(`/uikit/PrenatalAdmission/${route.params.id}`);
         return;
     }
 
@@ -138,7 +140,7 @@ function viewService(service) {
     if (name === 'prenatal') {
         router.push(`/uikit/PrenatalAdmission/${patientId}`);
     } else if (name === 'family planning') {
-        router.push(`/uikit/FamilyPlanningAdmission/${patientId}`); // ✅ pass patientID
+        router.push(`/uikit/FamilyPlanningAdmission/${patientId}`);
     } else {
         alert(`No dedicated view page for "${service.service}" yet.`);
     }
@@ -155,7 +157,7 @@ async function handleSubmit() {
             dateAvailed: form.dateAvailed,
             remarks: form.remarks
         });
-        await fetchServices(); // ✅ refresh list
+        await fetchServices();
     } catch (e) {
         console.error('Failed to save service', e);
         alert('Failed to save service: ' + e.message);
@@ -168,35 +170,29 @@ async function handleSubmit() {
 <template>
     <div class="min-h-screen bg-gray-50 p-6">
 
-        <!-- Loading -->
         <div v-if="loading" class="text-center py-20 text-gray-500">
             Loading patient data...
         </div>
 
-        <!-- Error -->
         <div v-else-if="error" class="text-center py-20 text-red-500">
             {{ error }}
         </div>
 
-        <!-- Content -->
         <div v-else class="max-w-screen mx-auto">
             <div class="flex justify-between items-center mb-6">
                 <div class="flex items-center gap-4">
-                    <button
-                        @click="router.push('/uikit/PatientsMain')"
+                    <button @click="router.push('/uikit/PatientsMain')"
                         class="text-gray-600 hover:text-gray-800 font-semibold">
                         ←
                     </button>
                     <h1 class="text-2xl font-semibold text-gray-800">Patient Profile</h1>
                 </div>
-                <button
-                    @click="showModal = true"
+                <button @click="showModal = true"
                     class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
                     Add New Service
                 </button>
             </div>
 
-            <!-- Patient Name -->
             <h2 class="text-3xl font-bold text-gray-900 mb-6">
                 {{ patientData.fName }} {{ patientData.middleI }} {{ patientData.lName }}
             </h2>
@@ -205,7 +201,8 @@ async function handleSubmit() {
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-semibold text-gray-800">General Information</h3>
-                    <button class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700 transition">
+                    <button
+                        class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700 transition">
                         Edit
                     </button>
                 </div>
@@ -287,8 +284,7 @@ async function handleSubmit() {
                             <td class="td">{{ service.dateAvailed }}</td>
                             <td class="td">{{ service.remarks }}</td>
                             <td class="td">
-                                <button
-                                    @click="viewService(service)"
+                                <button @click="viewService(service)"
                                     class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700">
                                     View
                                 </button>
@@ -315,12 +311,8 @@ async function handleSubmit() {
                 <div class="p-6 bg-gray-50">
                     <!-- Step 1: Selection -->
                     <div v-if="step === 'select'" class="space-y-4">
-                        <button
-                            v-for="type in types"
-                            :key="type"
-                            @click="selectType(type)"
-                            class="w-full p-4 bg-white border rounded-lg text-left hover:border-blue-500 hover:bg-blue-50 transition flex justify-between items-center group"
-                        >
+                        <button v-for="type in types" :key="type" @click="selectType(type)"
+                            class="w-full p-4 bg-white border rounded-lg text-left hover:border-blue-500 hover:bg-blue-50 transition flex justify-between items-center group">
                             <span class="font-semibold text-gray-700">{{ type }}</span>
                             <span class="text-blue-500 opacity-0 group-hover:opacity-100">➔</span>
                         </button>
@@ -347,8 +339,8 @@ async function handleSubmit() {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Remarks</label>
-                            <textarea v-model="form.remarks"
-                                class="w-full border rounded-lg px-3 py-2 bg-white" rows="3"></textarea>
+                            <textarea v-model="form.remarks" class="w-full border rounded-lg px-3 py-2 bg-white"
+                                rows="3"></textarea>
                         </div>
 
                         <div class="flex gap-3 pt-4">

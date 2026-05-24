@@ -60,5 +60,46 @@ public class TreatmentManagement {
     @Temporal(TemporalType.DATE)
     private Date tcbOn;
 
-    // getters and setters
+    // Getters and Setters
+    public Integer getTreatmentID() { return treatmentID; }
+    public void setTreatmentID(Integer treatmentID) { this.treatmentID = treatmentID; }
+
+    public Integer getPrenatalRecordID() { return prenatalRecordID; }
+    public void setPrenatalRecordID(Integer prenatalRecordID) { this.prenatalRecordID = prenatalRecordID; }
+
+    public Boolean getPalpitationDone() { return palpitationDone; }
+    public void setPalpitationDone(Boolean palpitationDone) { this.palpitationDone = palpitationDone; }
+
+    public Boolean getReferToRoutineLabExams() { return referToRoutineLabExams; }
+    public void setReferToRoutineLabExams(Boolean referToRoutineLabExams) { this.referToRoutineLabExams = referToRoutineLabExams; }
+
+    public Boolean getAdvisedDiet() { return advisedDiet; }
+    public void setAdvisedDiet(Boolean advisedDiet) { this.advisedDiet = advisedDiet; }
+
+    public Boolean getAdvisedHydration() { return advisedHydration; }
+    public void setAdvisedHydration(Boolean advisedHydration) { this.advisedHydration = advisedHydration; }
+
+    public Boolean getAdvisedExercise() { return advisedExercise; }
+    public void setAdvisedExercise(Boolean advisedExercise) { this.advisedExercise = advisedExercise; }
+
+    public Boolean getHygieneCareEmphasized() { return hygieneCareEmphasized; }
+    public void setHygieneCareEmphasized(Boolean hygieneCareEmphasized) { this.hygieneCareEmphasized = hygieneCareEmphasized; }
+
+    public Boolean getRefrainFromHeavyObjects() { return refrainFromHeavyObjects; }
+    public void setRefrainFromHeavyObjects(Boolean refrainFromHeavyObjects) { this.refrainFromHeavyObjects = refrainFromHeavyObjects; }
+
+    public Boolean getAdvisedVitaminIntake() { return advisedVitaminIntake; }
+    public void setAdvisedVitaminIntake(Boolean advisedVitaminIntake) { this.advisedVitaminIntake = advisedVitaminIntake; }
+
+    public Boolean getDiscussedFacilityDeliveryImportance() { return discussedFacilityDeliveryImportance; }
+    public void setDiscussedFacilityDeliveryImportance(Boolean discussedFacilityDeliveryImportance) { this.discussedFacilityDeliveryImportance = discussedFacilityDeliveryImportance; }
+
+    public String getReferralDoctor() { return referralDoctor; }
+    public void setReferralDoctor(String referralDoctor) { this.referralDoctor = referralDoctor; }
+
+    public String getLabResultsWithTelephoneOrder() { return labResultsWithTelephoneOrder; }
+    public void setLabResultsWithTelephoneOrder(String labResultsWithTelephoneOrder) { this.labResultsWithTelephoneOrder = labResultsWithTelephoneOrder; }
+
+    public Date getTcbOn() { return tcbOn; }
+    public void setTcbOn(Date tcbOn) { this.tcbOn = tcbOn; }
 }

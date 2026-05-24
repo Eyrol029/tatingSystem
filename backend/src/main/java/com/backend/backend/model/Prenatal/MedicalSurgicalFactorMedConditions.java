@@ -25,6 +25,9 @@ public class MedicalSurgicalFactorMedConditions {
     @Column(name = "heartDisease")
     private Boolean heartDisease;
 
+    @Column(name = "diabetes")
+    private Boolean diabetes;
+
     @Column(name = "thyroidDisorder")
     private Boolean thyroidDisorder;
 
@@ -80,6 +83,14 @@ public class MedicalSurgicalFactorMedConditions {
 
     public void setHeartDisease(Boolean heartDisease) {
         this.heartDisease = heartDisease;
+    }
+
+    public Boolean getDiabetes() {
+        return diabetes;
+    }
+
+    public void setDiabetes(Boolean diabetes) {
+        this.diabetes = diabetes;
     }
 
     public Boolean getThyroidDisorder() {

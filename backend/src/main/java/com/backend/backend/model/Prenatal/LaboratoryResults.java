@@ -51,5 +51,40 @@ public class LaboratoryResults {
     @Column(name = "tetanusToxoid")
     private String tetanusToxoid;
 
-    // getters and setters
+    // Getters and Setters
+    public Integer getLaboratoryResultID() { return laboratoryResultID; }
+    public void setLaboratoryResultID(Integer laboratoryResultID) { this.laboratoryResultID = laboratoryResultID; }
+
+    public Integer getPrenatalRecordID() { return prenatalRecordID; }
+    public void setPrenatalRecordID(Integer prenatalRecordID) { this.prenatalRecordID = prenatalRecordID; }
+
+    public String getUrinalysis() { return urinalysis; }
+    public void setUrinalysis(String urinalysis) { this.urinalysis = urinalysis; }
+
+    public String getPusCells() { return pusCells; }
+    public void setPusCells(String pusCells) { this.pusCells = pusCells; }
+
+    public String getRedBloodCells() { return redBloodCells; }
+    public void setRedBloodCells(String redBloodCells) { this.redBloodCells = redBloodCells; }
+
+    public String getCompleteBloodCount() { return completeBloodCount; }
+    public void setCompleteBloodCount(String completeBloodCount) { this.completeBloodCount = completeBloodCount; }
+
+    public BigDecimal getHemoglobin() { return hemoglobin; }
+    public void setHemoglobin(BigDecimal hemoglobin) { this.hemoglobin = hemoglobin; }
+
+    public String getHepatitisBSurfaceAntigen() { return hepatitisBSurfaceAntigen; }
+    public void setHepatitisBSurfaceAntigen(String hepatitisBSurfaceAntigen) { this.hepatitisBSurfaceAntigen = hepatitisBSurfaceAntigen; }
+
+    public String getVenerealDiseaseResearchLaboratoryTest() { return venerealDiseaseResearchLaboratoryTest; }
+    public void setVenerealDiseaseResearchLaboratoryTest(String v) { this.venerealDiseaseResearchLaboratoryTest = v; }
+
+    public String getHumanImmunodeficiencyVirusTest() { return humanImmunodeficiencyVirusTest; }
+    public void setHumanImmunodeficiencyVirusTest(String humanImmunodeficiencyVirusTest) { this.humanImmunodeficiencyVirusTest = humanImmunodeficiencyVirusTest; }
+
+    public String getUltrasoundResult() { return ultrasoundResult; }
+    public void setUltrasoundResult(String ultrasoundResult) { this.ultrasoundResult = ultrasoundResult; }
+
+    public String getTetanusToxoid() { return tetanusToxoid; }
+    public void setTetanusToxoid(String tetanusToxoid) { this.tetanusToxoid = tetanusToxoid; }
 }

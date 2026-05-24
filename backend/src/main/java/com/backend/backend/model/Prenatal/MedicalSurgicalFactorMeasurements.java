@@ -28,11 +28,29 @@ public class MedicalSurgicalFactorMeasurements {
     @Column(name = "activeFetalMovement")
     private Boolean activeFetalMovement;
 
+    @Column(name = "parousVagina")
+    private Boolean parousVagina;
+
+    @Column(name = "cervixSmoothClosed")
+    private Boolean cervixSmoothClosed;
+
     @Column(name = "fundalWeight")
     private Double fundalWeight;
 
     @Column(name = "estimatedFetalWeight")
     private Double estimatedFetalWeight;
+
+    @Column(name = "leopoldL1")
+    private String leopoldL1;
+
+    @Column(name = "leopoldL2")
+    private String leopoldL2;
+
+    @Column(name = "leopoldL3")
+    private String leopoldL3;
+
+    @Column(name = "leopoldL4")
+    private String leopoldL4;
 
     @Column(name = "fetalHeartTone")
     private Integer fetalHeartTone;
@@ -78,6 +96,22 @@ public class MedicalSurgicalFactorMeasurements {
         this.activeFetalMovement = activeFetalMovement;
     }
 
+    public Boolean getParousVagina() {
+        return parousVagina;
+    }
+
+    public void setParousVagina(Boolean parousVagina) {
+        this.parousVagina = parousVagina;
+    }
+
+    public Boolean getCervixSmoothClosed() {
+        return cervixSmoothClosed;
+    }
+
+    public void setCervixSmoothClosed(Boolean cervixSmoothClosed) {
+        this.cervixSmoothClosed = cervixSmoothClosed;
+    }
+
     public Double getFundalWeight() {
         return fundalWeight;
     }
@@ -92,6 +126,38 @@ public class MedicalSurgicalFactorMeasurements {
 
     public void setEstimatedFetalWeight(Double estimatedFetalWeight) {
         this.estimatedFetalWeight = estimatedFetalWeight;
+    }
+
+    public String getLeopoldL1() {
+        return leopoldL1;
+    }
+
+    public void setLeopoldL1(String leopoldL1) {
+        this.leopoldL1 = leopoldL1;
+    }
+
+    public String getLeopoldL2() {
+        return leopoldL2;
+    }
+
+    public void setLeopoldL2(String leopoldL2) {
+        this.leopoldL2 = leopoldL2;
+    }
+
+    public String getLeopoldL3() {
+        return leopoldL3;
+    }
+
+    public void setLeopoldL3(String leopoldL3) {
+        this.leopoldL3 = leopoldL3;
+    }
+
+    public String getLeopoldL4() {
+        return leopoldL4;
+    }
+
+    public void setLeopoldL4(String leopoldL4) {
+        this.leopoldL4 = leopoldL4;
     }
 
     public Integer getFetalHeartTone() {

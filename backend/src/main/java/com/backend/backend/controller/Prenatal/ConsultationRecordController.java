@@ -43,6 +43,11 @@ public class ConsultationRecordController {
         return service.getAll();
     }
 @CrossOrigin(origins = "*")
+    @GetMapping("/prenatal/{prenatalRecordID}")
+    public List<ConsultationRecord> getByPrenatalRecord(@PathVariable Integer prenatalRecordID) {
+        return service.getByPrenatalRecordID(prenatalRecordID);
+    }
+@CrossOrigin(origins = "*")
     // UPDATE
     @PutMapping
     public ConsultationRecord update(@RequestBody ConsultationRecord record) {
