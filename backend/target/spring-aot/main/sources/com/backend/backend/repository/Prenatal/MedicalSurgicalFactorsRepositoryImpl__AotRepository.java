@@ -1,0 +1,40 @@
+package com.backend.backend.repository.Prenatal;
+
+import com.backend.backend.model.Prenatal.MedicalSurgicalFactors;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
+import java.lang.Integer;
+import java.lang.String;
+import java.util.List;
+import org.springframework.aot.generate.Generated;
+import org.springframework.data.jpa.repository.aot.AotRepositoryFragmentSupport;
+import org.springframework.data.jpa.repository.query.QueryEnhancerSelector;
+import org.springframework.data.repository.core.support.RepositoryFactoryBeanSupport;
+
+/**
+ * AOT generated JPA repository implementation for {@link MedicalSurgicalFactorsRepository}.
+ */
+@Generated
+public class MedicalSurgicalFactorsRepositoryImpl__AotRepository extends AotRepositoryFragmentSupport {
+  private final RepositoryFactoryBeanSupport.FragmentCreationContext context;
+
+  private final EntityManager entityManager;
+
+  public MedicalSurgicalFactorsRepositoryImpl__AotRepository(EntityManager entityManager,
+      RepositoryFactoryBeanSupport.FragmentCreationContext context) {
+    super(QueryEnhancerSelector.DEFAULT_SELECTOR, context);
+    this.entityManager = entityManager;
+    this.context = context;
+  }
+
+  /**
+   * AOT generated implementation of {@link MedicalSurgicalFactorsRepository#findByClinicalHistoryID(java.lang.Integer)}.
+   */
+  public List<MedicalSurgicalFactors> findByClinicalHistoryID(Integer clinicalHistoryID) {
+    String queryString = "SELECT m FROM MedicalSurgicalFactors m WHERE m.clinicalHistoryID = :clinicalHistoryID";
+    Query query = this.entityManager.createQuery(queryString);
+    query.setParameter("clinicalHistoryID", clinicalHistoryID);
+
+    return (List<MedicalSurgicalFactors>) query.getResultList();
+  }
+}
