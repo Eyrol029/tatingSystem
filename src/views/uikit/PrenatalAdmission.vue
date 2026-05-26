@@ -843,9 +843,28 @@ async function submitForm() {
             :placeholder="form.deliveryPlanning.place" />
         </div>
         <div>
-          <label class="field-label">Type of Delivery</label>
-          <input type="text" v-model="form.deliveryDetails.type" class="input-line w-full" />
-        </div>
+  <label class="field-label flex items-center gap-1">
+    Type of Delivery
+    <span v-if="isLiveHighRisk || riskResult?.highRisk"
+      class="text-xs font-bold text-white bg-red-500 rounded px-1.5 py-0.5">
+      ⚠ HIGH RISK
+    </span>
+  </label>
+  <select v-model="form.deliveryDetails.type" class="select-field w-full"
+    :class="(isLiveHighRisk || riskResult?.highRisk) ? 'select-risk' : ''">
+    <option value="">— Select —</option>
+    <option>Normal Spontaneous Vaginal Delivery</option>
+    <option>High Risk Delivery</option>
+  </select>
+  <p v-if="(isLiveHighRisk || riskResult?.highRisk) && form.deliveryDetails.type === 'Normal Spontaneous Vaginal Delivery'"
+    class="text-xs text-red-600 font-semibold mt-1">
+    ⚠ Patient has high-risk factors — consider selecting "High Risk Delivery"
+  </p>
+  <p v-if="(isLiveHighRisk || riskResult?.highRisk) && !form.deliveryDetails.type"
+    class="text-xs text-red-600 font-semibold mt-1">
+    ⚠ High-risk patient detected — please select a delivery type
+  </p>
+</div>
         <div class="flex items-center gap-3">
           <label class="field-label flex items-center gap-1">
             Referral Hospital?
