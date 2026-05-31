@@ -24,7 +24,7 @@ const model = [
             { label: 'List of Patients', icon: 'pi pi-fw pi-chart-line', to: '/uikit/PatientsMain', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
             { label: 'User Account', icon: 'pi pi-fw pi-users', to: '/uikit/UserAccount', roles: [UserRole.ADMIN] },
             { label: 'Logs', icon: 'pi pi-fw pi-home', to: '/uikit/Logs', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
-            { label: 'Appointments', icon: 'pi pi-fw pi-calendar', to: '/uikit/ManageApp', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
+            { label: 'Appointments', icon: 'pi pi-fw pi-calendar', to: '/uikit/AppointmentManagement', roles: [UserRole.ADMIN, UserRole.MIDWIFE] }, // new sa appointment 
             { label: 'Calendar', icon: 'pi pi-fw pi-calendar', to: '/uikit/AdminCalendar', roles: [UserRole.ADMIN] },
             { label: 'Patient Dashboard', icon: 'pi pi-fw pi-user', to: '/uikit/PatientDashboard', roles: [UserRole.PATIENT] },
             { label: 'Create Appointment', icon: 'pi pi-fw pi-calendar-plus', to: '/uikit/PatientCreateAppointment', roles: [UserRole.PATIENT] },

@@ -45,6 +45,7 @@ const routes = [
             { path: 'uikit/viewListOfSOA', component: () => import('@/views/uikit/viewListOfSOA.vue') },
             { path: 'uikit/AdminCalendar', component: () => import('@/views/uikit/AdminCalendar.vue') },
             { path: 'uikit/MidwifeDashboard', component: () => import('@/views/Dashboard/MidwifeDashboard.vue') },
+            { path: 'uikit/AppointmentManagement', component: () => import('@/views/uikit/AppointmentManagement.vue') }, //  new sa appointment 
         ]
     },
     {
@@ -65,12 +66,10 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
     const userStore = useUserDataStore();
 
-    // public pages
     if (to.matched.some((record) => record.meta.public)) {
         return next();
     }
 
-    // protected pages
     if (to.matched.some((record) => record.meta.requiresAuth)) {
         if (!userStore.user) {
             return next({ path: '/uikit/Login' });
