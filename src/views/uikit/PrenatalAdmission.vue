@@ -7,7 +7,10 @@ const route = useRoute()
 const router = useRouter()
 const BASE = 'http://localhost:8080/api/prenatal'
 const PATIENT_SERVICE_BASE = 'http://localhost:8080/api/patient-services'
-const clientId = route.params.clientId
+
+// ─── Get both clientId and serviceId from route ───────────────────────────────
+const clientId  = route.params.clientId
+const serviceId = route.params.serviceId  // ← specific service record
 
 function goBack() { router.back() }
 function handleBeforePrint() { document.body.classList.add('printing-prenatal') }
@@ -15,11 +18,10 @@ function handleAfterPrint()  { document.body.classList.remove('printing-prenatal
 
 // ─── State ────────────────────────────────────────────────────────────────────
 const serviceID    = ref(null)
-const prenatalID   = ref(null)   // kept after first save so we can re-assess
+const prenatalID   = ref(null)
 const submitStatus = ref({ loading: false, error: '', success: '' })
 
-// High-risk assessment state
-const riskResult   = ref(null)   // { highRisk: bool, reasons: string[] }
+const riskResult   = ref(null)
 const riskLoading  = ref(false)
 
 const form = ref({
@@ -62,25 +64,17 @@ const form = ref({
   }
 })
 
-// ─── Reactive high-risk computeds (live, before save) ─────────────────────────
-
-/** Any obstetric checkbox ticked */
+// ─── Reactive high-risk computeds ─────────────────────────────────────────────
 const obstetricHighRisk = computed(() =>
   Object.values(form.value.obstetricRisk).some(Boolean)
 )
-
-/** Any medical/surgical checkbox ticked */
 const medicalHighRisk = computed(() =>
   Object.values(form.value.medical).some(Boolean)
 )
-
-/** FHT in Leopold section out of range */
 const leopoldFhtHighRisk = computed(() => {
   const fht = Number(form.value.factors.leopold.fht)
   return fht > 0 && (fht < 110 || fht > 160)
 })
-
-/** Lab results that are flagged */
 const labHighRisk = computed(() => {
   const v = form.value.labs
   const isPositive = (s) => {
@@ -91,14 +85,9 @@ const labHighRisk = computed(() => {
   const hgb = parseFloat(v.hemoglobin)
   return isPositive(v.vdrl) || isPositive(v.hiv) || (!isNaN(hgb) && hgb < 11.0)
 })
-
-/** Referral hospital ticked */
 const referralHighRisk = computed(() => form.value.deliveryDetails.referralHospitalNeeded)
-
-/** Any visit with abnormal BP, FHT, or non-vertex presentation */
 const visitHighRisk = computed(() => {
   return form.value.visits.some(v => {
-    // BP check
     if (v.bp) {
       const parts = v.bp.split('/')
       if (parts.length === 2) {
@@ -106,12 +95,10 @@ const visitHighRisk = computed(() => {
         if (!isNaN(s) && !isNaN(d) && (s >= 140 || d >= 90)) return true
       }
     }
-    // FHT check
     if (v.fht) {
       const fht = parseInt(v.fht)
       if (!isNaN(fht) && (fht < 110 || fht > 160)) return true
     }
-    // Presentation check
     if (v.presentation) {
       const p = v.presentation.toLowerCase()
       if (['breech','transverse','oblique','face','brow','shoulder'].some(k => p.includes(k))) return true
@@ -135,13 +122,12 @@ const ultrasoundHighRisk = computed(() =>
   ultrasoundTags.value.some(t => HIGH_RISK_US_TAGS.includes(t))
 )
 
-/** Overall live high-risk flag (shown before save) */
 const isLiveHighRisk = computed(() =>
   obstetricHighRisk.value || medicalHighRisk.value || leopoldFhtHighRisk.value ||
   labHighRisk.value || ultrasoundHighRisk.value || referralHighRisk.value || visitHighRisk.value
 )
 
-// ─── Per-visit row risk helpers ────────────────────────────────────────────────
+// ─── Per-visit row risk helpers ───────────────────────────────────────────────
 function isVisitBpHigh(v) {
   if (!v.bp) return false
   const parts = v.bp.split('/')
@@ -167,16 +153,25 @@ function isVisitRowHighRisk(v) {
 onMounted(async () => {
   window.addEventListener('beforeprint', handleBeforePrint)
   window.addEventListener('afterprint',  handleAfterPrint)
-  if (!clientId) return
-  await ensurePrenatalService(clientId)
-  if (serviceID.value) await loadExistingPrenatalData(serviceID.value)
+
+  if (serviceId) {
+    // ✅ KEY CHANGE: directly use the serviceId from URL
+    // This ensures each service record loads its OWN data only
+    serviceID.value = Number(serviceId)
+    await loadExistingPrenatalData(serviceID.value)
+  } else if (clientId) {
+    // Fallback (should not happen with new routes)
+    await ensurePrenatalService(clientId)
+    if (serviceID.value) await loadExistingPrenatalData(serviceID.value)
+  }
 })
+
 onUnmounted(() => {
   window.removeEventListener('beforeprint', handleBeforePrint)
   window.removeEventListener('afterprint',  handleAfterPrint)
 })
 
-// ─── High-risk assessment API call ────────────────────────────────────────────
+// ─── High-risk assessment API call ───────────────────────────────────────────
 async function fetchRiskAssessment(id) {
   if (!id) return
   riskLoading.value = true
@@ -243,6 +238,7 @@ async function ensurePrenatalService(clientId) {
 
 async function loadExistingPrenatalData(sid) {
   try {
+    // ✅ Load records linked to THIS specific serviceID only
     const res = await axios.get(`${BASE}/records/service/${sid}`)
     const records = Array.isArray(res.data) ? res.data : []
     if (!records.length) return
@@ -253,19 +249,17 @@ async function loadExistingPrenatalData(sid) {
 
     prenatalID.value = latestRecord.prenatalrecordID
 
-    form.value.deliveryPlanning.prenatalExamDate   = parseDateForForm(latestRecord.prenatalExamDate)
+    form.value.deliveryPlanning.prenatalExamDate    = parseDateForForm(latestRecord.prenatalExamDate)
     form.value.deliveryPlanning.expectedDeliveryDate = parseDateForForm(latestRecord.expectedDeliveryDate)
-    form.value.edc                                 = parseDateForForm(latestRecord.edc)
-    form.value.deliveryDetails.date                = parseDateForForm(latestRecord.deliveryDate)
-    form.value.deliveryDetails.place               = latestRecord.placeOfDelivery || ''
-    form.value.deliveryDetails.type                = latestRecord.typeOfDelivery || ''
+    form.value.edc                                  = parseDateForForm(latestRecord.edc)
+    form.value.deliveryDetails.date                 = parseDateForForm(latestRecord.deliveryDate)
+    form.value.deliveryDetails.place                = latestRecord.placeOfDelivery || ''
+    form.value.deliveryDetails.type                 = latestRecord.typeOfDelivery || ''
     form.value.deliveryDetails.referralHospitalNeeded = !!latestRecord.referralHospitalNeeded
     form.value.deliveryDetails.referralHospitalName   = latestRecord.referralHospitalName || ''
 
     await loadClinicalHistoryData(latestRecord.prenatalrecordID)
     await loadPrenatalDetailData(latestRecord.prenatalrecordID)
-
-    // Fetch saved risk assessment
     await fetchRiskAssessment(latestRecord.prenatalrecordID)
   } catch (e) { console.error('Load existing prenatal data error:', e) }
 }
@@ -293,14 +287,14 @@ async function loadClinicalHistoryData(prenatalrecordID) {
 
     const obstetric = Array.isArray(obstetricRes.data) ? obstetricRes.data[0] : null
     if (obstetric) {
-      form.value.obstetricRisk.multiplePregnancy   = !!obstetric.multiplePregnancy
-      form.value.obstetricRisk.ovarianCyst         = !!obstetric.ovarianCyst
-      form.value.obstetricRisk.myomaUteri          = !!obstetric.myomaUteri
-      form.value.obstetricRisk.thyroidDisorder     = !!obstetric.thyroidDisorder
-      form.value.obstetricRisk.miscarriage         = !!obstetric.historyOfMiscarriage
-      form.value.obstetricRisk.preeclampsia        = !!obstetric.preEclampsia
-      form.value.obstetricRisk.eclampsia           = !!obstetric.preEclampsia
-      form.value.obstetricRisk.prematureContraction= !!obstetric.prematureContraction
+      form.value.obstetricRisk.multiplePregnancy    = !!obstetric.multiplePregnancy
+      form.value.obstetricRisk.ovarianCyst          = !!obstetric.ovarianCyst
+      form.value.obstetricRisk.myomaUteri           = !!obstetric.myomaUteri
+      form.value.obstetricRisk.thyroidDisorder      = !!obstetric.thyroidDisorder
+      form.value.obstetricRisk.miscarriage          = !!obstetric.historyOfMiscarriage
+      form.value.obstetricRisk.preeclampsia         = !!obstetric.preEclampsia
+      form.value.obstetricRisk.eclampsia            = !!obstetric.preEclampsia
+      form.value.obstetricRisk.prematureContraction = !!obstetric.prematureContraction
     }
 
     const medsurg = Array.isArray(medsurgRes.data) ? medsurgRes.data[0] : null
@@ -312,17 +306,17 @@ async function loadClinicalHistoryData(prenatalrecordID) {
       ])
       const conds = Array.isArray(condsRes.data) ? condsRes.data[0] : null
       if (conds) {
-        form.value.medical.hypertension  = !!conds.hypertension
-        form.value.medical.heartDisease  = !!conds.heartDisease
-        form.value.medical.diabetes      = !!conds.diabetes
+        form.value.medical.hypertension    = !!conds.hypertension
+        form.value.medical.heartDisease    = !!conds.heartDisease
+        form.value.medical.diabetes        = !!conds.diabetes
         form.value.medical.thyroidDisorder = !!conds.thyroidDisorder
-        form.value.medical.obesity       = !!conds.obesity
-        form.value.medical.asthma        = !!conds.moderateToSevereAsthma
-        form.value.medical.epilepsy      = !!conds.epilepsy
-        form.value.medical.renalDisease  = !!conds.renalDisease
-        form.value.medical.bleedingDisorder = !!conds.bleedingDisorder
-        form.value.medical.previousCS    = !!conds.previousCesarianSection
-        form.value.medical.myomectomy    = !!conds.historyOfMyomectomy
+        form.value.medical.obesity         = !!conds.obesity
+        form.value.medical.asthma          = !!conds.moderateToSevereAsthma
+        form.value.medical.epilepsy        = !!conds.epilepsy
+        form.value.medical.renalDisease    = !!conds.renalDisease
+        form.value.medical.bleedingDisorder= !!conds.bleedingDisorder
+        form.value.medical.previousCS      = !!conds.previousCesarianSection
+        form.value.medical.myomectomy      = !!conds.historyOfMyomectomy
       }
       const measurements = Array.isArray(measurementsRes.data) ? measurementsRes.data[0] : null
       if (measurements) {
@@ -331,13 +325,13 @@ async function loadClinicalHistoryData(prenatalrecordID) {
         form.value.factors.abdomen.activeFetalMovement = !!measurements.activeFetalMovement
         form.value.factors.speculum.parousVagina       = !!measurements.parousVagina
         form.value.factors.speculum.cervixSmoothClosed = !!measurements.cervixSmoothClosed
-        form.value.factors.leopold.fundalHeight  = measurements.fundalWeight != null ? String(measurements.fundalWeight) : ''
-        form.value.factors.leopold.estFetalWeight= measurements.estimatedFetalWeight != null ? String(measurements.estimatedFetalWeight) : ''
-        form.value.factors.leopold.fht           = measurements.fetalHeartTone != null ? String(measurements.fetalHeartTone) : ''
-        form.value.factors.leopold.l1            = measurements.leopoldL1 || ''
-        form.value.factors.leopold.l2            = measurements.leopoldL2 || ''
-        form.value.factors.leopold.l3            = measurements.leopoldL3 || ''
-        form.value.factors.leopold.l4            = measurements.leopoldL4 || ''
+        form.value.factors.leopold.fundalHeight   = measurements.fundalWeight != null ? String(measurements.fundalWeight) : ''
+        form.value.factors.leopold.estFetalWeight = measurements.estimatedFetalWeight != null ? String(measurements.estimatedFetalWeight) : ''
+        form.value.factors.leopold.fht            = measurements.fetalHeartTone != null ? String(measurements.fetalHeartTone) : ''
+        form.value.factors.leopold.l1             = measurements.leopoldL1 || ''
+        form.value.factors.leopold.l2             = measurements.leopoldL2 || ''
+        form.value.factors.leopold.l3             = measurements.leopoldL3 || ''
+        form.value.factors.leopold.l4             = measurements.leopoldL4 || ''
       }
     }
 
@@ -414,7 +408,11 @@ async function submitForm() {
   submitStatus.value.error   = ''
   submitStatus.value.success = ''
 
-  if (!serviceID.value) await ensurePrenatalService(clientId)
+  // Use serviceId from URL directly
+  if (!serviceID.value && serviceId) {
+    serviceID.value = Number(serviceId)
+  }
+
   if (!serviceID.value) {
     submitStatus.value.error   = 'Service ID not found. Please go back and try again.'
     submitStatus.value.loading = false
@@ -424,16 +422,16 @@ async function submitForm() {
   const today = new Date().toISOString().split('T')[0]
 
   try {
-    // 1. PrenatalRecord
+    // 1. PrenatalRecord — always creates a NEW record linked to THIS serviceID
     const prenatalRes = await axios.post(`${BASE}/records`, {
       serviceID: serviceID.value,
       initialPreConsultationDate: today,
-      prenatalExamDate:    normalizeDate(form.value.deliveryPlanning.prenatalExamDate),
-      expectedDeliveryDate:normalizeDate(form.value.deliveryPlanning.expectedDeliveryDate),
-      edc:                 normalizeDate(form.value.edc),
-      deliveryDate:        normalizeDate(form.value.deliveryDetails.date),
-      placeOfDelivery:     form.value.deliveryDetails.place || null,
-      typeOfDelivery:      form.value.deliveryDetails.type || null,
+      prenatalExamDate:     normalizeDate(form.value.deliveryPlanning.prenatalExamDate),
+      expectedDeliveryDate: normalizeDate(form.value.deliveryPlanning.expectedDeliveryDate),
+      edc:                  normalizeDate(form.value.edc),
+      deliveryDate:         normalizeDate(form.value.deliveryDetails.date),
+      placeOfDelivery:      form.value.deliveryDetails.place || null,
+      typeOfDelivery:       form.value.deliveryDetails.type || null,
       referralHospitalNeeded: form.value.deliveryDetails.referralHospitalNeeded,
       referralHospitalName:   form.value.deliveryDetails.referralHospitalName || null
     })
@@ -483,17 +481,17 @@ async function submitForm() {
       try {
         await axios.post(`${BASE}/medsurg-conditions`, {
           medsurgID,
-          hypertension:          form.value.medical.hypertension,
-          heartDisease:          form.value.medical.heartDisease,
-          diabetes:              form.value.medical.diabetes,
-          thyroidDisorder:       form.value.medical.thyroidDisorder,
-          obesity:               form.value.medical.obesity,
-          moderateToSevereAsthma:form.value.medical.asthma,
-          epilepsy:              form.value.medical.epilepsy,
-          renalDisease:          form.value.medical.renalDisease,
-          bleedingDisorder:      form.value.medical.bleedingDisorder,
+          hypertension:            form.value.medical.hypertension,
+          heartDisease:            form.value.medical.heartDisease,
+          diabetes:                form.value.medical.diabetes,
+          thyroidDisorder:         form.value.medical.thyroidDisorder,
+          obesity:                 form.value.medical.obesity,
+          moderateToSevereAsthma:  form.value.medical.asthma,
+          epilepsy:                form.value.medical.epilepsy,
+          renalDisease:            form.value.medical.renalDisease,
+          bleedingDisorder:        form.value.medical.bleedingDisorder,
           previousCesarianSection: form.value.medical.previousCS,
-          historyOfMyomectomy:   form.value.medical.myomectomy
+          historyOfMyomectomy:     form.value.medical.myomectomy
         })
       } catch (e) { console.error('MedConditions save error:', e) }
 
@@ -548,12 +546,11 @@ async function submitForm() {
     })
 
     // 9. ConsultationRecord + Visits + VitalSigns
-    let consultationRecordID = null
     try {
       const consultRes = await axios.post(`${BASE}/consultationrecord`, {
         prenatalRecordID: prenatalrecordID, notes: ''
       })
-      consultationRecordID = consultRes.data.consultationRecordID
+      const consultationRecordID = consultRes.data.consultationRecordID
 
       for (const visit of form.value.visits) {
         if (!visit.date) continue
@@ -581,8 +578,6 @@ async function submitForm() {
     } catch (e) { console.error('ConsultationRecord save error:', e) }
 
     submitStatus.value.success = '✅ Prenatal record saved successfully!'
-
-    // 10. Fetch high-risk assessment from backend after save
     await fetchRiskAssessment(prenatalrecordID)
 
   } catch (error) {
@@ -632,11 +627,7 @@ async function submitForm() {
       </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════════════════════ -->
-    <!--  HIGH-RISK BANNER                                              -->
-    <!-- ══════════════════════════════════════════════════════════════ -->
-
-    <!-- Live banner (shown while editing, before save) -->
+    <!-- HIGH-RISK BANNER (live) -->
     <div v-if="isLiveHighRisk && !riskResult" class="no-print mb-4 rounded-lg border-2 border-red-500 bg-red-50 p-4">
       <div class="flex items-center gap-2 mb-2">
         <span class="text-2xl">🚨</span>
@@ -654,11 +645,9 @@ async function submitForm() {
       </ul>
     </div>
 
-    <!-- Confirmed banner (returned from backend after save) -->
+    <!-- HIGH-RISK BANNER (confirmed from backend) -->
     <div v-if="riskResult" class="no-print mb-4 rounded-lg border-2 p-4"
-      :class="riskResult.highRisk
-        ? 'border-red-500 bg-red-50'
-        : 'border-green-500 bg-green-50'">
+      :class="riskResult.highRisk ? 'border-red-500 bg-red-50' : 'border-green-500 bg-green-50'">
       <div class="flex items-center gap-2 mb-2">
         <span class="text-2xl">{{ riskResult.highRisk ? '🚨' : '✅' }}</span>
         <span class="font-bold text-lg"
@@ -670,8 +659,7 @@ async function submitForm() {
           Assessed by server
         </span>
       </div>
-      <ul v-if="riskResult.highRisk"
-        class="list-disc list-inside text-sm text-red-700 space-y-1">
+      <ul v-if="riskResult.highRisk" class="list-disc list-inside text-sm text-red-700 space-y-1">
         <li v-for="reason in riskResult.reasons" :key="reason">{{ reason }}</li>
       </ul>
       <p v-else class="text-sm text-green-700">No high-risk factors detected in this record.</p>
@@ -705,11 +693,9 @@ async function submitForm() {
       </div>
     </div>
 
-    <!-- Risk Factors — highlighted sections when flagged -->
+    <!-- Risk Factors -->
     <div class="no-break grid grid-cols-2 gap-6 mb-6 border rounded p-4"
-      :class="obstetricHighRisk || medicalHighRisk
-        ? 'border-red-400 bg-red-50'
-        : 'border-gray-200'">
+      :class="obstetricHighRisk || medicalHighRisk ? 'border-red-400 bg-red-50' : 'border-gray-200'">
 
       <!-- Obstetric Risk Factors -->
       <div>
@@ -794,7 +780,6 @@ async function submitForm() {
               <input type="text" v-model="form.factors.leopold.fundalHeight" class="input-line" />
               <label class="field-label mt-2">Est. Fetal Weight</label>
               <input type="text" v-model="form.factors.leopold.estFetalWeight" class="input-line" />
-              <!-- FHT with red border when abnormal -->
               <label class="field-label mt-2 flex items-center gap-1">
                 FHT
                 <span v-if="leopoldFhtHighRisk" class="text-red-600 font-bold text-xs">(⚠ Abnormal)</span>
@@ -839,39 +824,27 @@ async function submitForm() {
         </div>
         <div>
           <label class="field-label">Place of Delivery</label>
-          <input type="text" v-model="form.deliveryDetails.place" class="input-line w-full"
-            :placeholder="form.deliveryPlanning.place" />
+          <input type="text" v-model="form.deliveryDetails.place" class="input-line w-full" />
         </div>
         <div>
-  <label class="field-label flex items-center gap-1">
-    Type of Delivery
-    <span v-if="isLiveHighRisk || riskResult?.highRisk"
-      class="text-xs font-bold text-white bg-red-500 rounded px-1.5 py-0.5">
-      ⚠ HIGH RISK
-    </span>
-  </label>
-  <select v-model="form.deliveryDetails.type" class="select-field w-full"
-    :class="(isLiveHighRisk || riskResult?.highRisk) ? 'select-risk' : ''">
-    <option value="">— Select —</option>
-    <option>Normal Spontaneous Vaginal Delivery</option>
-    <option>High Risk Delivery</option>
-  </select>
-  <p v-if="(isLiveHighRisk || riskResult?.highRisk) && form.deliveryDetails.type === 'Normal Spontaneous Vaginal Delivery'"
-    class="text-xs text-red-600 font-semibold mt-1">
-    ⚠ Patient has high-risk factors — consider selecting "High Risk Delivery"
-  </p>
-  <p v-if="(isLiveHighRisk || riskResult?.highRisk) && !form.deliveryDetails.type"
-    class="text-xs text-red-600 font-semibold mt-1">
-    ⚠ High-risk patient detected — please select a delivery type
-  </p>
-</div>
+          <label class="field-label flex items-center gap-1">
+            Type of Delivery
+            <span v-if="isLiveHighRisk || riskResult?.highRisk"
+              class="text-xs font-bold text-white bg-red-500 rounded px-1.5 py-0.5">⚠ HIGH RISK</span>
+          </label>
+          <select v-model="form.deliveryDetails.type" class="select-field w-full"
+            :class="(isLiveHighRisk || riskResult?.highRisk) ? 'select-risk' : ''">
+            <option value="">— Select —</option>
+            <option>Normal Spontaneous Vaginal Delivery</option>
+            <option>High Risk Delivery</option>
+          </select>
+        </div>
         <div class="flex items-center gap-3">
           <label class="field-label flex items-center gap-1">
             Referral Hospital?
             <span v-if="referralHighRisk" class="text-red-600 font-bold text-xs ml-1">⚠ HIGH RISK</span>
           </label>
-          <input type="checkbox" v-model="form.deliveryDetails.referralHospitalNeeded"
-            class="accent-red-500" />
+          <input type="checkbox" v-model="form.deliveryDetails.referralHospitalNeeded" class="accent-red-500" />
           <input v-if="form.deliveryDetails.referralHospitalNeeded" type="text"
             placeholder="Specify" v-model="form.deliveryDetails.referralHospitalName"
             class="input-line flex-1" />
@@ -909,20 +882,17 @@ async function submitForm() {
                 :class="isVisitRowHighRisk(v) ? 'text-red-600' : ''">{{ v.visit }}</td>
               <td class="td"><input v-model="v.date" type="date" class="input-table" /></td>
               <td class="td"><input v-model="v.aog" class="input-table" /></td>
-              <!-- FHT cell -->
               <td class="td">
                 <input v-model="v.fht" class="input-table"
                   :class="isVisitFhtAbnormal(v) ? 'text-red-600 font-bold' : ''" />
               </td>
               <td class="td"><input v-model="v.fh" class="input-table" /></td>
               <td class="td"><input v-model="v.position" class="input-table" /></td>
-              <!-- Presentation cell -->
               <td class="td">
                 <input v-model="v.presentation" class="input-table"
                   :class="isVisitPresentationAbnormal(v) ? 'text-red-600 font-bold' : ''" />
               </td>
               <td class="td"><input v-model="v.weight" class="input-table" /></td>
-              <!-- BP cell -->
               <td class="td">
                 <input v-model="v.bp" class="input-table"
                   :class="isVisitBpHigh(v) ? 'text-red-600 font-bold' : ''" />
@@ -931,7 +901,6 @@ async function submitForm() {
             </tr>
           </tbody>
         </table>
-        <!-- Legend -->
         <p v-if="visitHighRisk" class="text-xs text-red-600 mt-1 no-print">
           🔴 Red values indicate: FHT &lt;110 or &gt;160 bpm | BP ≥ 140/90 mmHg | Non-vertex presentation
         </p>
@@ -945,11 +914,9 @@ async function submitForm() {
       <p v-if="labHighRisk" class="text-center text-xs text-red-600 font-bold mb-3">⚠ Abnormal lab result(s) detected</p>
       <div class="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
 
-        <!-- Urinalysis -->
         <div class="col-span-2 flex items-center gap-2">
           <label class="w-36 font-medium shrink-0">Urinalysis:</label>
-          <select v-model="form.labs.ua" class="select-field flex-1"
-            :class="['Protein+','Protein++','Protein+++','Pus Cells Present','Protein + Pus Cells'].includes(form.labs.ua) ? 'select-risk' : ''">
+          <select v-model="form.labs.ua" class="select-field flex-1">
             <option value="">— Select —</option>
             <option>Normal</option>
             <option>Protein+</option>
@@ -960,15 +927,11 @@ async function submitForm() {
             <option>Glucose Present</option>
             <option>RBC Present</option>
           </select>
-          <span v-if="['Protein+','Protein++','Protein+++','Pus Cells Present','Protein + Pus Cells'].includes(form.labs.ua)"
-            class="text-red-600 font-bold text-xs shrink-0">⚠ Risk</span>
         </div>
 
-        <!-- Purulent / Pus Cells -->
         <div class="flex items-center gap-2">
           <label class="w-36 font-medium shrink-0">Purulent (Pus Cells):</label>
-          <select v-model="form.labs.purulentSubstance" class="select-field flex-1"
-            :class="['Few','Moderate','Many','TNTC'].includes(form.labs.purulentSubstance) ? 'select-risk' : ''">
+          <select v-model="form.labs.purulentSubstance" class="select-field flex-1">
             <option value="">— Select —</option>
             <option>None</option>
             <option>Few</option>
@@ -976,15 +939,11 @@ async function submitForm() {
             <option>Many</option>
             <option>TNTC</option>
           </select>
-          <span v-if="['Few','Moderate','Many','TNTC'].includes(form.labs.purulentSubstance)"
-            class="text-red-600 font-bold text-xs shrink-0">⚠</span>
         </div>
 
-        <!-- Red Blood Cells -->
         <div class="flex items-center gap-2">
           <label class="w-36 font-medium shrink-0">Red Blood Cells:</label>
-          <select v-model="form.labs.rbc" class="select-field flex-1"
-            :class="['Few','Moderate','Many','TNTC'].includes(form.labs.rbc) ? 'select-risk' : ''">
+          <select v-model="form.labs.rbc" class="select-field flex-1">
             <option value="">— Select —</option>
             <option>Normal</option>
             <option>Few</option>
@@ -992,15 +951,11 @@ async function submitForm() {
             <option>Many</option>
             <option>TNTC</option>
           </select>
-          <span v-if="['Few','Moderate','Many','TNTC'].includes(form.labs.rbc)"
-            class="text-red-600 font-bold text-xs shrink-0">⚠</span>
         </div>
 
-        <!-- CBC -->
         <div class="flex items-center gap-2">
           <label class="w-36 font-medium shrink-0">CBC:</label>
-          <select v-model="form.labs.cbc" class="select-field flex-1"
-            :class="['Low WBC','High WBC','Anemia','Thrombocytopenia','Pancytopenia'].includes(form.labs.cbc) ? 'select-risk' : ''">
+          <select v-model="form.labs.cbc" class="select-field flex-1">
             <option value="">— Select —</option>
             <option>Normal</option>
             <option>Low WBC</option>
@@ -1009,62 +964,37 @@ async function submitForm() {
             <option>Thrombocytopenia</option>
             <option>Pancytopenia</option>
           </select>
-          <span v-if="['Low WBC','High WBC','Anemia','Thrombocytopenia','Pancytopenia'].includes(form.labs.cbc)"
-            class="text-red-600 font-bold text-xs shrink-0">⚠ Risk</span>
         </div>
 
-        <!-- Hemoglobin — kept as number input for auto-threshold flagging -->
         <div class="flex items-center gap-2">
-          <label class="w-36 font-medium shrink-0 flex items-center gap-1">
-            Hemoglobin (g/dL):
-            <span v-if="form.labs.hemoglobin && parseFloat(form.labs.hemoglobin) < 11"
-              class="text-red-600 text-xs font-bold">⚠</span>
-          </label>
+          <label class="w-36 font-medium shrink-0">Hemoglobin (g/dL):</label>
           <input v-model="form.labs.hemoglobin" type="number" step="0.1" min="0" max="20"
-            placeholder="e.g. 12.5"
-            class="input-line flex-1"
+            placeholder="e.g. 12.5" class="input-line flex-1"
             :class="form.labs.hemoglobin && parseFloat(form.labs.hemoglobin) < 11 ? 'text-red-600 font-bold border-red-400' : ''" />
           <span v-if="form.labs.hemoglobin && parseFloat(form.labs.hemoglobin) < 11"
             class="text-red-600 font-bold text-xs shrink-0">⚠ Anemia</span>
         </div>
 
-        <!-- VDRL -->
         <div class="flex items-center gap-2">
-          <label class="w-36 font-medium shrink-0 flex items-center gap-1">
-            VDRL:
-            <span v-if="form.labs.vdrl && form.labs.vdrl.toLowerCase().includes('pos')"
-              class="text-red-600 text-xs font-bold">⚠</span>
-          </label>
-          <select v-model="form.labs.vdrl" class="select-field flex-1"
-            :class="form.labs.vdrl && form.labs.vdrl.toLowerCase().includes('pos') ? 'select-risk' : ''">
+          <label class="w-36 font-medium shrink-0">VDRL:</label>
+          <select v-model="form.labs.vdrl" class="select-field flex-1">
             <option value="">— Select —</option>
             <option>Non-Reactive</option>
             <option>Reactive (Positive)</option>
             <option>Weakly Reactive</option>
           </select>
-          <span v-if="form.labs.vdrl && form.labs.vdrl.toLowerCase().includes('react')"
-            class="text-red-600 font-bold text-xs shrink-0">⚠ Risk</span>
         </div>
 
-        <!-- HIV Test -->
         <div class="flex items-center gap-2">
-          <label class="w-36 font-medium shrink-0 flex items-center gap-1">
-            HIV Test:
-            <span v-if="form.labs.hiv && form.labs.hiv.toLowerCase().includes('pos')"
-              class="text-red-600 text-xs font-bold">⚠</span>
-          </label>
-          <select v-model="form.labs.hiv" class="select-field flex-1"
-            :class="form.labs.hiv && form.labs.hiv.toLowerCase().includes('pos') ? 'select-risk' : ''">
+          <label class="w-36 font-medium shrink-0">HIV Test:</label>
+          <select v-model="form.labs.hiv" class="select-field flex-1">
             <option value="">— Select —</option>
             <option>Non-Reactive</option>
             <option>Reactive (Positive)</option>
             <option>Indeterminate</option>
           </select>
-          <span v-if="form.labs.hiv && form.labs.hiv.toLowerCase().includes('react')"
-            class="text-red-600 font-bold text-xs shrink-0">⚠ Risk</span>
         </div>
 
-        <!-- Ultrasound Results — kept as textarea for free text findings -->
         <div class="col-span-2">
           <label class="block font-medium mb-1">Ultrasound Results:</label>
           <div class="flex gap-2 mb-2 flex-wrap">
@@ -1083,7 +1013,6 @@ async function submitForm() {
             placeholder="Additional findings or notes..."
             class="w-full border border-gray-300 rounded p-2 text-sm"></textarea>
         </div>
-
       </div>
     </div>
 
@@ -1139,24 +1068,9 @@ async function submitForm() {
 .td { border:1px solid #e5e7eb; padding:2px 4px; }
 .cb { display:flex; align-items:center; gap:6px; font-size:0.85rem; cursor:pointer; }
 .row-between { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e5e7eb; padding-bottom:4px; }
-.select-field {
-  width: 100%;
-  padding: 4px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
-  background: white;
-  outline: none;
-  cursor: pointer;
-  transition: border-color 0.15s;
-}
+.select-field { width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; background:white; outline:none; cursor:pointer; transition:border-color 0.15s; }
 .select-field:focus { border-color: #6366f1; }
-.select-risk {
-  border-color: #f87171 !important;
-  color: #dc2626;
-  font-weight: 600;
-  background-color: #fff5f5;
-}
+.select-risk { border-color:#f87171 !important; color:#dc2626; font-weight:600; background-color:#fff5f5; }
 </style>
 
 <style>

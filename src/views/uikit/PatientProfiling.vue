@@ -79,29 +79,9 @@ const form = reactive({
 });
 
 async function selectType(type: string) {
-    if (type === 'Family Planning') {
-        try {
-            await axios.post('http://localhost:8080/api/patient-services', {
-                patientID: Number(route.params.id),
-                serviceName: 'Family Planning',
-                employeeName: '---',
-                wardName: '---',
-                dateAvailed: new Date().toISOString().split('T')[0],
-                remarks: ''
-            });
-            await fetchServices();
-        } catch (e) {
-            console.error('Failed to save Family Planning service', e);
-        }
-        showModal.value = false;
-        step.value = 'select';
-        router.push(`/uikit/FamilyPlanningAdmission/${route.params.id}`);
-        return;
-    }
-
     if (type === 'Prenatal') {
         try {
-            await axios.post('http://localhost:8080/api/patient-services', {
+            const res = await axios.post('http://localhost:8080/api/patient-services', {
                 patientID: Number(route.params.id),
                 serviceName: 'Prenatal',
                 employeeName: '---',
@@ -110,13 +90,34 @@ async function selectType(type: string) {
                 remarks: ''
             });
             await fetchServices();
+            const newServiceID = res.data.patientServiceID;
+            showModal.value = false;
+            step.value = 'select';
+            router.push(`/uikit/PrenatalAdmission/${route.params.id}/${newServiceID}`);
         } catch (e) {
             console.error('Failed to save Prenatal service', e);
         }
-        showModal.value = false;
-        step.value = 'select';
-        // ✅ Fixed - now passes patient ID
-        router.push(`/uikit/PrenatalAdmission/${route.params.id}`);
+        return;
+    }
+
+    if (type === 'Family Planning') {
+        try {
+            const res = await axios.post('http://localhost:8080/api/patient-services', {
+                patientID: Number(route.params.id),
+                serviceName: 'Family Planning',
+                employeeName: '---',
+                wardName: '---',
+                dateAvailed: new Date().toISOString().split('T')[0],
+                remarks: ''
+            });
+            await fetchServices();
+            const newServiceID = res.data.patientServiceID;
+            showModal.value = false;
+            step.value = 'select';
+            router.push(`/uikit/FamilyPlanningAdmission/${route.params.id}/${newServiceID}`);
+        } catch (e) {
+            console.error('Failed to save Family Planning service', e);
+        }
         return;
     }
 
@@ -137,10 +138,12 @@ function closeModal() {
 function viewService(service) {
     const name = service.service?.toLowerCase();
     const patientId = route.params.id;
+    const serviceId = service.id; // specific patientServiceID sa row
+
     if (name === 'prenatal') {
-        router.push(`/uikit/PrenatalAdmission/${patientId}`);
+        router.push(`/uikit/PrenatalAdmission/${patientId}/${serviceId}`);
     } else if (name === 'family planning') {
-        router.push(`/uikit/FamilyPlanningAdmission/${patientId}`);
+        router.push(`/uikit/FamilyPlanningAdmission/${patientId}/${serviceId}`);
     } else {
         alert(`No dedicated view page for "${service.service}" yet.`);
     }

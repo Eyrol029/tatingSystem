@@ -85,13 +85,11 @@ public class Appointment {
         this.fName = fName;
     }
 
-    public String getlName() {
-        return lName;
-    }
+        public String getFName() { return fName; }
+    public void setFName(String fName) { this.fName = fName; }
 
-    public void setlName(String lName) {
-        this.lName = lName;
-    }
+        public String getLName() { return lName; }
+    public void setLName(String lName) { this.lName = lName; }
 
     public String getMiddleI() {
         return middleI;

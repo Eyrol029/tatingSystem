@@ -11,6 +11,10 @@ const existingRecordId = ref(null);
 
 const BASE = 'http://localhost:8080/api/familyplanning';
 
+// ✅ Get both patientID and serviceId from route
+const patientID = route.params.patientID;
+const serviceId = route.params.serviceId;  // specific service record
+
 function goBack() {
     router.back();
 }
@@ -29,7 +33,7 @@ const formData = ref({
     age: '',
     occupation: '',
     civilStatus: '',
-    serviceID: 1,
+    serviceID: serviceId ? Number(serviceId) : 1,  // ✅ use serviceId from route
     nhtsYes: false,
     nhtsNo: false,
     _4psMember: false,
@@ -149,7 +153,6 @@ async function submitForm() {
     submitStatus.value.success = '';
 
     if (!formData.value.clientId) {
-        const patientID = route.params.patientID;
         if (patientID) formData.value.clientId = String(patientID);
     }
 
@@ -189,9 +192,9 @@ async function submitForm() {
             }
         } catch (e) { console.error('Spouse save error:', e); }
 
-        // 3. Save FamilyPlanningRecord
+        // 3. Save FamilyPlanningRecord — use serviceId from route
         const savedRecord = await createFamilyPlanningRecord({
-            serviceID: formData.value.serviceID || 1,
+            serviceID: serviceId ? Number(serviceId) : (formData.value.serviceID || 1),
             clientID,
             philHealthNumber: formData.value.philhealthNo || null,
             civilStatus: formData.value.civilStatus || null,
@@ -244,18 +247,16 @@ async function submitForm() {
         } catch (e) { console.error('TypeOfClient save error:', e); }
 
         // 6. Save MedicalHistory
-      // 6. Save MedicalHistory
-let medicalHistoryID = null;
-try {
-    const mhRes = await axios.post(`${BASE}/medicalhistory`, {
-        clientID,
-        hasDisability: formData.value.medicalHistory.disability === true,
-        disabilityDescription: formData.value.medicalHistory.disabilitySpecify || '',
-        dateRecorded: today
-    });
-    medicalHistoryID = mhRes.data.medicalHistoryid;
+        let medicalHistoryID = null;
+        try {
+            const mhRes = await axios.post(`${BASE}/medicalhistory`, {
+                clientID,
+                hasDisability: formData.value.medicalHistory.disability === true,
+                disabilityDescription: formData.value.medicalHistory.disabilitySpecify || '',
+                dateRecorded: today
+            });
+            medicalHistoryID = mhRes.data.medicalHistoryid;
 
-            // 7. Save MedicalHistoryDetails
             const medicalConditions = [
                 { id: 1, value: formData.value.medicalHistory.severeHeadache },
                 { id: 2, value: formData.value.medicalHistory.strokeHistory },
@@ -270,19 +271,19 @@ try {
                 { id: 11, value: formData.value.medicalHistory.phenobarbital },
                 { id: 12, value: formData.value.medicalHistory.smoker },
             ];
-           for (const cond of medicalConditions) {
-             if (cond.value === true) {
-                try {
-                    await axios.post(`${BASE}/medicalhistory/detail`, {
-                        medicalHistoryid: medicalHistoryID,
-                        medicalConditionID: cond.id
-                    });
+            for (const cond of medicalConditions) {
+                if (cond.value === true) {
+                    try {
+                        await axios.post(`${BASE}/medicalhistory/detail`, {
+                            medicalHistoryid: medicalHistoryID,
+                            medicalConditionID: cond.id
+                        });
                     } catch (e) { console.error(`MedicalHistoryDetail ${cond.id} error:`, e); }
                 }
             }
         } catch (e) { console.error('MedicalHistory save error:', e); }
 
-        // 8. Save ObstetricalHistory
+        // 7. Save ObstetricalHistory
         let obstetricalHistoryID = null;
         try {
             const ohRes = await axios.post(`${BASE}/obstetrical-history`, {
@@ -301,7 +302,6 @@ try {
             });
             obstetricalHistoryID = ohRes.data.obstetricalHistoryID;
 
-            // 9. Save ObstetricalConditionDetails
             const obstetricConditions = [
                 { id: 1, value: formData.value.obstetric.dysmenorrhea },
                 { id: 2, value: formData.value.obstetric.hydatidiformMole },
@@ -319,7 +319,7 @@ try {
             }
         } catch (e) { console.error('ObstetricalHistory save error:', e); }
 
-        // 10. Save RiskForVAW
+        // 8. Save RiskForVAW
         try {
             const referredAgencies = [
                 formData.value.vaw.referredTo.dswd ? 'DSWD' : '',
@@ -337,26 +337,25 @@ try {
             });
         } catch (e) { console.error('RiskForVAW save error:', e); }
 
-// 11. Save PhysicalExamination
-let pExamID = null;
-try {
-    const existingPE = await axios.get(`${BASE}/physical-exam/client/${clientID}`);
-    if (existingPE.data && existingPE.data.length > 0) {
-        pExamID = existingPE.data[existingPE.data.length - 1].pExamID;
-    } else {
-        const peRes = await axios.post(`${BASE}/physical-exam`, {
-            clientID,
-            weight: formData.value.physical.weight ? Number(formData.value.physical.weight) : null,
-            height: formData.value.physical.height ? Number(formData.value.physical.height) : null,
-            bloodPressure: formData.value.physical.bloodPressure || null,
-            pulseRate: formData.value.physical.pulseRate ? Number(formData.value.physical.pulseRate) : null,
-            dateExamined: today,
-            examinerName: formData.value.physical.sideB.serviceProvider || null
-        });
-        pExamID = peRes.data.pExamID;
-    }
+        // 9. Save PhysicalExamination
+        let pExamID = null;
+        try {
+            const existingPE = await axios.get(`${BASE}/physical-exam/client/${clientID}`);
+            if (existingPE.data && existingPE.data.length > 0) {
+                pExamID = existingPE.data[existingPE.data.length - 1].pExamID;
+            } else {
+                const peRes = await axios.post(`${BASE}/physical-exam`, {
+                    clientID,
+                    weight: formData.value.physical.weight ? Number(formData.value.physical.weight) : null,
+                    height: formData.value.physical.height ? Number(formData.value.physical.height) : null,
+                    bloodPressure: formData.value.physical.bloodPressure || null,
+                    pulseRate: formData.value.physical.pulseRate ? Number(formData.value.physical.pulseRate) : null,
+                    dateExamined: today,
+                    examinerName: formData.value.physical.sideB.serviceProvider || null
+                });
+                pExamID = peRes.data.pExamID;
+            }
 
-            // 12. Skin
             const skinConditions = [
                 { condition: 'normal', value: formData.value.physical.skin.normal },
                 { condition: 'pale', value: formData.value.physical.skin.pale },
@@ -365,13 +364,11 @@ try {
             ];
             for (const s of skinConditions) {
                 if (s.value) {
-                    try {
-                        await axios.post(`${BASE}/skin`, { pExamID, condition: s.condition });
-                    } catch (e) { console.error('Skin save error:', e); }
+                    try { await axios.post(`${BASE}/skin`, { pExamID, condition: s.condition }); }
+                    catch (e) { console.error('Skin save error:', e); }
                 }
             }
 
-            // 13. Conjunctiva
             const conjunctivaConditions = [
                 { condition: 'normal', value: formData.value.physical.conjunctiva.normal },
                 { condition: 'pale', value: formData.value.physical.conjunctiva.pale },
@@ -379,13 +376,11 @@ try {
             ];
             for (const c of conjunctivaConditions) {
                 if (c.value) {
-                    try {
-                        await axios.post(`${BASE}/conjunctiva`, { pExamID, condition: c.condition });
-                    } catch (e) { console.error('Conjunctiva save error:', e); }
+                    try { await axios.post(`${BASE}/conjunctiva`, { pExamID, condition: c.condition }); }
+                    catch (e) { console.error('Conjunctiva save error:', e); }
                 }
             }
 
-            // 14. Neck
             const neckConditions = [
                 { condition: 'normal', value: formData.value.physical.neck.normal },
                 { condition: 'neck mass', value: formData.value.physical.neck.neckMass },
@@ -393,13 +388,11 @@ try {
             ];
             for (const n of neckConditions) {
                 if (n.value) {
-                    try {
-                        await axios.post(`${BASE}/neck`, { pExamID, condition: n.condition });
-                    } catch (e) { console.error('Neck save error:', e); }
+                    try { await axios.post(`${BASE}/neck`, { pExamID, condition: n.condition }); }
+                    catch (e) { console.error('Neck save error:', e); }
                 }
             }
 
-            // 15. Breast
             const breastConditions = [
                 { condition: 'normal', value: formData.value.physical.breast.normal },
                 { condition: 'mass', value: formData.value.physical.breast.mass },
@@ -407,13 +400,11 @@ try {
             ];
             for (const b of breastConditions) {
                 if (b.value) {
-                    try {
-                        await axios.post(`${BASE}/breast`, { pExamID, condition: b.condition });
-                    } catch (e) { console.error('Breast save error:', e); }
+                    try { await axios.post(`${BASE}/breast`, { pExamID, condition: b.condition }); }
+                    catch (e) { console.error('Breast save error:', e); }
                 }
             }
 
-            // 16. Abdomen
             const abdomenConditions = [
                 { condition: 'normal', value: formData.value.physical.abdomen.normal },
                 { condition: 'abdominal mass', value: formData.value.physical.abdomen.abdominalMass },
@@ -421,13 +412,11 @@ try {
             ];
             for (const a of abdomenConditions) {
                 if (a.value) {
-                    try {
-                        await axios.post(`${BASE}/abdomen`, { pExamID, condition: a.condition });
-                    } catch (e) { console.error('Abdomen save error:', e); }
+                    try { await axios.post(`${BASE}/abdomen`, { pExamID, condition: a.condition }); }
+                    catch (e) { console.error('Abdomen save error:', e); }
                 }
             }
 
-            // 17. Extremities
             const extremitiesConditions = [
                 { condition: 'normal', value: formData.value.physical.extremities.normal },
                 { condition: 'edema', value: formData.value.physical.extremities.edema },
@@ -435,13 +424,11 @@ try {
             ];
             for (const ex of extremitiesConditions) {
                 if (ex.value) {
-                    try {
-                        await axios.post(`${BASE}/extremities`, { pExamID, condition: ex.condition });
-                    } catch (e) { console.error('Extremities save error:', e); }
+                    try { await axios.post(`${BASE}/extremities`, { pExamID, condition: ex.condition }); }
+                    catch (e) { console.error('Extremities save error:', e); }
                 }
             }
 
-            // 18. PelvicExamination
             const pelvicConditions = [
                 formData.value.physical.pelvicExam.normal ? 'normal' : '',
                 formData.value.physical.pelvicExam.mass ? 'mass' : '',
@@ -466,7 +453,7 @@ try {
 
         } catch (e) { console.error('PhysicalExamination save error:', e); }
 
-        // 19. FpAssessmentRecord
+        // 10. FpAssessmentRecord
         try {
             await axios.post(`${BASE}/fpassessment`, {
                 clientID,
@@ -477,7 +464,7 @@ try {
             });
         } catch (e) { console.error('FpAssessmentRecord save error:', e); }
 
-        // 20. PregnancyExclusionChecklist
+        // 11. PregnancyExclusionChecklist
         try {
             await axios.post(`${BASE}/pregnancychecklist`, {
                 clientID,
@@ -513,7 +500,7 @@ function printForm() {
 }
 
 onMounted(async () => {
-    const patientID = route.params.patientID;
+    // ✅ Set clientId from route
     if (patientID) formData.value.clientId = String(patientID);
 
     const clientId = formData.value.clientId;
@@ -521,11 +508,19 @@ onMounted(async () => {
 
     isViewMode.value = true;
 
-    // 1. Load FP Record
+    // ✅ Load FP Record — filter by serviceId so only THIS record loads
     try {
         const res = await axios.get(`${BASE}/records/client/${clientId}`);
         if (res.data && res.data.length > 0) {
-            const record = res.data[res.data.length - 1];
+            // Find the record matching this specific serviceId
+            let record = null;
+            if (serviceId) {
+                record = res.data.find(r => String(r.serviceID) === String(serviceId));
+            }
+            // Fallback to latest if not found by serviceId
+            if (!record) {
+                record = res.data[res.data.length - 1];
+            }
             existingRecordId.value = record.fpRecordID;
             formData.value.philhealthNo = record.philHealthNumber || '';
             formData.value.civilStatus = record.civilStatus || '';
@@ -552,7 +547,6 @@ onMounted(async () => {
             formData.value.reasonOthers = t.reasonOtherDetails || '';
             formData.value.sideEffects = t.changeReason || '';
 
-            // 3. Load MethodCurrentlyUsed
             try {
                 const mRes = await axios.get(`${BASE}/methods/type/${t.typeID}`);
                 if (mRes.data) {
@@ -577,15 +571,13 @@ onMounted(async () => {
         }
     } catch (e) { console.error('Failed to load TypeOfClient', e); }
 
-    // 4. Load MedicalHistory
+    // 3. Load MedicalHistory
     try {
         const res = await axios.get(`${BASE}/medicalhistory/client/${clientId}`);
         if (res.data && res.data.length > 0) {
             const m = res.data[res.data.length - 1];
             formData.value.medicalHistory.disability = m.hasDisability || false;
             formData.value.medicalHistory.disabilitySpecify = m.disabilityDescription || '';
-
-            // ✅ Load MedicalHistoryDetails (conditions)
             try {
                 const detailRes = await axios.get(`${BASE}/medicalhistory/detail/medicalHistory/${m.medicalHistoryid}`);
                 if (detailRes.data) {
@@ -608,7 +600,7 @@ onMounted(async () => {
         }
     } catch (e) { console.error('Failed to load MedicalHistory', e); }
 
-    // 5. Load ObstetricalHistory
+    // 4. Load ObstetricalHistory
     try {
         const res = await axios.get(`${BASE}/obstetrical-history/client/${clientId}`);
         if (res.data && res.data.length > 0) {
@@ -626,7 +618,7 @@ onMounted(async () => {
         }
     } catch (e) { console.error('Failed to load ObstetricalHistory', e); }
 
-    // 6. Load RiskForVAW
+    // 5. Load RiskForVAW
     try {
         const res = await axios.get(`${BASE}/risk-vaw/client/${clientId}`);
         if (res.data && res.data.length > 0) {
@@ -641,7 +633,7 @@ onMounted(async () => {
         }
     } catch (e) { console.error('Failed to load RiskForVAW', e); }
 
-    // 7. Load Spouse
+    // 6. Load Spouse
     try {
         const res = await axios.get(`${BASE}/spouses/client/${clientId}`);
         if (res.data && res.data.length > 0) {
@@ -653,7 +645,7 @@ onMounted(async () => {
         }
     } catch (e) { console.error('Failed to load Spouse', e); }
 
-    // 8. Load PhysicalExamination ✅ fixed URL
+    // 7. Load PhysicalExamination
     try {
         const res = await axios.get(`${BASE}/physical-exam/client/${clientId}`);
         if (res.data && res.data.length > 0) {
@@ -663,7 +655,6 @@ onMounted(async () => {
             formData.value.physical.bloodPressure = p.bloodPressure || '';
             formData.value.physical.pulseRate = p.pulseRate || '';
 
-            // ✅ Load Skin
             try {
                 const skinRes = await axios.get(`${BASE}/skin/exam/${p.pExamID}`);
                 if (skinRes.data) {
@@ -676,7 +667,6 @@ onMounted(async () => {
                 }
             } catch (e) { console.error('Failed to load Skin', e); }
 
-            // ✅ Load Conjunctiva
             try {
                 const conjRes = await axios.get(`${BASE}/conjunctiva/exam/${p.pExamID}`);
                 if (conjRes.data) {
@@ -688,7 +678,6 @@ onMounted(async () => {
                 }
             } catch (e) { console.error('Failed to load Conjunctiva', e); }
 
-            // ✅ Load Neck
             try {
                 const neckRes = await axios.get(`${BASE}/neck/pExam/${p.pExamID}`);
                 if (neckRes.data) {
@@ -700,7 +689,6 @@ onMounted(async () => {
                 }
             } catch (e) { console.error('Failed to load Neck', e); }
 
-            // ✅ Load Breast
             try {
                 const breastRes = await axios.get(`${BASE}/breast/pExam/${p.pExamID}`);
                 if (breastRes.data) {
@@ -712,7 +700,6 @@ onMounted(async () => {
                 }
             } catch (e) { console.error('Failed to load Breast', e); }
 
-            // ✅ Load Abdomen
             try {
                 const abdRes = await axios.get(`${BASE}/abdomen/pExam/${p.pExamID}`);
                 if (abdRes.data) {
@@ -724,7 +711,6 @@ onMounted(async () => {
                 }
             } catch (e) { console.error('Failed to load Abdomen', e); }
 
-            // ✅ Load Extremities
             try {
                 const extRes = await axios.get(`${BASE}/extremities/pExam/${p.pExamID}`);
                 if (extRes.data) {
@@ -736,7 +722,6 @@ onMounted(async () => {
                 }
             } catch (e) { console.error('Failed to load Extremities', e); }
 
-            // ✅ Load PelvicExamination
             try {
                 const pelvicRes = await axios.get(`${BASE}/pelvic-examination/pExam/${p.pExamID}`);
                 if (pelvicRes.data && pelvicRes.data.length > 0) {
@@ -761,7 +746,7 @@ onMounted(async () => {
         }
     } catch (e) { console.error('Failed to load PhysicalExamination', e); }
 
-    // 9. Load FpAssessmentRecord
+    // 8. Load FpAssessmentRecord
     try {
         const res = await axios.get(`${BASE}/fpassessment/client/${clientId}`);
         if (res.data && res.data.length > 0) {
@@ -773,7 +758,7 @@ onMounted(async () => {
         }
     } catch (e) { console.error('Failed to load FpAssessmentRecord', e); }
 
-    // 10. Load PregnancyChecklist
+    // 9. Load PregnancyChecklist
     try {
         const res = await axios.get(`${BASE}/pregnancychecklist/client/${clientId}`);
         if (res.data && res.data.length > 0) {
@@ -794,12 +779,9 @@ onMounted(async () => {
         <div class="max-w-screen mx-auto bg-white rounded-lg shadow-lg p-8">
             <!-- Header -->
             <div class="border-b-2 border-gray-800 pb-4 mb-6">
-                <!-- Back Button -->
                 <div class="mb-4">
-                    <button
-                        @click="goBack"
-                        class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow transition"
-                    >
+                    <button @click="goBack"
+                        class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow transition">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
                         </svg>
@@ -824,13 +806,11 @@ onMounted(async () => {
 
                 <!-- Client Information -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <!-- To this: -->
-<div>
-    <label class="block text-sm font-medium mb-1">Client ID</label>
-    <input v-model="formData.clientId" type="text" 
-        readonly
-        class="w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded cursor-not-allowed" />
-</div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Client ID</label>
+                        <input v-model="formData.clientId" type="text" readonly
+                            class="w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded cursor-not-allowed" />
+                    </div>
                     <div>
                         <label class="block text-sm font-medium mb-1">PHILHEALTH NO</label>
                         <input v-model="formData.philhealthNo" type="text" class="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
@@ -888,7 +868,6 @@ onMounted(async () => {
                     </label>
                 </div>
 
-                <!-- Average Monthly Income -->
                 <div class="border-t pt-4">
                     <label class="block text-sm font-bold mb-2">AVERAGE MONTHLY INCOME:</label>
                     <input v-model="formData.averageMonthlyIncome" type="text" class="w-full md:w-1/2 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
@@ -913,58 +892,26 @@ onMounted(async () => {
                     <h3 class="font-bold mb-4">Type Of Client</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="space-y-2">
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.clientType.newAcceptor" type="checkbox" class="w-4 h-4" />
-                                <span>New Acceptor</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.clientType.currentUser" type="checkbox" class="w-4 h-4" />
-                                <span>Current User</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.clientType.changingMethod" type="checkbox" class="w-4 h-4" />
-                                <span>Changing Method</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.clientType.changingClinic" type="checkbox" class="w-4 h-4" />
-                                <span>Changing Clinic</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.clientType.dropoutRestart" type="checkbox" class="w-4 h-4" />
-                                <span>Dropout/Restart</span>
-                            </label>
+                            <label class="flex items-center gap-2"><input v-model="formData.clientType.newAcceptor" type="checkbox" class="w-4 h-4" /><span>New Acceptor</span></label>
+                            <label class="flex items-center gap-2"><input v-model="formData.clientType.currentUser" type="checkbox" class="w-4 h-4" /><span>Current User</span></label>
+                            <label class="flex items-center gap-2"><input v-model="formData.clientType.changingMethod" type="checkbox" class="w-4 h-4" /><span>Changing Method</span></label>
+                            <label class="flex items-center gap-2"><input v-model="formData.clientType.changingClinic" type="checkbox" class="w-4 h-4" /><span>Changing Clinic</span></label>
+                            <label class="flex items-center gap-2"><input v-model="formData.clientType.dropoutRestart" type="checkbox" class="w-4 h-4" /><span>Dropout/Restart</span></label>
                         </div>
-
                         <div class="space-y-4">
                             <div>
                                 <p class="font-medium mb-2">Reason for FP:</p>
                                 <div class="space-y-2">
-                                    <label class="flex items-center gap-2">
-                                        <input v-model="formData.reasonSpacing" type="checkbox" class="w-4 h-4" />
-                                        <span>Spacing</span>
-                                    </label>
-                                    <label class="flex items-center gap-2">
-                                        <input v-model="formData.reasonLimiting" type="checkbox" class="w-4 h-4" />
-                                        <span>Limiting</span>
-                                    </label>
-                                    <label class="flex items-center gap-2">
-                                        <span>Others</span>
-                                        <input v-model="formData.reasonOthers" type="text" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm" />
-                                    </label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.reasonSpacing" type="checkbox" class="w-4 h-4" /><span>Spacing</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.reasonLimiting" type="checkbox" class="w-4 h-4" /><span>Limiting</span></label>
+                                    <label class="flex items-center gap-2"><span>Others</span><input v-model="formData.reasonOthers" type="text" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm" /></label>
                                 </div>
                             </div>
-
                             <div>
                                 <p class="font-medium mb-2">Reason:</p>
                                 <div class="space-y-2">
-                                    <label class="flex items-center gap-2">
-                                        <input v-model="formData.medicalCondition" type="checkbox" class="w-4 h-4" />
-                                        <span>Medical condition</span>
-                                    </label>
-                                    <label class="flex items-center gap-2">
-                                        <span>Side-effects</span>
-                                        <input v-model="formData.sideEffects" type="text" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm" />
-                                    </label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.medicalCondition" type="checkbox" class="w-4 h-4" /><span>Medical condition</span></label>
+                                    <label class="flex items-center gap-2"><span>Side-effects</span><input v-model="formData.sideEffects" type="text" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm" /></label>
                                 </div>
                             </div>
                         </div>
@@ -975,226 +922,51 @@ onMounted(async () => {
                 <div class="border-t pt-4">
                     <h3 class="font-bold mb-4">Method currently used (for Changing Method)</h3>
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.currentMethod.coc" type="checkbox" class="w-4 h-4" />
-                            <span>COC</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.currentMethod.iud" type="checkbox" class="w-4 h-4" />
-                            <span>IUD</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.currentMethod.bom_ccm" type="checkbox" class="w-4 h-4" />
-                            <span>BOM/CCM</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.currentMethod.pop" type="checkbox" class="w-4 h-4" />
-                            <span>POP</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.currentMethod.interval" type="checkbox" class="w-4 h-4" />
-                            <span>INTERVAL</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.currentMethod.bbt" type="checkbox" class="w-4 h-4" />
-                            <span>BBT</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.currentMethod.injectable" type="checkbox" class="w-4 h-4" />
-                            <span>INJECTABLE</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.currentMethod.postPartum" type="checkbox" class="w-4 h-4" />
-                            <span>POST-PARTUM</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.currentMethod.stm" type="checkbox" class="w-4 h-4" />
-                            <span>STM</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.currentMethod.implant" type="checkbox" class="w-4 h-4" />
-                            <span>IMPLANT</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.currentMethod.condom" type="checkbox" class="w-4 h-4" />
-                            <span>CONDOM</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.currentMethod.sdm" type="checkbox" class="w-4 h-4" />
-                            <span>SDM</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.currentMethod.lam" type="checkbox" class="w-4 h-4" />
-                            <span>LAM</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <span>OTHERS:</span>
-                            <input v-model="formData.currentMethod.others" type="text" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm" />
-                        </label>
+                        <label class="flex items-center gap-2"><input v-model="formData.currentMethod.coc" type="checkbox" class="w-4 h-4" /><span>COC</span></label>
+                        <label class="flex items-center gap-2"><input v-model="formData.currentMethod.iud" type="checkbox" class="w-4 h-4" /><span>IUD</span></label>
+                        <label class="flex items-center gap-2"><input v-model="formData.currentMethod.bom_ccm" type="checkbox" class="w-4 h-4" /><span>BOM/CCM</span></label>
+                        <label class="flex items-center gap-2"><input v-model="formData.currentMethod.pop" type="checkbox" class="w-4 h-4" /><span>POP</span></label>
+                        <label class="flex items-center gap-2"><input v-model="formData.currentMethod.interval" type="checkbox" class="w-4 h-4" /><span>INTERVAL</span></label>
+                        <label class="flex items-center gap-2"><input v-model="formData.currentMethod.bbt" type="checkbox" class="w-4 h-4" /><span>BBT</span></label>
+                        <label class="flex items-center gap-2"><input v-model="formData.currentMethod.injectable" type="checkbox" class="w-4 h-4" /><span>INJECTABLE</span></label>
+                        <label class="flex items-center gap-2"><input v-model="formData.currentMethod.postPartum" type="checkbox" class="w-4 h-4" /><span>POST-PARTUM</span></label>
+                        <label class="flex items-center gap-2"><input v-model="formData.currentMethod.stm" type="checkbox" class="w-4 h-4" /><span>STM</span></label>
+                        <label class="flex items-center gap-2"><input v-model="formData.currentMethod.implant" type="checkbox" class="w-4 h-4" /><span>IMPLANT</span></label>
+                        <label class="flex items-center gap-2"><input v-model="formData.currentMethod.condom" type="checkbox" class="w-4 h-4" /><span>CONDOM</span></label>
+                        <label class="flex items-center gap-2"><input v-model="formData.currentMethod.sdm" type="checkbox" class="w-4 h-4" /><span>SDM</span></label>
+                        <label class="flex items-center gap-2"><input v-model="formData.currentMethod.lam" type="checkbox" class="w-4 h-4" /><span>LAM</span></label>
+                        <label class="flex items-center gap-2"><span>OTHERS:</span><input v-model="formData.currentMethod.others" type="text" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm" /></label>
                     </div>
                 </div>
 
-                <!-- I. Medical History -->
+                <!-- Medical History -->
                 <div class="border-t pt-4">
                     <h3 class="font-bold mb-4">I. Medical History</h3>
                     <p class="text-sm mb-4">Does the client have any of the following</p>
                     <div class="space-y-2">
-                        <div class="grid grid-cols-3 gap-4 items-center">
-                            <span class="text-sm">● Severe headache / migraine</span>
+                        <div v-for="(item, idx) in [
+                            { label: '● Severe headache / migraine', key: 'severeHeadache' },
+                            { label: '● History of stroke / heart attack/ hypertension', key: 'strokeHistory' },
+                            { label: '● Non-traumatic hematoma / frequent bruising or gum bleeding', key: 'hematoma' },
+                            { label: '● Current or history of breast cancer / breast mass', key: 'breastCancer' },
+                            { label: '● Severe chest pain', key: 'chestPain' },
+                            { label: '● Cough for more than 14 days', key: 'cough' },
+                            { label: '● Jaundice', key: 'jaundice' },
+                            { label: '● Unexplained vaginal bleeding', key: 'vaginalBleeding' },
+                            { label: '● Abnormal vaginal discharge', key: 'abnormalVaginalDischarge' },
+                            { label: '● Abnormal penile discharge', key: 'abnormalPenileDischarge' },
+                            { label: '● Intake of phenobarbital (anti-seizure) or rifampicin', key: 'phenobarbital' },
+                            { label: '● Is the client smoker?', key: 'smoker' },
+                            { label: '● With Disability?', key: 'disability' },
+                        ]" :key="idx" class="grid grid-cols-3 gap-4 items-center">
+                            <span class="text-sm">{{ item.label }}</span>
                             <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.severeHeadache" type="radio" :value="true" class="w-4 h-4" />
-                                <span>Yes</span>
+                                <input v-model="formData.medicalHistory[item.key]" type="radio" :value="true" class="w-4 h-4" /><span>Yes</span>
                             </label>
                             <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.severeHeadache" type="radio" :value="false" class="w-4 h-4" />
-                                <span>No</span>
-                            </label>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-4 items-center">
-                            <span class="text-sm">● History of stroke / heart attack/ hypertension</span>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.strokeHistory" type="radio" :value="true" class="w-4 h-4" />
-                                <span>Yes</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.strokeHistory" type="radio" :value="false" class="w-4 h-4" />
-                                <span>No</span>
-                            </label>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-4 items-center">
-                            <span class="text-sm">● Non-traumatic hematoma / frequent bruising or gum bleeding</span>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.hematoma" type="radio" :value="true" class="w-4 h-4" />
-                                <span>Yes</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.hematoma" type="radio" :value="false" class="w-4 h-4" />
-                                <span>No</span>
+                                <input v-model="formData.medicalHistory[item.key]" type="radio" :value="false" class="w-4 h-4" /><span>No</span>
                             </label>
                         </div>
-
-                        <div class="grid grid-cols-3 gap-4 items-center">
-                            <span class="text-sm">● Current or history of breast cancer / breast mass</span>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.breastCancer" type="radio" :value="true" class="w-4 h-4" />
-                                <span>Yes</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.breastCancer" type="radio" :value="false" class="w-4 h-4" />
-                                <span>No</span>
-                            </label>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-4 items-center">
-                            <span class="text-sm">● Severe chest pain</span>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.chestPain" type="radio" :value="true" class="w-4 h-4" />
-                                <span>Yes</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.chestPain" type="radio" :value="false" class="w-4 h-4" />
-                                <span>No</span>
-                            </label>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-4 items-center">
-                            <span class="text-sm">● Cough for more than 14 days</span>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.cough" type="radio" :value="true" class="w-4 h-4" />
-                                <span>Yes</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.cough" type="radio" :value="false" class="w-4 h-4" />
-                                <span>No</span>
-                            </label>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-4 items-center">
-                            <span class="text-sm">● Jaundice</span>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.jaundice" type="radio" :value="true" class="w-4 h-4" />
-                                <span>Yes</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.jaundice" type="radio" :value="false" class="w-4 h-4" />
-                                <span>No</span>
-                            </label>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-4 items-center">
-                            <span class="text-sm">● Unexplained vaginal bleeding</span>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.vaginalBleeding" type="radio" :value="true" class="w-4 h-4" />
-                                <span>Yes</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.vaginalBleeding" type="radio" :value="false" class="w-4 h-4" />
-                                <span>No</span>
-                            </label>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-4 items-center">
-                            <span class="text-sm">● Abnormal vaginal discharge</span>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.abnormalVaginalDischarge" type="radio" :value="true" class="w-4 h-4" />
-                                <span>Yes</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.abnormalVaginalDischarge" type="radio" :value="false" class="w-4 h-4" />
-                                <span>No</span>
-                            </label>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-4 items-center">
-                            <span class="text-sm">● Abnormal penile discharge</span>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.abnormalPenileDischarge" type="radio" :value="true" class="w-4 h-4" />
-                                <span>Yes</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.abnormalPenileDischarge" type="radio" :value="false" class="w-4 h-4" />
-                                <span>No</span>
-                            </label>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-4 items-center">
-                            <span class="text-sm">● Intake of phenobarbital (anti-seizure) or rifampicin</span>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.phenobarbital" type="radio" :value="true" class="w-4 h-4" />
-                                <span>Yes</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.phenobarbital" type="radio" :value="false" class="w-4 h-4" />
-                                <span>No</span>
-                            </label>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-4 items-center">
-                            <span class="text-sm">● Is the client smoker?</span>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.smoker" type="radio" :value="true" class="w-4 h-4" />
-                                <span>Yes</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.smoker" type="radio" :value="false" class="w-4 h-4" />
-                                <span>No</span>
-                            </label>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-4 items-center">
-                            <span class="text-sm">● With Disability?</span>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.disability" type="radio" :value="true" class="w-4 h-4" />
-                                <span>Yes</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.medicalHistory.disability" type="radio" :value="false" class="w-4 h-4" />
-                                <span>No</span>
-                            </label>
-                        </div>
-
                         <div class="ml-8" v-if="formData.medicalHistory.disability">
                             <label class="text-sm">If yes then please specify</label>
                             <input v-model="formData.medicalHistory.disabilitySpecify" type="text" class="w-full px-3 py-2 border border-gray-300 rounded mt-1" />
@@ -1202,7 +974,7 @@ onMounted(async () => {
                     </div>
                 </div>
 
-                <!-- II. OBSTETRIC HISTORY -->
+                <!-- Obstetric History -->
                 <div class="border-t pt-4">
                     <h3 class="font-bold mb-4">II. OBSTETRIC HISTORY</h3>
                     <div class="space-y-4">
@@ -1212,400 +984,16 @@ onMounted(async () => {
                             <span>P</span>
                             <input type="text" class="w-16 px-2 py-1 border border-gray-300 rounded" />
                         </div>
-
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div class="flex items-center gap-2">
-                                <label class="text-sm">Full Term</label>
-                                <input v-model="formData.obstetric.fullTerm" type="text" class="w-20 px-2 py-1 border border-gray-300 rounded" />
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <label class="text-sm">Premature</label>
-                                <input v-model="formData.obstetric.premature" type="text" class="w-20 px-2 py-1 border border-gray-300 rounded" />
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <label class="text-sm">Abortion</label>
-                                <input v-model="formData.obstetric.abortion" type="text" class="w-20 px-2 py-1 border border-gray-300 rounded" />
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <label class="text-sm">Living Children</label>
-                                <input v-model="formData.obstetric.livingChildren" type="text" class="w-20 px-2 py-1 border border-gray-300 rounded" />
-                            </div>
+                            <div class="flex items-center gap-2"><label class="text-sm">Full Term</label><input v-model="formData.obstetric.fullTerm" type="text" class="w-20 px-2 py-1 border border-gray-300 rounded" /></div>
+                            <div class="flex items-center gap-2"><label class="text-sm">Premature</label><input v-model="formData.obstetric.premature" type="text" class="w-20 px-2 py-1 border border-gray-300 rounded" /></div>
+                            <div class="flex items-center gap-2"><label class="text-sm">Abortion</label><input v-model="formData.obstetric.abortion" type="text" class="w-20 px-2 py-1 border border-gray-300 rounded" /></div>
+                            <div class="flex items-center gap-2"><label class="text-sm">Living Children</label><input v-model="formData.obstetric.livingChildren" type="text" class="w-20 px-2 py-1 border border-gray-300 rounded" /></div>
                         </div>
-
                         <div class="flex items-center gap-4">
                             <label class="text-sm">Date of last delivery:</label>
                             <input v-model="formData.obstetric.lastDeliveryDate" type="date" class="px-3 py-2 border border-gray-300 rounded" />
                         </div>
-
-                        <div>
-                            <label class="text-sm font-medium mb-2 block">Type of last delivery</label>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-sm">Last menstrual period:</label>
-                            <input v-model="formData.obstetric.lastMenstrualStart" type="date" class="w-full px-3 py-2 border border-gray-300 rounded mt-1" />
-                        </div>
-                        <div>
-                            <label class="text-sm">Previous menstrual period:</label>
-                            <input v-model="formData.obstetric.previousMenstrualPeriod" type="date" class="w-full px-3 py-2 border border-gray-300 rounded mt-1" />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="text-sm font-medium mb-2 block">Menstrual flow:</label>
-                        <div class="space-y-2">
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.obstetric.menstrualFlow" type="radio" value="scanty" class="w-4 h-4" />
-                                <span class="text-sm">scanty (1-2 pads per day)</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.obstetric.menstrualFlow" type="radio" value="moderate" class="w-4 h-4" />
-                                <span class="text-sm">moderate (3-5 pads per day)</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.obstetric.menstrualFlow" type="radio" value="heavy" class="w-4 h-4" />
-                                <span class="text-sm">heavy (>5 pads per day)</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.obstetric.dysmenorrhea" type="checkbox" class="w-4 h-4" />
-                            <span class="text-sm">Dysmenorrhea</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.obstetric.hydatidiformMole" type="checkbox" class="w-4 h-4" />
-                            <span class="text-sm">Hydatidiform mole (within the last 12 months)</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.obstetric.ectopicPregnancy" type="checkbox" class="w-4 h-4" />
-                            <span class="text-sm">History of ectopic pregnancy</span>
-                        </label>
-                    </div>
-                </div>
-                </div>
-            </div>
-
-            <!-- IV. Risk for Violence Against Women (VAW) -->
-            <div class="border-t pt-4">
-                <h3 class="font-bold mb-4">IV. Risk For Violence Against Women (VAW)</h3>
-                <div class="space-y-3">
-                    <div class="grid grid-cols-3 gap-4 items-center">
-                        <span class="text-sm">● Unpleasant relationship with partner</span>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.vaw.unpleasantRelationship" type="radio" :value="true" class="w-4 h-4" />
-                            <span>Yes</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.vaw.unpleasantRelationship" type="radio" :value="false" class="w-4 h-4" />
-                            <span>No</span>
-                        </label>
-                    </div>
-
-                    <div class="grid grid-cols-3 gap-4 items-center">
-                        <span class="text-sm">● Partner does not approve visit to FP clinic</span>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.vaw.partnerDisapproval" type="radio" :value="true" class="w-4 h-4" />
-                            <span>Yes</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.vaw.partnerDisapproval" type="radio" :value="false" class="w-4 h-4" />
-                            <span>No</span>
-                        </label>
-                    </div>
-
-                    <div class="grid grid-cols-3 gap-4 items-center">
-                        <span class="text-sm">● History of domestic violence or VAW</span>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.vaw.domesticViolence" type="radio" :value="true" class="w-4 h-4" />
-                            <span>Yes</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input v-model="formData.vaw.domesticViolence" type="radio" :value="false" class="w-4 h-4" />
-                            <span>No</span>
-                        </label>
-                    </div>
-
-                    <div class="ml-8 mt-4">
-                        <p class="text-sm font-medium mb-2">referred to:</p>
-                        <div class="space-y-2">
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.vaw.referredTo.dswd" type="checkbox" class="w-4 h-4" />
-                                <span class="text-sm">DSWD</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.vaw.referredTo.wcpu" type="checkbox" class="w-4 h-4" />
-                                <span class="text-sm">WCPU</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <input v-model="formData.vaw.referredTo.ngos" type="checkbox" class="w-4 h-4" />
-                                <span class="text-sm">NGO's</span>
-                            </label>
-                            <label class="flex items-center gap-2">
-                                <span class="text-sm">Others please specify</span>
-                                <input v-model="formData.vaw.referredTo.othersSpecify" type="text" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm" />
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- V. PHYSICAL EXAMINATION -->
-            <div class="border-t pt-4">
-                <h3 class="font-bold mb-4">V. PHYSICAL EXAMINATION</h3>
-                
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div>
-                        <label class="text-sm">Weight:</label>
-                        <input v-model="formData.physical.weight" type="text" placeholder="kg" class="w-full px-3 py-2 border border-gray-300 rounded mt-1" />
-                    </div>
-                    <div>
-                        <label class="text-sm">Blood pressure:</label>
-                        <input v-model="formData.physical.bloodPressure" type="text" placeholder="mmHg" class="w-full px-3 py-2 border border-gray-300 rounded mt-1" />
-                    </div>
-                    <div>
-                        <label class="text-sm">Height:</label>
-                        <input v-model="formData.physical.height" type="text" placeholder="cm" class="w-full px-3 py-2 border border-gray-300 rounded mt-1" />
-                    </div>
-                    <div>
-                        <label class="text-sm">Pulse rate:</label>
-                        <input v-model="formData.physical.pulseRate" type="text" placeholder="/min" class="w-full px-3 py-2 border border-gray-300 rounded mt-1" />
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Left Column -->
-                    <div class="space-y-6">
-                        <div>
-                            <p class="font-medium mb-2">SKIN:</p>
-                            <div class="space-y-2">
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.skin.normal" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">normal</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.skin.pale" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">pale</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.skin.yellowish" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">yellowish</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.skin.hematoma" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">hematoma</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div>
-                            <p class="font-medium mb-2">CONJUNCTIVA:</p>
-                            <div class="space-y-2">
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.conjunctiva.normal" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">normal</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.conjunctiva.pale" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">pale</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.conjunctiva.yellowish" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">yellowish</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div>
-                            <p class="font-medium mb-2">NECK:</p>
-                            <div class="space-y-2">
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.neck.normal" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">normal</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.neck.neckMass" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">neck mass</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.neck.enlargedLymphNodes" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">enlarged lymph nodes</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div>
-                            <p class="font-medium mb-2">BREAST:</p>
-                            <div class="space-y-2">
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.breast.normal" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">normal</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.breast.mass" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">mass</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.breast.nippleDischarge" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">nipple discharge</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div>
-                            <p class="font-medium mb-2">ABDOMEN:</p>
-                            <div class="space-y-2">
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.abdomen.normal" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">normal</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.abdomen.abdominalMass" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">abdominal mass</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.abdomen.varicosities" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">varicosities</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right Column -->
-                    <div class="space-y-6">
-                        <div>
-                            <p class="font-medium mb-2">EXTREMITIES:</p>
-                            <div class="space-y-2">
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.extremities.normal" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">normal</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.extremities.edema" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">edema</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.extremities.varicosities" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">varicosities</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div>
-                            <p class="font-medium mb-2">PELVIC EXAMINATION:</p>
-                            <div class="space-y-2">
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.pelvicExam.normal" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">normal</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.pelvicExam.mass" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">mass</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.pelvicExam.abnormalDischarge" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">abnormal discharge</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.pelvicExam.warts" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">warts</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.pelvicExam.polypCyst" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">polyp or cyst</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.pelvicExam.inflammationErosion" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">inflammation or erosion</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.pelvicExam.bloodyDischarge" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">bloody discharge</span>
-                                </label>
-                            </div>
-
-                            <div class="mt-4 space-y-3">
-                                <div>
-                                    <p class="text-sm mb-2">cervical consistency:</p>
-                                    <div class="flex gap-4">
-                                        <label class="flex items-center gap-2">
-                                            <input v-model="formData.physical.pelvicExam.cervicalConsistency" type="radio" value="firm" class="w-4 h-4" />
-                                            <span class="text-sm">firm</span>
-                                        </label>
-                                        <label class="flex items-center gap-2">
-                                            <input v-model="formData.physical.pelvicExam.cervicalConsistency" type="radio" value="soft" class="w-4 h-4" />
-                                            <span class="text-sm">soft</span>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.pelvicExam.cervicalTenderness" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">cervical tenderness</span>
-                                </label>
-
-                                <label class="flex items-center gap-2">
-                                    <input v-model="formData.physical.pelvicExam.adnexalMass" type="checkbox" class="w-4 h-4" />
-                                    <span class="text-sm">adnexal mass / tenderness</span>
-                                </label>
-
-                                <div>
-                                    <p class="text-sm mb-2">uterine position:</p>
-                                    <div class="space-y-2">
-                                        <label class="flex items-center gap-2">
-                                            <input v-model="formData.physical.pelvicExam.uterinePosition" type="radio" value="mid" class="w-4 h-4" />
-                                            <span class="text-sm">mid</span>
-                                        </label>
-                                        <label class="flex items-center gap-2">
-                                            <input v-model="formData.physical.pelvicExam.uterinePosition" type="radio" value="anteflexed" class="w-4 h-4" />
-                                            <span class="text-sm">anteflexed</span>
-                                        </label>
-                                        <label class="flex items-center gap-2">
-                                            <input v-model="formData.physical.pelvicExam.uterinePosition" type="radio" value="retroflexed" class="w-4 h-4" />
-                                            <span class="text-sm">retroflexed</span>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div class="flex items-center gap-2">
-                                    <label class="text-sm">uterine depth:</label>
-                                    <input v-model="formData.physical.pelvicExam.uterineDepth" type="text" placeholder="cm" class="w-24 px-2 py-1 border border-gray-300 rounded" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- SIDE B -->
-      <div class="border-t pt-4">
-                    <h3 class="font-bold mb-4">II. OBSTETRIC HISTORY</h3>
-                    <div class="space-y-4">
-                        <div class="flex items-center gap-4">
-                            <span class="text-sm">Number of pregnancies: G</span>
-                            <input v-model="formData.obstetric.numPregnancies" type="text" class="w-16 px-2 py-1 border border-gray-300 rounded" />
-                            <span>P</span>
-                            <input v-model="formData.obstetric.fullTerm" type="text" class="w-16 px-2 py-1 border border-gray-300 rounded" />
-                        </div>
-
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div class="flex items-center gap-2">
-                                <label class="text-sm">Full Term</label>
-                                <input v-model="formData.obstetric.fullTerm" type="text" class="w-20 px-2 py-1 border border-gray-300 rounded" />
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <label class="text-sm">Premature</label>
-                                <input v-model="formData.obstetric.premature" type="text" class="w-20 px-2 py-1 border border-gray-300 rounded" />
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <label class="text-sm">Abortion</label>
-                                <input v-model="formData.obstetric.abortion" type="text" class="w-20 px-2 py-1 border border-gray-300 rounded" />
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <label class="text-sm">Living Children</label>
-                                <input v-model="formData.obstetric.livingChildren" type="text" class="w-20 px-2 py-1 border border-gray-300 rounded" />
-                            </div>
-                        </div>
-
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="text-sm">Last menstrual period:</label>
@@ -1616,12 +1004,151 @@ onMounted(async () => {
                                 <input v-model="formData.obstetric.previousMenstrualPeriod" type="date" class="w-full px-3 py-2 border border-gray-300 rounded mt-1" />
                             </div>
                         </div>
+                        <div>
+                            <label class="text-sm font-medium mb-2 block">Menstrual flow:</label>
+                            <div class="space-y-2">
+                                <label class="flex items-center gap-2"><input v-model="formData.obstetric.menstrualFlow" type="radio" value="scanty" class="w-4 h-4" /><span class="text-sm">scanty (1-2 pads per day)</span></label>
+                                <label class="flex items-center gap-2"><input v-model="formData.obstetric.menstrualFlow" type="radio" value="moderate" class="w-4 h-4" /><span class="text-sm">moderate (3-5 pads per day)</span></label>
+                                <label class="flex items-center gap-2"><input v-model="formData.obstetric.menstrualFlow" type="radio" value="heavy" class="w-4 h-4" /><span class="text-sm">heavy (>5 pads per day)</span></label>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2"><input v-model="formData.obstetric.dysmenorrhea" type="checkbox" class="w-4 h-4" /><span class="text-sm">Dysmenorrhea</span></label>
+                            <label class="flex items-center gap-2"><input v-model="formData.obstetric.hydatidiformMole" type="checkbox" class="w-4 h-4" /><span class="text-sm">Hydatidiform mole (within the last 12 months)</span></label>
+                            <label class="flex items-center gap-2"><input v-model="formData.obstetric.ectopicPregnancy" type="checkbox" class="w-4 h-4" /><span class="text-sm">History of ectopic pregnancy</span></label>
+                        </div>
                     </div>
                 </div>
 
+                <!-- VAW -->
+                <div class="border-t pt-4">
+                    <h3 class="font-bold mb-4">IV. Risk For Violence Against Women (VAW)</h3>
+                    <div class="space-y-3">
+                        <div v-for="(item, idx) in [
+                            { label: '● Unpleasant relationship with partner', key: 'unpleasantRelationship' },
+                            { label: '● Partner does not approve visit to FP clinic', key: 'partnerDisapproval' },
+                            { label: '● History of domestic violence or VAW', key: 'domesticViolence' },
+                        ]" :key="idx" class="grid grid-cols-3 gap-4 items-center">
+                            <span class="text-sm">{{ item.label }}</span>
+                            <label class="flex items-center gap-2"><input v-model="formData.vaw[item.key]" type="radio" :value="true" class="w-4 h-4" /><span>Yes</span></label>
+                            <label class="flex items-center gap-2"><input v-model="formData.vaw[item.key]" type="radio" :value="false" class="w-4 h-4" /><span>No</span></label>
+                        </div>
+                        <div class="ml-8 mt-4">
+                            <p class="text-sm font-medium mb-2">referred to:</p>
+                            <div class="space-y-2">
+                                <label class="flex items-center gap-2"><input v-model="formData.vaw.referredTo.dswd" type="checkbox" class="w-4 h-4" /><span class="text-sm">DSWD</span></label>
+                                <label class="flex items-center gap-2"><input v-model="formData.vaw.referredTo.wcpu" type="checkbox" class="w-4 h-4" /><span class="text-sm">WCPU</span></label>
+                                <label class="flex items-center gap-2"><input v-model="formData.vaw.referredTo.ngos" type="checkbox" class="w-4 h-4" /><span class="text-sm">NGO's</span></label>
+                                <label class="flex items-center gap-2"><span class="text-sm">Others please specify</span><input v-model="formData.vaw.referredTo.othersSpecify" type="text" class="flex-1 px-2 py-1 border border-gray-300 rounded text-sm" /></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Physical Examination -->
+                <div class="border-t pt-4">
+                    <h3 class="font-bold mb-4">V. PHYSICAL EXAMINATION</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div><label class="text-sm">Weight:</label><input v-model="formData.physical.weight" type="text" placeholder="kg" class="w-full px-3 py-2 border border-gray-300 rounded mt-1" /></div>
+                        <div><label class="text-sm">Blood pressure:</label><input v-model="formData.physical.bloodPressure" type="text" placeholder="mmHg" class="w-full px-3 py-2 border border-gray-300 rounded mt-1" /></div>
+                        <div><label class="text-sm">Height:</label><input v-model="formData.physical.height" type="text" placeholder="cm" class="w-full px-3 py-2 border border-gray-300 rounded mt-1" /></div>
+                        <div><label class="text-sm">Pulse rate:</label><input v-model="formData.physical.pulseRate" type="text" placeholder="/min" class="w-full px-3 py-2 border border-gray-300 rounded mt-1" /></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-6">
+                            <div>
+                                <p class="font-medium mb-2">SKIN:</p>
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.skin.normal" type="checkbox" class="w-4 h-4" /><span class="text-sm">normal</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.skin.pale" type="checkbox" class="w-4 h-4" /><span class="text-sm">pale</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.skin.yellowish" type="checkbox" class="w-4 h-4" /><span class="text-sm">yellowish</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.skin.hematoma" type="checkbox" class="w-4 h-4" /><span class="text-sm">hematoma</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="font-medium mb-2">CONJUNCTIVA:</p>
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.conjunctiva.normal" type="checkbox" class="w-4 h-4" /><span class="text-sm">normal</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.conjunctiva.pale" type="checkbox" class="w-4 h-4" /><span class="text-sm">pale</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.conjunctiva.yellowish" type="checkbox" class="w-4 h-4" /><span class="text-sm">yellowish</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="font-medium mb-2">NECK:</p>
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.neck.normal" type="checkbox" class="w-4 h-4" /><span class="text-sm">normal</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.neck.neckMass" type="checkbox" class="w-4 h-4" /><span class="text-sm">neck mass</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.neck.enlargedLymphNodes" type="checkbox" class="w-4 h-4" /><span class="text-sm">enlarged lymph nodes</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="font-medium mb-2">BREAST:</p>
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.breast.normal" type="checkbox" class="w-4 h-4" /><span class="text-sm">normal</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.breast.mass" type="checkbox" class="w-4 h-4" /><span class="text-sm">mass</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.breast.nippleDischarge" type="checkbox" class="w-4 h-4" /><span class="text-sm">nipple discharge</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="font-medium mb-2">ABDOMEN:</p>
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.abdomen.normal" type="checkbox" class="w-4 h-4" /><span class="text-sm">normal</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.abdomen.abdominalMass" type="checkbox" class="w-4 h-4" /><span class="text-sm">abdominal mass</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.abdomen.varicosities" type="checkbox" class="w-4 h-4" /><span class="text-sm">varicosities</span></label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-6">
+                            <div>
+                                <p class="font-medium mb-2">EXTREMITIES:</p>
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.extremities.normal" type="checkbox" class="w-4 h-4" /><span class="text-sm">normal</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.extremities.edema" type="checkbox" class="w-4 h-4" /><span class="text-sm">edema</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.extremities.varicosities" type="checkbox" class="w-4 h-4" /><span class="text-sm">varicosities</span></label>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="font-medium mb-2">PELVIC EXAMINATION:</p>
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.pelvicExam.normal" type="checkbox" class="w-4 h-4" /><span class="text-sm">normal</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.pelvicExam.mass" type="checkbox" class="w-4 h-4" /><span class="text-sm">mass</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.pelvicExam.abnormalDischarge" type="checkbox" class="w-4 h-4" /><span class="text-sm">abnormal discharge</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.pelvicExam.warts" type="checkbox" class="w-4 h-4" /><span class="text-sm">warts</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.pelvicExam.polypCyst" type="checkbox" class="w-4 h-4" /><span class="text-sm">polyp or cyst</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.pelvicExam.inflammationErosion" type="checkbox" class="w-4 h-4" /><span class="text-sm">inflammation or erosion</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.pelvicExam.bloodyDischarge" type="checkbox" class="w-4 h-4" /><span class="text-sm">bloody discharge</span></label>
+                                </div>
+                                <div class="mt-4 space-y-3">
+                                    <div>
+                                        <p class="text-sm mb-2">cervical consistency:</p>
+                                        <div class="flex gap-4">
+                                            <label class="flex items-center gap-2"><input v-model="formData.physical.pelvicExam.cervicalConsistency" type="radio" value="firm" class="w-4 h-4" /><span class="text-sm">firm</span></label>
+                                            <label class="flex items-center gap-2"><input v-model="formData.physical.pelvicExam.cervicalConsistency" type="radio" value="soft" class="w-4 h-4" /><span class="text-sm">soft</span></label>
+                                        </div>
+                                    </div>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.pelvicExam.cervicalTenderness" type="checkbox" class="w-4 h-4" /><span class="text-sm">cervical tenderness</span></label>
+                                    <label class="flex items-center gap-2"><input v-model="formData.physical.pelvicExam.adnexalMass" type="checkbox" class="w-4 h-4" /><span class="text-sm">adnexal mass / tenderness</span></label>
+                                    <div>
+                                        <p class="text-sm mb-2">uterine position:</p>
+                                        <div class="space-y-2">
+                                            <label class="flex items-center gap-2"><input v-model="formData.physical.pelvicExam.uterinePosition" type="radio" value="mid" class="w-4 h-4" /><span class="text-sm">mid</span></label>
+                                            <label class="flex items-center gap-2"><input v-model="formData.physical.pelvicExam.uterinePosition" type="radio" value="anteflexed" class="w-4 h-4" /><span class="text-sm">anteflexed</span></label>
+                                            <label class="flex items-center gap-2"><input v-model="formData.physical.pelvicExam.uterinePosition" type="radio" value="retroflexed" class="w-4 h-4" /><span class="text-sm">retroflexed</span></label>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <label class="text-sm">uterine depth:</label>
+                                        <input v-model="formData.physical.pelvicExam.uterineDepth" type="text" placeholder="cm" class="w-24 px-2 py-1 border border-gray-300 rounded" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Side B -->
                 <div class="border-t-4 border-blue-600 pt-8 mt-12">
                     <h2 class="text-xl font-bold mb-6 text-blue-900">SIDE B: FAMILY PLANNING ASSESSMENT RECORD</h2>
-                    
                     <div class="bg-white border rounded-xl shadow-sm p-6 space-y-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
@@ -1633,12 +1160,10 @@ onMounted(async () => {
                                 <input v-model="formData.physical.sideB.serviceProvider" type="text" class="w-full p-2 border rounded-md" />
                             </div>
                         </div>
-
                         <div>
                             <label class="block text-sm font-semibold mb-1">Medical Findings</label>
                             <textarea v-model="formData.physical.sideB.medicalFindings" rows="3" class="w-full p-2 border rounded-md"></textarea>
                         </div>
-
                         <div class="mt-8">
                             <h3 class="font-bold text-lg mb-4 text-blue-900 underline">How to be Reasonably Sure a Client is Not Pregnant</h3>
                             <div class="space-y-2">
@@ -1686,11 +1211,10 @@ onMounted(async () => {
                                 </div>
                             </div>
                         </div>
-
                         <div class="flex gap-4 mt-8 no-print">
                             <button type="submit" :disabled="submitStatus.loading" class="bg-blue-600 text-white px-8 py-3 rounded font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                            {{ submitStatus.loading ? 'Saving...' : 'SUBMIT RECORD' }}
-                        </button>
+                                {{ submitStatus.loading ? 'Saving...' : 'SUBMIT RECORD' }}
+                            </button>
                             <button @click="resetForm" type="button" class="bg-gray-200 px-8 py-3 rounded font-bold">RESET</button>
                             <button @click="printForm" type="button" class="bg-green-600 text-white px-8 py-3 rounded font-bold hover:bg-green-700 flex items-center gap-2">
                                 🖨️ PRINT / SAVE PDF
@@ -1705,40 +1229,11 @@ onMounted(async () => {
 
 <style>
 @media print {
-    /* Hide navigation, buttons, status messages */
-    .no-print,
-    nav,
-    aside,
-    header,
-    .sidebar,
-    #sidebar {
-        display: none !important;
-    }
-    /* Make the form fill the full printed page */
-    body, html {
-        margin: 0 !important;
-        padding: 0 !important;
-        background: white !important;
-    }
-    .min-h-screen {
-        min-height: unset !important;
-        background: white !important;
-        padding: 0 !important;
-    }
-    .max-w-screen {
-        max-width: 100% !important;
-        box-shadow: none !important;
-        padding: 10px !important;
-    }
-    /* Ensure all text is black for printing */
-    * {
-        color: black !important;
-        background: white !important;
-    }
-    /* Keep borders and checkboxes visible */
-    input[type="checkbox"], input[type="radio"] {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
+    .no-print, nav, aside, header, .sidebar, #sidebar { display: none !important; }
+    body, html { margin: 0 !important; padding: 0 !important; background: white !important; }
+    .min-h-screen { min-height: unset !important; background: white !important; padding: 0 !important; }
+    .max-w-screen { max-width: 100% !important; box-shadow: none !important; padding: 10px !important; }
+    * { color: black !important; background: white !important; }
+    input[type="checkbox"], input[type="radio"] { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 </style>
