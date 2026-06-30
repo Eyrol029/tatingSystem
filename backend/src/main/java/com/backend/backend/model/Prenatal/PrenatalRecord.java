@@ -1,6 +1,9 @@
 package com.backend.backend.model.Prenatal;
 
-import java.sql.Date;
+import java.time.LocalDate;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -21,20 +24,30 @@ public class PrenatalRecord {
     @Column(name = "serviceID")
     private Integer serviceID;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     @Column(name = "initialPreConsultationDate")
-    private Date initialPreConsultationDate;
+    private LocalDate initialPreConsultationDate;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     @Column(name = "prenatalExamDate")
-    private Date prenatalExamDate;
+    private LocalDate prenatalExamDate;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     @Column(name = "expectedDeliveryDate")
-    private Date expectedDeliveryDate;
+    private LocalDate expectedDeliveryDate;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     @Column(name = "edc")
-    private Date edc;
+    private LocalDate edc;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     @Column(name = "deliveryDate")
-    private Date deliveryDate;
+    private LocalDate deliveryDate;
 
     @Column(name = "placeOfDelivery")
     private String placeOfDelivery;
@@ -65,43 +78,43 @@ public class PrenatalRecord {
         this.serviceID = serviceID;
     }
 
-    public Date getInitialPreConsultationDate() {
+    public LocalDate getInitialPreConsultationDate() {
         return initialPreConsultationDate;
     }
 
-    public void setInitialPreConsultationDate(Date initialPreConsultationDate) {
+    public void setInitialPreConsultationDate(LocalDate initialPreConsultationDate) {
         this.initialPreConsultationDate = initialPreConsultationDate;
     }
 
-    public Date getPrenatalExamDate() {
+    public LocalDate getPrenatalExamDate() {
         return prenatalExamDate;
     }
 
-    public void setPrenatalExamDate(Date prenatalExamDate) {
+    public void setPrenatalExamDate(LocalDate prenatalExamDate) {
         this.prenatalExamDate = prenatalExamDate;
     }
 
-    public Date getExpectedDeliveryDate() {
+    public LocalDate getExpectedDeliveryDate() {
         return expectedDeliveryDate;
     }
 
-    public void setExpectedDeliveryDate(Date expectedDeliveryDate) {
+    public void setExpectedDeliveryDate(LocalDate expectedDeliveryDate) {
         this.expectedDeliveryDate = expectedDeliveryDate;
     }
 
-    public Date getEdc() {
+    public LocalDate getEdc() {
         return edc;
     }
 
-    public void setEdc(Date edc) {
+    public void setEdc(LocalDate edc) {
         this.edc = edc;
     }
 
-    public Date getDeliveryDate() {
+    public LocalDate getDeliveryDate() {
         return deliveryDate;
     }
 
-    public void setDeliveryDate(Date deliveryDate) {
+    public void setDeliveryDate(LocalDate deliveryDate) {
         this.deliveryDate = deliveryDate;
     }
 
