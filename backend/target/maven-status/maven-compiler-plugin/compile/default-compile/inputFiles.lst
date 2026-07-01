@@ -7,6 +7,7 @@ C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Calendar\CalendarEventController.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\ClinicalServiceController.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\ClinicLogController.java
+C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\DashboardController.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\EmployeeController.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\AbdomenController.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\FamilyPlanning\BreastController.java
@@ -64,6 +65,7 @@ C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\CalendarEventDto.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\ClinicalService.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\ClinicLog.java
+C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\DashboardSummaryDTO.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Employee.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Abdomen.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\FamilyPlanning\Breast.java
@@ -181,6 +183,8 @@ C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\ClinicalServiceServiceInterface.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\ClinicLogService.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\ClinicLogServiceImpl.java
+C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\DashboardService.java
+C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\DashboardServiceImpl.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\EmployeeService.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\EmployeeServiceImpl.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\service\FamilyPlanning\AbdomenService.java

@@ -12,6 +12,8 @@ public interface PatientServiceRepository extends CrudRepository<PatientService,
 
     List<PatientService> findByPatientID(Integer patientID);
 
+    void deleteByPatientID(Integer patientID);
+
     List<PatientService> findByServiceName(String serviceName);
 
     List<PatientService> findByEmployeeName(String employeeName);
