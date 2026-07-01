@@ -188,17 +188,45 @@ async function fetchRiskAssessment(id) {
 // ─── Utilities ────────────────────────────────────────────────────────────────
 function printForm() { window.print() }
 
-function normalizeDate(value) {
+function parseLocalDate(value) {
   if (!value) return null
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return null
-  return date.toISOString().split('T')[0]
+  const dateString = String(value).trim()
+
+  const isoMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (isoMatch) {
+    return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]))
+  }
+
+  const mdyMatch = dateString.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/)
+  if (mdyMatch) {
+    let year = Number(mdyMatch[3])
+    if (year < 100) {
+      year += year < 70 ? 2000 : 1900
+    }
+    return new Date(Number(year), Number(mdyMatch[1]) - 1, Number(mdyMatch[2]))
+  }
+
+  const parsed = new Date(dateString)
+  if (Number.isNaN(parsed.getTime())) {
+    return null
+  }
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate())
+}
+
+function formatLocalDate(value) {
+  const date = parseLocalDate(value)
+  if (!date) return null
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
+function normalizeDate(value) {
+  return formatLocalDate(value)
 }
 
 function parseDateForForm(value) {
-  if (!value) return ''
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0]
+  return formatLocalDate(value) || ''
 }
 
 function buildPrenatalUrl(path, id) {

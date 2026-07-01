@@ -11,4 +11,6 @@ public interface PrenatalRecordRepository extends CrudRepository<PrenatalRecord,
     List<PrenatalRecord> findAll();
 
     List<PrenatalRecord> findByServiceID(Integer serviceID);
+
+    void deleteByServiceID(Integer serviceID);
 }
