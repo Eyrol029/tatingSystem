@@ -339,7 +339,7 @@ async function handleDeleteUser(userID) {
                 <td class="px-6 py-4 text-sm text-gray-900">{{ user.email }}</td>
                 <td class="px-6 py-4 text-sm text-gray-900">{{ user.role }}</td>
                 <td class="px-6 py-4 text-sm text-gray-900">{{ user.employeeID ?? '—' }}</td>
-                <td class="px-6 py-4 text-sm text-gray-900">{{  ' ' }}</td>
+                <td class="px-6 py-4 text-sm text-gray-900">{{ ' ' }}</td>
                 <td class="px-6 py-4">
                   <span
                     :class="[
