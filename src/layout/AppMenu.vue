@@ -20,7 +20,8 @@ const model = [
             { label: 'Wards', icon: 'pi pi-fw pi-warehouse', to: '/uikit/Wards', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
             { label: 'Service', icon: 'pi pi-fw pi-book', to: '/uikit/Service', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
             { label: 'Inventory', icon: 'pi pi-fw pi-box', to: '/uikit/Inventory', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
-            { label: 'Payment Dashboard', icon: 'pi pi-fw pi-money-bill', to: '/uikit/PaymentDashboard', roles: [UserRole.ADMIN] },
+            { label: 'Expense', icon: 'pi pi-fw pi-wallet', to: '/uikit/Expense', roles: [UserRole.ADMIN] },
+            {label: 'Payment Dashboard', icon: 'pi pi-fw pi-file', to: '/uikit/PaymentDashboard', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
             { label: 'List of Patients', icon: 'pi pi-fw pi-chart-line', to: '/uikit/PatientsMain', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
             { label: 'User Account', icon: 'pi pi-fw pi-users', to: '/uikit/UserAccount', roles: [UserRole.ADMIN] },
             { label: 'Logs', icon: 'pi pi-fw pi-home', to: '/uikit/Logs', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
@@ -30,8 +31,7 @@ const model = [
             { label: 'Create Appointment', icon: 'pi pi-fw pi-calendar-plus', to: '/uikit/PatientCreateAppointment', roles: [UserRole.PATIENT] },
             { label: 'Clinic Services', icon: 'pi pi-fw pi-book', to: '/uikit/PatientService', roles: [UserRole.PATIENT] },
             { label: 'My Services and Appointments', icon: 'pi pi-fw pi-list', to: '/uikit/MyServicesAndAppointment', roles: [UserRole.PATIENT] },
-            { label: 'Payment History', icon: 'pi pi-fw pi-money-bill', to: '/uikit/PaymentHistory', roles: [UserRole.PATIENT] },
-           
+            { label: 'Payment History', icon: 'pi pi-fw pi-money-bill', to: '/uikit/PaymentHistory', roles: [UserRole.PATIENT] },  
       ]   
     }
 ];

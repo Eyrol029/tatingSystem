@@ -2,13 +2,14 @@
 import { ref } from 'vue'
 
 const showModal = ref(false)
+const isEditing = ref(false)
+const editingId = ref(null)
 
 const expenses = ref([
   {
     id: 1,
     category: 'Medical Supplies',
     description: 'Surgical gloves and masks',
-    invoiceNo: '01227321',
     amount: 5000,
     payee: 'MedSupply Corp'
   }
@@ -17,12 +18,25 @@ const expenses = ref([
 const form = ref({
   category: '',
   description: '',
-  invoiceNo: '',
   amount: '',
   payee: ''
 })
 
-function openModal() {
+function openAddModal() {
+  isEditing.value = false
+  editingId.value = null
+  showModal.value = true
+}
+
+function openEditModal(expense) {
+  isEditing.value = true
+  editingId.value = expense.id
+  form.value = {
+    category: expense.category,
+    description: expense.description,
+    amount: expense.amount,
+    payee: expense.payee
+  }
   showModal.value = true
 }
 
@@ -35,19 +49,30 @@ function resetForm() {
   form.value = {
     category: '',
     description: '',
-    invoiceNo: '',
     amount: '',
     payee: ''
   }
+  isEditing.value = false
+  editingId.value = null
 }
 
 function saveExpense() {
   if (!form.value.category || !form.value.amount) return
 
-  expenses.value.push({
-    id: Date.now(),
-    ...form.value
-  })
+  if (isEditing.value) {
+    const index = expenses.value.findIndex(exp => exp.id === editingId.value)
+    if (index !== -1) {
+      expenses.value[index] = {
+        id: editingId.value,
+        ...form.value
+      }
+    }
+  } else {
+    expenses.value.push({
+      id: Date.now(),
+      ...form.value
+    })
+  }
 
   closeModal()
 }
@@ -64,9 +89,9 @@ function deleteExpense(id) {
 
     <!-- HEADER -->
     <div class="flex justify-between items-center mb-6">
-      <h2 class="text-xl font-semibold">View Expense Record</h2>
+      <h2 class="text-xl font-semibold">Expense Records</h2>
       <button
-        @click="openModal"
+        @click="openAddModal"
         class="bg-purple-700 text-white px-4 py-2 rounded-md"
       >
         + Add Expense
@@ -81,6 +106,7 @@ function deleteExpense(id) {
             <th class="p-3 text-left">Category</th>
             <th class="p-3 text-left">Description</th>
             <th class="p-3 text-left">Amount</th>
+            <th class="p-3 text-left">Payee</th>
             <th class="p-3 text-left">Action</th>
           </tr>
         </thead>
@@ -90,9 +116,13 @@ function deleteExpense(id) {
             <td class="p-3">{{ expense.category }}</td>
             <td class="p-3">{{ expense.description }}</td>
             <td class="p-3 font-semibold">₱{{ expense.amount }}</td>
+            <td class="p-3">{{ expense.payee }}</td>
             <td class="p-3 space-x-3">
-              <button class="text-blue-600 hover:underline">
-                View
+              <button
+                @click="openEditModal(expense)"
+                class="text-blue-600 hover:underline"
+              >
+                Edit
               </button>
               <button
                 @click="deleteExpense(expense.id)"
@@ -112,7 +142,7 @@ function deleteExpense(id) {
       class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
     >
       <div class="bg-white w-full max-w-lg rounded-lg p-6 shadow-lg">
-        <h3 class="text-lg font-semibold mb-4">Add Expense</h3>
+        <h3 class="text-lg font-semibold mb-4">{{ isEditing ? 'Edit Expense' : 'Add Expense' }}</h3>
 
         <div class="space-y-3">
           <div>
@@ -131,11 +161,6 @@ function deleteExpense(id) {
           </div>
 
           <div>
-            <label class="text-sm font-medium">Invoice / Receipt No.</label>
-            <input v-model="form.invoiceNo" class="w-full border rounded px-3 py-2" />
-          </div>
-
-          <div>
             <label class="text-sm font-medium">Amount (₱)</label>
             <input type="number" v-model="form.amount" class="w-full border rounded px-3 py-2" />
           </div>
@@ -151,7 +176,7 @@ function deleteExpense(id) {
             Cancel
           </button>
           <button @click="saveExpense" class="px-6 py-2 bg-purple-700 text-white rounded-md">
-            Save
+            {{ isEditing ? 'Update' : 'Save' }}
           </button>
         </div>
       </div>

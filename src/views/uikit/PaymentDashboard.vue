@@ -155,8 +155,7 @@ function handleSort(field) {
 <template>
     <div class="space-y-6 p-6 bg-gray-50 min-h-screen">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <button @click="$router.push('/uikit/viewListOfExpense')" class="bg-white border-2 border-purple-500 text-purple-700 px-6 py-4 rounded-lg font-semibold hover:bg-purple-50 flex items-center justify-center gap-2">View Expenses</button>
-            <button @click="$router.push('/uikit/viewListOfRevenue')" class="bg-white border-2 border-green-500 text-green-700 px-6 py-4 rounded-lg font-semibold hover:bg-green-50 flex items-center justify-center gap-2">View Revenue</button>
+            <button @click="$router.push('/uikit/Revenue')" class="bg-white border-2 border-green-500 text-green-700 px-6 py-4 rounded-lg font-semibold hover:bg-green-50 flex items-center justify-center gap-2">View Revenue</button>
             <button @click="$router.push('/uikit/viewListOfSOA')" class="bg-white border-2 border-blue-500 text-blue-700 px-6 py-4 rounded-lg font-semibold hover:bg-blue-50 flex items-center justify-center gap-2">View SOA</button>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
