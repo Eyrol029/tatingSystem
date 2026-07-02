@@ -3,6 +3,7 @@ C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Appointment\AppointmentController.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Billing\BillingController.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Billing\ExpenseController.java
+C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Billing\PaymentInstallmentController.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Billing\StatementOfAccountController.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\Calendar\CalendarEventController.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\controller\ClinicalServiceController.java
@@ -60,7 +61,10 @@ C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Appointment\Appointment.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Billing\Billing.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Billing\Expense.java
+C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Billing\PatientPaymentSummaryDTO.java
+C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Billing\PaymentInstallment.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Billing\StatementOfAccount.java
+C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Billing\StatementOfAccountDetailsDTO.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\CalendarEvent.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\CalendarEventDto.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\ClinicalService.java
@@ -118,6 +122,7 @@ C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Appointment\AppointmentRepository.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Billing\BillingRepository.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Billing\ExpenseRepository.java
+C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Billing\PaymentInstallmentRepository.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Billing\StatementOfAccountRepository.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\Calendar\CalendarEventRepository.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\repository\ClinicalServiceRepository.java

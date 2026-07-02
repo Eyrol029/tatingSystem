@@ -1,50 +1,78 @@
 <script setup>
-import { computed, ref } from 'vue';
+import axios from 'axios';
+import { computed, onMounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
 
-// --- State for the Patient List ---
+const route = useRoute();
 const searchQuery = ref('');
 const statusFilter = ref('all');
 const serviceFilter = ref('all');
-const sortField = ref('name');
+const sortField = ref('patientName');
 const sortOrder = ref('asc');
-
-// --- State for the Detail View / Modal ---
+const patients = ref([]);
+const loading = ref(false);
 const showDetails = ref(false);
 const selectedPatient = ref(null);
 const reminderType = ref('email');
 const reminderMessage = ref('');
+const paymentAmount = ref('');
+const paymentMessage = ref('');
+const selectedPatientId = ref(null);
 
-// Sample patient data
-const patients = ref([
-    { id: 'P001', name: 'Maria Santos', email: 'maria.santos@email.com', phone: '09123456789', service: 'Prenatal Checkup', totalBill: 5000, amountPaid: 5000, paymentStatus: 'paid', reminders: [] },
-    { id: 'P002', name: 'Ana Cruz', email: 'ana.cruz@email.com', phone: '09234567890', service: 'Normal Delivery', totalBill: 25000, amountPaid: 15000, paymentStatus: 'partial', reminders: [] },
-    { id: 'P003', name: 'Rosa Mendoza', email: 'rosa.mendoza@email.com', phone: '09345678901', service: 'Family Planning', totalBill: 2000, amountPaid: 0, paymentStatus: 'pending', reminders: [] },
-    { id: 'P004', name: 'Elena Reyes', email: 'elena.reyes@email.com', phone: '09456789012', service: 'Postnatal Care', totalBill: 3500, amountPaid: 1500, paymentStatus: 'partial', reminders: [] },
-    { id: 'P005', name: 'Carmen Garcia', email: 'carmen.garcia@email.com', phone: '09567890123', service: 'Prenatal Checkup', totalBill: 5000, amountPaid: 5000, paymentStatus: 'paid', reminders: [] }
-]);
+const API_URL = 'http://localhost:8080/api/billing/soa';
 
-// --- List Logic ---
+async function loadPatients() {
+    loading.value = true;
+    try {
+        const { data } = await axios.get(`${API_URL}/dashboard`);
+        selectedPatientId.value = route.query.patientId ? Number(route.query.patientId) : null;
+        patients.value = data.map((item) => ({
+            id: item.patientServiceId,
+            soaId: item.soaId,
+            patientId: item.patientId,
+            name: item.patientName,
+            email: item.email,
+            phone: item.phone,
+            service: item.serviceName,
+            totalBill: item.totalAmount || 0,
+            amountPaid: item.amountPaid || 0,
+            paymentStatus: (item.paymentStatus || 'Pending').toLowerCase(),
+            outstanding: (item.balanceAmount || 0),
+            reminders: []
+        }));
+    } catch (error) {
+        console.error('Failed to load payment dashboard data', error);
+        paymentMessage.value = 'Unable to load payment data from the backend.';
+    } finally {
+        loading.value = false;
+    }
+}
+
+onMounted(() => {
+    loadPatients();
+});
+
 const services = computed(() => ['all', ...new Set(patients.value.map((p) => p.service))]);
 
 const filteredPatients = computed(() => {
     return patients.value.filter((p) => {
-        const matchesSearch = p.name.toLowerCase().includes(searchQuery.value.toLowerCase()) || p.email.toLowerCase().includes(searchQuery.value.toLowerCase());
+        const matchesPatientId = selectedPatientId.value === null || selectedPatientId.value === undefined || p.patientId === selectedPatientId.value;
+        const searchText = `${p.name} ${p.email} ${p.service}`.toLowerCase();
+        const matchesSearch = searchText.includes(searchQuery.value.toLowerCase());
         const matchesStatus = statusFilter.value === 'all' || p.paymentStatus === statusFilter.value;
         const matchesService = serviceFilter.value === 'all' || p.service === serviceFilter.value;
-        return matchesSearch && matchesStatus && matchesService;
+        return matchesPatientId && matchesSearch && matchesStatus && matchesService;
     });
 });
 
 const sortedPatients = computed(() => {
     const copy = [...filteredPatients.value];
     copy.sort((a, b) => {
-        let aVal, bVal;
+        let aVal = a[sortField.value];
+        let bVal = b[sortField.value];
         if (sortField.value === 'outstanding') {
             aVal = a.totalBill - a.amountPaid;
             bVal = b.totalBill - b.amountPaid;
-        } else {
-            aVal = a[sortField.value];
-            bVal = b[sortField.value];
         }
         if (typeof aVal === 'string') return sortOrder.value === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
         return sortOrder.value === 'asc' ? aVal - bVal : bVal - aVal;
@@ -52,10 +80,11 @@ const sortedPatients = computed(() => {
     return copy;
 });
 
-// --- Detail View Logic ---
 function openDetails(patient) {
     selectedPatient.value = patient;
     showDetails.value = true;
+    paymentAmount.value = '';
+    paymentMessage.value = '';
     reminderMessage.value = `Reminder: Outstanding balance of ${formatCurrency(patient.totalBill - patient.amountPaid)} due for ${patient.service}.`;
 }
 
@@ -64,13 +93,54 @@ function handleClose() {
     selectedPatient.value = null;
 }
 
+async function handleRecordPayment() {
+    if (!selectedPatient.value) return;
+    const amount = Number(paymentAmount.value);
+    if (!amount || amount <= 0) {
+        paymentMessage.value = 'Enter a valid payment amount.';
+        return;
+    }
+
+    let soaId = selectedPatient.value.soaId;
+    if (!soaId) {
+        try {
+            const createResponse = await axios.post(API_URL, {
+                patientID: Number(selectedPatient.value.patientId),
+                patientServiceID: null,
+                totalAmount: selectedPatient.value.totalBill || amount,
+                amountPaid: 0.0,
+                balanceAmount: selectedPatient.value.totalBill || amount,
+                description: `SOA for ${selectedPatient.value.service || 'Statement of Account'}`,
+                invoiceReceiptNumber: 'SOA-' + Math.floor(Math.random() * 10000),
+                dueDate: new Date().toISOString()
+            });
+            const createdSoa = createResponse.data;
+            soaId = createdSoa.soaId ?? createdSoa.soaID ?? createdSoa.id;
+            if (!soaId) {
+                throw new Error('Failed to resolve ID for the newly created SOA.');
+            }
+        } catch (createError) {
+            console.error('Failed to auto-create SOA for payment', createError);
+            paymentMessage.value = 'Failed to initialize Statement of Account for this patient.';
+            return;
+        }
+    }
+
+    try {
+        await axios.post(`${API_URL}/${soaId}/payments`, { amount });
+        paymentMessage.value = 'Payment recorded successfully.';
+        await loadPatients();
+    } catch (error) {
+        console.error('Failed to record payment', error);
+        paymentMessage.value = 'Unable to record payment.';
+    }
+}
+
 function handleSendReminder() {
     alert(`Reminder sent via ${reminderType.value} to ${selectedPatient.value.name}`);
 }
 
-// --- Helpers ---
 function formatCurrency(amount) { return '₱' + (amount || 0).toLocaleString(); }
-function getPaymentPercentage(p) { return p.totalBill === 0 ? 0 : Math.round((p.amountPaid / p.totalBill) * 100); }
 function getStatusBg(status) {
     if (status === 'paid') return 'bg-green-100 text-green-700';
     if (status === 'partial') return 'bg-yellow-100 text-yellow-700';
@@ -95,6 +165,8 @@ function handleSort(field) {
             <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-100 shadow-sm"><p class="text-xs text-yellow-600 uppercase font-bold">Partial</p><p class="text-2xl font-bold text-yellow-700">{{ patients.filter(p => p.paymentStatus === 'partial').length }}</p></div>
             <div class="bg-red-50 p-4 rounded-lg border border-red-100 shadow-sm"><p class="text-xs text-red-600 uppercase font-bold">Pending</p><p class="text-2xl font-bold text-red-700">{{ patients.filter(p => p.paymentStatus === 'pending').length }}</p></div>
         </div>
+
+        <div v-if="loading" class="text-sm text-gray-500">Loading payment data...</div>
 
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-4 rounded-lg shadow-sm border">
             <input v-model="searchQuery" type="text" placeholder="Search patients..." class="md:col-span-2 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
@@ -130,7 +202,7 @@ function handleSort(field) {
                             </td>
                             <td class="px-6 py-4 text-right font-bold text-gray-700">{{ formatCurrency(p.totalBill) }}</td>
                             <td class="px-6 py-4 text-right font-bold text-green-600">{{ formatCurrency(p.amountPaid) }}</td>
-                            <td class="px-6 py-4 text-right font-bold text-red-600">{{ formatCurrency(p.totalBill - p.amountPaid) }}</td>
+                            <td class="px-6 py-4 text-right font-bold text-red-600">{{ formatCurrency(p.outstanding) }}</td>
                             <td class="px-6 py-4 text-center">
                                 <span :class="['px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter', getStatusBg(p.paymentStatus)]">
                                     {{ p.paymentStatus }}
@@ -167,8 +239,15 @@ function handleSort(field) {
                         </div>
                         <div class="bg-red-50 p-4 rounded-xl border border-red-100">
                             <p class="text-[10px] text-red-600 font-black uppercase mb-1">Outstanding</p>
-                            <p class="text-xl font-black text-red-700">{{ formatCurrency(selectedPatient.totalBill - selectedPatient.amountPaid) }}</p>
+                            <p class="text-xl font-black text-red-700">{{ formatCurrency(selectedPatient.outstanding) }}</p>
                         </div>
+                    </div>
+
+                    <div class="bg-white border rounded-2xl p-4 space-y-3">
+                        <h3 class="text-sm font-black text-gray-800 uppercase tracking-widest">Record Payment</h3>
+                        <input v-model="paymentAmount" type="number" min="0" step="0.01" placeholder="Enter payment amount" class="w-full p-3 border rounded-xl" />
+                        <button @click="handleRecordPayment" class="w-full bg-green-600 text-white font-black py-3 rounded-xl hover:bg-green-700">Record Installment</button>
+                        <p v-if="paymentMessage" class="text-sm text-gray-600">{{ paymentMessage }}</p>
                     </div>
 
                     <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100 shadow-inner">

@@ -33,6 +33,18 @@ public class PatientService {
     @Column(name = "dateAvailed", nullable = false)
     private LocalDate dateAvailed;
 
+    @Column(name = "serviceFee")
+    private Double serviceFee = 0.0;
+
+    @Column(name = "amountPaid")
+    private Double amountPaid = 0.0;
+
+    @Column(name = "balanceAmount")
+    private Double balanceAmount = 0.0;
+
+    @Column(name = "paymentStatus", length = 20)
+    private String paymentStatus = "Pending";
+
     @Column(name = "remarks", columnDefinition = "TEXT")
     private String remarks;
 
@@ -83,6 +95,38 @@ public class PatientService {
 
     public void setDateAvailed(LocalDate dateAvailed) {
         this.dateAvailed = dateAvailed;
+    }
+
+    public Double getServiceFee() {
+        return serviceFee;
+    }
+
+    public void setServiceFee(Double serviceFee) {
+        this.serviceFee = serviceFee;
+    }
+
+    public Double getAmountPaid() {
+        return amountPaid;
+    }
+
+    public void setAmountPaid(Double amountPaid) {
+        this.amountPaid = amountPaid;
+    }
+
+    public Double getBalanceAmount() {
+        return balanceAmount;
+    }
+
+    public void setBalanceAmount(Double balanceAmount) {
+        this.balanceAmount = balanceAmount;
+    }
+
+    public String getPaymentStatus() {
+        return paymentStatus;
+    }
+
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
     }
 
     public String getRemarks() {

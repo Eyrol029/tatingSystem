@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.backend.backend.model.Patient;
 import com.backend.backend.repository.Appointment.AppointmentRepository;
@@ -48,6 +49,7 @@ public class PatientServiceImpl implements PatientService {
     }
 
     @Override
+    @Transactional
     public void deletePatient(Integer id) {
         // Delete appointments tied directly to the patient.
         appointmentRepository.deleteByPatientID(id);
