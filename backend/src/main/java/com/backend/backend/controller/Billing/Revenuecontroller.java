@@ -13,40 +13,40 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.backend.backend.model.Billing.Expense;
-import com.backend.backend.service.Billing.ExpenseService;
+import com.backend.backend.model.Billing.Revenue;
+import com.backend.backend.service.Billing.Revenueservice;
 
 @CrossOrigin(origins = "*")
 @RestController
-@RequestMapping("/api/expenses")
-public class ExpenseController {
+@RequestMapping("/api/revenue")
+public class Revenuecontroller {
 
     @Autowired
-    private ExpenseService service;
+    private Revenueservice service;
 
     @GetMapping
-    public List<Expense> getAll() {
-        return service.getAllExpense();
+    public List<Revenue> getAll() {
+        return service.getAllRevenue();
     }
 
     @GetMapping("/{id}")
-    public Expense getById(@PathVariable Integer id) {
-        return service.getExpenseById(id);
+    public Revenue getById(@PathVariable Integer id) {
+        return service.getRevenueById(id);
     }
 
     @PostMapping
-    public Expense add(@RequestBody Expense expense) {
-        return service.addExpense(expense);
+    public Revenue add(@RequestBody Revenue revenue) {
+        return service.addRevenue(revenue);
     }
 
     @PutMapping
-    public Expense update(@RequestBody Expense expense) {
-        return service.updateExpense(expense);
+    public Revenue update(@RequestBody Revenue revenue) {
+        return service.updateRevenue(revenue);
     }
 
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {
-        service.deleteExpense(id);
-        return "Expense deleted successfully.";
+        service.deleteRevenue(id);
+        return "Revenue deleted successfully.";
     }
 }

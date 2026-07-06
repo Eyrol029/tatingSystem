@@ -13,12 +13,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.backend.backend.model.Appointment.Appointment;
+import com.backend.backend.model.Billing.Expense;
+import com.backend.backend.model.Billing.Revenue;
 import com.backend.backend.model.DashboardSummaryDTO;
 import com.backend.backend.model.DashboardSummaryDTO.ActivityItem;
 import com.backend.backend.model.DashboardSummaryDTO.PendingItem;
 import com.backend.backend.model.Patient;
 import com.backend.backend.model.Prenatal.PrenatalRecord;
 import com.backend.backend.repository.Appointment.AppointmentRepository;
+import com.backend.backend.repository.Billing.ExpenseRepository;
+import com.backend.backend.repository.Billing.RevenueRepository;
 import com.backend.backend.repository.PatientRepository;
 import com.backend.backend.repository.Prenatal.PrenatalRecordRepository;
 
@@ -29,8 +33,9 @@ public class DashboardServiceImpl implements DashboardService {
     @Autowired private AppointmentRepository    appointmentRepository;
     @Autowired private PrenatalRecordRepository prenatalRecordRepository;
 
-    // Inject payment repository if you have one — see comment below
-    // @Autowired private PaymentRepository paymentRepository;
+    // NEW: wired in for the Financial Overview card
+    @Autowired private RevenueRepository revenueRepository;
+    @Autowired private ExpenseRepository expenseRepository;
 
     private static final DateTimeFormatter TIME_FMT =
             DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a");
@@ -60,17 +65,26 @@ public class DashboardServiceImpl implements DashboardService {
         dto.setTotalDeliveries(deliveries);
 
         // ── 2. Financial overview ─────────────────────────────────────────────
-        // If you have a Payment/Billing table, inject its repository and replace
-        // these placeholders. For now we compute 0 and note where to hook in.
-        double revenue  = 0.0;
-        double expenses = 0.0;
+        // NEW: pulls from the Revenue and Expense tables, filtered by the same
+        // date range as everything else on the dashboard.
+        List<Revenue> allRevenue  = revenueRepository.findAll();
+        List<Expense> allExpenses = expenseRepository.findAll();
 
-        // Example (uncomment when you have a payment repository):
-        // List<Payment> payments = paymentRepository.findAll();
-        // revenue = payments.stream()
-        //     .filter(p -> isInRange(toLocalDate(p.getPaymentDate()), start, end))
-        //     .mapToDouble(p -> p.getAmount() != null ? p.getAmount().doubleValue() : 0)
-        //     .sum();
+        List<Revenue> revenueInRange = allRevenue.stream()
+                .filter(r -> isInRange(r.getRevenueDate(), start, end))
+                .collect(Collectors.toList());
+
+        List<Expense> expensesInRange = allExpenses.stream()
+                .filter(e -> isInRange(e.getExpenseDate(), start, end))
+                .collect(Collectors.toList());
+
+        double revenue = revenueInRange.stream()
+                .mapToDouble(r -> r.getAmount() != null ? r.getAmount() : 0.0)
+                .sum();
+
+        double expenses = expensesInRange.stream()
+                .mapToDouble(e -> e.getAmount() != null ? e.getAmount() : 0.0)
+                .sum();
 
         dto.setTotalRevenue(revenue);
         dto.setTotalExpenses(expenses);
@@ -111,6 +125,18 @@ public class DashboardServiceImpl implements DashboardService {
                                 + (p.getDeliveryDate() != null ? " — delivery recorded" : ""),
                         "Record ID " + p.getPrenatalrecordID(),
                         "prenatal")));
+
+        // NEW: Recent revenue entries — shows up with the green "payment" dot
+        // that the dashboard UI already has a color mapping for.
+        allRevenue.stream()
+                .sorted(Comparator.comparing(
+                        Revenue::getRevenueDate, Comparator.nullsLast(Comparator.naturalOrder())).reversed())
+                .limit(3)
+                .forEach(r -> activities.add(new ActivityItem(
+                        "Payment received from " + (r.getDealer() != null ? r.getDealer() : "a patient")
+                                + " — ₱" + (r.getAmount() != null ? r.getAmount() : 0.0),
+                        dateStr(r.getRevenueDate()),
+                        "payment")));
 
         // Sort by most recent and cap at 8
         dto.setRecentActivities(activities.stream().limit(8).collect(Collectors.toList()));

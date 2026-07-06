@@ -1,7 +1,7 @@
 <script setup>
-import { ref,} from 'vue';
+import { ref, computed } from 'vue';
 
-const activeTab = ref('appointment');
+const activeTab = ref('calendar');
 const patientName = ref('John Doe');
 const lastLogin = ref('Today at 10:30 AM');
 
@@ -52,6 +52,87 @@ function formatCurrency(amount) {
 
 function setActiveTab(tab) {
     activeTab.value = tab;
+}
+
+// Calendar Logic
+const currentDate = ref(new Date());
+
+const currentMonth = computed(() => currentDate.value.getMonth());
+const currentYear = computed(() => currentDate.value.getFullYear());
+
+const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const daysInMonth = computed(() => {
+    const year = currentYear.value;
+    const month = currentMonth.value;
+    const date = new Date(year, month, 1);
+    const days = [];
+    
+    // Get day of week of the first day (0 = Sunday, 1 = Monday, etc.)
+    const firstDayIndex = date.getDay();
+    
+    // Add empty slots for days before the 1st
+    for (let i = 0; i < firstDayIndex; i++) {
+        days.push({ empty: true, key: `empty-${i}` });
+    }
+    
+    // Add the actual days of the month
+    const numDays = new Date(year, month + 1, 0).getDate();
+    for (let i = 1; i <= numDays; i++) {
+        days.push({
+            date: i,
+            fullDate: new Date(year, month, i),
+            empty: false,
+            key: `day-${i}`
+        });
+    }
+    
+    return days;
+});
+
+function nextMonth() {
+    currentDate.value = new Date(currentYear.value, currentMonth.value + 1, 1);
+}
+
+function prevMonth() {
+    currentDate.value = new Date(currentYear.value, currentMonth.value - 1, 1);
+}
+
+// Mock Events
+const mockEvents = ref([
+    {
+        date: new Date(new Date().getFullYear(), new Date().getMonth(), 15),
+        title: 'Prenatal Checkup',
+        type: 'checkup'
+    },
+    {
+        date: new Date(new Date().getFullYear(), new Date().getMonth(), 28),
+        title: 'Ultrasound',
+        type: 'checkup'
+    },
+    {
+        date: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 10),
+        title: 'Expected Day of Labor',
+        type: 'labor'
+    }
+]);
+
+function getEventsForDay(day) {
+    if (day.empty) return [];
+    return mockEvents.value.filter(e => {
+        return e.date.getDate() === day.date && 
+               e.date.getMonth() === currentMonth.value && 
+               e.date.getFullYear() === currentYear.value;
+    });
+}
+
+function isToday(day) {
+    if (day.empty) return false;
+    const today = new Date();
+    return day.fullDate.getDate() === today.getDate() &&
+           day.fullDate.getMonth() === today.getMonth() &&
+           day.fullDate.getFullYear() === today.getFullYear();
 }
 </script>
 
@@ -137,8 +218,22 @@ function setActiveTab(tab) {
         </div>
 
         <!-- Tabs -->
-        <div class="px-8 py-4 bg-white border-b border-gray-200">
-            <div class="flex space-x-1">
+        <div class="px-8 py-4 bg-white border-b border-gray-200 overflow-x-auto">
+            <div class="flex space-x-1 min-w-max">
+                <button
+                    @click="setActiveTab('calendar')"
+                    :class="[
+                        'px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2',
+                        activeTab === 'calendar' 
+                            ? 'bg-blue-600 text-white' 
+                            : 'text-gray-600 hover:bg-gray-100'
+                    ]"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Calendar
+                </button>
                 <button
                     @click="setActiveTab('appointment')"
                     :class="[
@@ -203,6 +298,101 @@ function setActiveTab(tab) {
 
         <!-- Content Area -->
         <div class="px-8 py-8">
+            <!-- Calendar Tab -->
+            <div v-if="activeTab === 'calendar'" class="bg-white rounded-lg shadow-sm p-8">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">My Schedule</h2>
+                        <p class="text-gray-600">View your upcoming checkups and expected day of labor</p>
+                    </div>
+                    <div class="flex space-x-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                            <span class="text-sm font-medium text-gray-600">Checkup</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-pink-500"></span>
+                            <span class="text-sm font-medium text-gray-600">Day of Labor</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendar Header -->
+                <div class="flex items-center justify-between mb-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <button @click="prevMonth" class="p-2 hover:bg-gray-200 rounded-full transition-colors">
+                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <h3 class="text-xl font-bold text-gray-800">{{ monthNames[currentMonth] }} {{ currentYear }}</h3>
+                    <button @click="nextMonth" class="p-2 hover:bg-gray-200 rounded-full transition-colors">
+                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Calendar Grid -->
+                <div class="grid grid-cols-7 gap-px bg-gray-200 border border-gray-200 rounded-lg overflow-hidden">
+                    <!-- Days of week -->
+                    <div v-for="day in dayNames" :key="day" class="bg-gray-100 text-center py-3 font-semibold text-sm text-gray-700">
+                        {{ day }}
+                    </div>
+                    
+                    <!-- Days -->
+                    <div 
+                        v-for="day in daysInMonth" 
+                        :key="day.key" 
+                        class="bg-white min-h-[120px] p-2 transition-colors"
+                        :class="{'bg-gray-50': day.empty}"
+                    >
+                        <div v-if="!day.empty" class="h-full flex flex-col">
+                            <div class="flex justify-between items-start mb-2">
+                                <span 
+                                    class="text-sm font-medium w-8 h-8 flex items-center justify-center rounded-full"
+                                    :class="isToday(day) ? 'bg-blue-600 text-white shadow-md' : 'text-gray-700'"
+                                >
+                                    {{ day.date }}
+                                </span>
+                            </div>
+                            <div class="flex-1 overflow-y-auto space-y-1">
+                                <div 
+                                    v-for="(event, index) in getEventsForDay(day)" 
+                                    :key="index"
+                                    class="text-xs px-2 py-1.5 rounded truncate font-medium"
+                                    :class="event.type === 'labor' ? 'bg-pink-100 text-pink-700 border border-pink-200' : 'bg-blue-100 text-blue-700 border border-blue-200'"
+                                    :title="event.title"
+                                >
+                                    {{ event.title }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Upcoming List -->
+                <div class="mt-8">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">Upcoming Events</h3>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div v-for="(event, index) in mockEvents.slice().sort((a,b) => a.date - b.date).filter(e => e.date >= new Date(new Date().setHours(0,0,0,0)))" :key="'upcoming-'+index" 
+                             class="flex items-center p-4 bg-gray-50 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
+                            <div :class="['w-3 h-12 rounded-full mr-4 flex-shrink-0', event.type === 'labor' ? 'bg-pink-500' : 'bg-blue-500']"></div>
+                            <div>
+                                <p class="font-bold text-gray-800 text-lg">{{ event.title }}</p>
+                                <p class="text-sm font-medium text-gray-500 mt-1 flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    {{ event.date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div v-if="mockEvents.filter(e => e.date >= new Date(new Date().setHours(0,0,0,0))).length === 0" class="col-span-2 p-8 text-center bg-gray-50 rounded-xl border border-gray-200 border-dashed">
+                            <p class="text-gray-500 font-medium">No upcoming events scheduled.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Appointment Tab -->
             <div v-if="activeTab === 'appointment'" class="bg-white rounded-lg shadow-sm p-8">
                 <div class="mb-6">

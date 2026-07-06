@@ -1,19 +1,14 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+
+const BASE_URL = 'http://localhost:8080/api/expenses'
 
 const showModal = ref(false)
 const isEditing = ref(false)
 const editingId = ref(null)
 
-const expenses = ref([
-  {
-    id: 1,
-    category: 'Medical Supplies',
-    description: 'Surgical gloves and masks',
-    amount: 5000,
-    payee: 'MedSupply Corp'
-  }
-])
+const expenses = ref([])
 
 const form = ref({
   category: '',
@@ -21,6 +16,17 @@ const form = ref({
   amount: '',
   payee: ''
 })
+
+// Load all expenses from the backend
+async function fetchExpenses() {
+  try {
+    const response = await axios.get(BASE_URL)
+    expenses.value = response.data
+  } catch (error) {
+    console.error('Failed to load expenses', error)
+    alert('Failed to load expenses: ' + (error.response?.data || error.message))
+  }
+}
 
 function openAddModal() {
   isEditing.value = false
@@ -56,32 +62,51 @@ function resetForm() {
   editingId.value = null
 }
 
-function saveExpense() {
+async function saveExpense() {
   if (!form.value.category || !form.value.amount) return
 
-  if (isEditing.value) {
-    const index = expenses.value.findIndex(exp => exp.id === editingId.value)
-    if (index !== -1) {
-      expenses.value[index] = {
+  try {
+    if (isEditing.value) {
+      await axios.put(BASE_URL, {
         id: editingId.value,
-        ...form.value
-      }
+        category: form.value.category,
+        description: form.value.description,
+        amount: Number(form.value.amount),
+        payee: form.value.payee
+      })
+    } else {
+      await axios.post(BASE_URL, {
+        category: form.value.category,
+        description: form.value.description,
+        amount: Number(form.value.amount),
+        payee: form.value.payee,
+        expenseDate: new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+      })
     }
-  } else {
-    expenses.value.push({
-      id: Date.now(),
-      ...form.value
-    })
-  }
 
-  closeModal()
-}
-
-function deleteExpense(id) {
-  if (confirm('Are you sure you want to delete this expense?')) {
-    expenses.value = expenses.value.filter(exp => exp.id !== id)
+    await fetchExpenses()
+    closeModal()
+  } catch (error) {
+    console.error('Failed to save expense', error)
+    alert('Failed to save expense: ' + (error.response?.data || error.message))
   }
 }
+
+async function deleteExpense(id) {
+  if (!confirm('Are you sure you want to delete this expense?')) return
+
+  try {
+    await axios.delete(`${BASE_URL}/${id}`)
+    await fetchExpenses()
+  } catch (error) {
+    console.error('Failed to delete expense', error)
+    alert('Failed to delete expense: ' + (error.response?.data || error.message))
+  }
+}
+
+onMounted(() => {
+  fetchExpenses()
+})
 </script>
 
 <template>
@@ -103,6 +128,7 @@ function deleteExpense(id) {
       <table class="w-full text-sm">
         <thead class="bg-gray-100">
           <tr>
+            <th class="p-3 text-left">Expense ID</th>
             <th class="p-3 text-left">Category</th>
             <th class="p-3 text-left">Description</th>
             <th class="p-3 text-left">Amount</th>
@@ -113,6 +139,7 @@ function deleteExpense(id) {
 
         <tbody>
           <tr v-for="expense in expenses" :key="expense.id" class="border-t">
+            <td class="p-3 font-mono text-xs text-gray-500">EXP-{{ String(expense.id).padStart(5, '0') }}</td>
             <td class="p-3">{{ expense.category }}</td>
             <td class="p-3">{{ expense.description }}</td>
             <td class="p-3 font-semibold">₱{{ expense.amount }}</td>
@@ -134,6 +161,10 @@ function deleteExpense(id) {
           </tr>
         </tbody>
       </table>
+
+      <div v-if="expenses.length === 0" class="text-center py-8 text-gray-400 text-sm">
+        No expenses recorded yet.
+      </div>
     </div>
 
     <!-- MODAL -->
@@ -142,7 +173,11 @@ function deleteExpense(id) {
       class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
     >
       <div class="bg-white w-full max-w-lg rounded-lg p-6 shadow-lg">
-        <h3 class="text-lg font-semibold mb-4">{{ isEditing ? 'Edit Expense' : 'Add Expense' }}</h3>
+        <h3 class="text-lg font-semibold mb-1">{{ isEditing ? 'Edit Expense' : 'Add Expense' }}</h3>
+        <p v-if="isEditing" class="text-xs text-gray-400 font-mono mb-4">
+          EXP-{{ String(editingId).padStart(5, '0') }}
+        </p>
+        <div v-else class="mb-4"></div>
 
         <div class="space-y-3">
           <div>

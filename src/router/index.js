@@ -33,17 +33,15 @@ const routes = [
             { path: 'uikit/ReferralForm', component: () => import('@/views/uikit/ReferralForm.vue') },
             { path: 'uikit/Admission', component: () => import('@/views/uikit/Admission.vue') },
             { path: 'uikit/Logs', component: () => import('@/views/uikit/Logs.vue') },
-            { path: 'uikit/ManageApp', component: () => import('@/views/uikit/ManageApp.vue') },
+            { path: 'uikit/AppointmentManagement', component: () => import('@/views/uikit/AppointmentManagement.vue') },
             { path: 'uikit/PatientCreateAppointment', component: () => import('@/views/uikit/PatientCreateAppointment.vue') },
-            { path: 'uikit/PatientDashboard/:patientId', component: () => import('@/views/Dashboard/PatientDashboard.vue') },
+            { path: 'uikit/PatientDashboard/', component: () => import('@/views/Dashboard/PatientDashboard.vue') },
             { path: 'uikit/PatientService', component: () => import('@/views/uikit/PatientService.vue') },
             { path: 'uikit/MyServicesAndAppointment', component: () => import('@/views/uikit/MyServicesAndAppointment.vue') },
             { path: 'uikit/Expense', component: () => import('@/views/uikit/Expense.vue') },
             { path: 'uikit/Revenue', component: () => import('@/views/uikit/Revenue.vue') },
-            { path: 'uikit/SOA', component: () => import('@/views/uikit/SOA.vue') },
             { path: 'uikit/AdminCalendar', component: () => import('@/views/uikit/AdminCalendar.vue') },
             { path: 'uikit/MidwifeDashboard', component: () => import('@/views/Dashboard/MidwifeDashboard.vue') },
-            { path: 'uikit/AppointmentManagement', component: () => import('@/views/uikit/AppointmentManagement.vue') }, //  new sa appointment 
         ]
     },
     {
