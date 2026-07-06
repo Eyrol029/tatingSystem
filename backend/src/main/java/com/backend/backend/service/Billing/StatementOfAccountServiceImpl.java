@@ -1,6 +1,5 @@
 package com.backend.backend.service.Billing;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -10,11 +9,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.backend.backend.model.Billing.PatientPaymentSummaryDTO;
+import com.backend.backend.model.Billing.PaymentInstallment;
 import com.backend.backend.model.Billing.StatementOfAccount;
 import com.backend.backend.model.Billing.StatementOfAccountDetailsDTO;
 import com.backend.backend.model.Patient;
 import com.backend.backend.model.PatientService;
-import com.backend.backend.model.Billing.PaymentInstallment;
 import com.backend.backend.repository.Billing.PaymentInstallmentRepository;
 import com.backend.backend.repository.Billing.StatementOfAccountRepository;
 import com.backend.backend.repository.PatientRepository;
@@ -68,7 +67,14 @@ public class StatementOfAccountServiceImpl implements StatementOfAccountService 
     }
 
     @Override
-    public void applyPayment(StatementOfAccount soa, Double amount) {
+    public void applyPayment(
+            StatementOfAccount soa,
+            Double amount,
+            String notes,
+            String discountName,
+            Double discountAmount,
+            String serviceBreakdown
+    ) {
         double paymentAmount = amount == null ? 0.0 : Math.max(0.0, amount);
         double totalAmount = soa.getTotalAmount() == null ? 0.0 : soa.getTotalAmount();
         double currentPaid = soa.getAmountPaid() == null ? 0.0 : soa.getAmountPaid();
@@ -85,7 +91,9 @@ public class StatementOfAccountServiceImpl implements StatementOfAccountService 
         }
         repository.save(soa);
 
-        if (paymentAmount > 0.0) {
+        // CHANGED: >= 0 instead of > 0, so a record (with its discount/service breakdown)
+        // can be saved even if the patient isn't paying anything on this visit yet.
+        if (paymentAmount >= 0.0) {
             PaymentInstallment installment = new PaymentInstallment();
             installment.setSoaId(soa.getSoaID());
             installment.setPatientServiceId(soa.getPatientServiceID());
@@ -93,8 +101,16 @@ public class StatementOfAccountServiceImpl implements StatementOfAccountService 
             installment.setAmountPaid(paymentAmount);
             installment.setPaymentDate(java.time.LocalDateTime.now());
             installment.setPaymentMethod("Cash");
-            installment.setNotes("Installment payment recorded");
+            // CHANGED: use the real notes coming from the frontend instead of a hardcoded string
+            installment.setNotes(notes != null && !notes.isBlank() ? notes : "Installment payment recorded");
             installment.setInstallmentNumber(soa.getInstallmentCount() == null ? 1 : soa.getInstallmentCount() + 1);
+
+            // NEW: persist the discount + full service/discount breakdown so the
+            // frontend can reconstruct the "Availed Services" list when reopening.
+            installment.setDiscountName(discountName);
+            installment.setDiscountAmount(discountAmount);
+            installment.setServiceBreakdown(serviceBreakdown);
+
             paymentInstallmentRepository.save(installment);
             soa.setInstallmentCount(installment.getInstallmentNumber());
             repository.save(soa);

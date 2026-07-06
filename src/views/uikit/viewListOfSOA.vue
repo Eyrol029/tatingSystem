@@ -18,8 +18,17 @@ const paymentForm = ref({
   diagnosis: '',
   paymentDate: '',
   totalAmount: '',
-  paidAmount: ''
+  paidAmount: '',
+  discountName: '',
+  discountAmount: ''
 })
+
+// Services availed for the CURRENT payment session (can be many per patient)
+const availedServices = ref([])
+
+const servicesList = ref([])
+const selectedServiceId = ref('')
+const selectedAddSoaServiceId = ref('')
 
 function parseNumber(value) {
   if (value === null || value === undefined) return 0
@@ -41,10 +50,22 @@ function resolveSoaId(soa) {
   )
 }
 
+// New Balance = Total Amount minus already paid minus amount being paid now (gross, no discount yet)
 const paymentBalance = computed(() => {
   const total = parseNumber(paymentForm.value.totalAmount)
-  const paid = parseNumber(paymentForm.value.paidAmount)
-  return Math.max(0, total - paid)
+  const alreadyPaid = selectedSOA.value ? parseNumber(selectedSOA.value.amountPaid) : 0
+  const paidNow = parseNumber(paymentForm.value.paidAmount)
+  return Math.max(0, total - alreadyPaid - paidNow)
+})
+
+// Total New Balance After Discount = New Balance minus whatever discount was entered
+const totalNewBalanceAfterDiscount = computed(() => {
+  const discount = parseNumber(paymentForm.value.discountAmount)
+  return Math.max(0, paymentBalance.value - discount)
+})
+
+const availedServicesTotal = computed(() => {
+  return availedServices.value.reduce((sum, s) => sum + parseNumber(s.amount), 0)
 })
 
 const filteredSoaList = computed(() => {
@@ -71,6 +92,98 @@ const newService = ref({ name: '', amount: '' })
 
 const BASE_URL = 'http://localhost:8080/api/billing/soa'
 const DASHBOARD_URL = `${BASE_URL}/dashboard`
+const INSTALLMENTS_URL = 'http://localhost:8080/api/billing/installments'
+
+async function loadServicesList() {
+  try {
+    const response = await axios.get('http://localhost:8080/api/clinical-services')
+    servicesList.value = response.data
+  } catch (error) {
+    console.error('Failed to load clinical services list', error)
+  }
+}
+
+function onPaymentServiceChange() {
+  if (selectedServiceId.value === 'custom') {
+    paymentForm.value.serviceName = ''
+    paymentForm.value.totalAmount = ''
+  } else {
+    const service = servicesList.value.find(s => s.id === Number(selectedServiceId.value))
+    if (service) {
+      paymentForm.value.serviceName = service.name
+      paymentForm.value.totalAmount = String(service.price)
+    } else {
+      paymentForm.value.serviceName = ''
+      paymentForm.value.totalAmount = ''
+    }
+  }
+}
+
+function onAddSoaServiceChange() {
+  if (selectedAddSoaServiceId.value === 'custom') {
+    newService.value.name = ''
+    newService.value.amount = ''
+  } else {
+    const service = servicesList.value.find(s => s.id === Number(selectedAddSoaServiceId.value))
+    if (service) {
+      newService.value.name = service.name
+      newService.value.amount = service.price
+    } else {
+      newService.value.name = ''
+      newService.value.amount = ''
+    }
+  }
+}
+
+// Adds the currently-selected service (or custom entry) to the Availed Services list
+// for this payment session, and recalculates the running Total Amount.
+function addAvailedService() {
+  if (selectedServiceId.value === 'custom') {
+    if (!paymentForm.value.serviceName || !paymentForm.value.totalAmount) return
+    availedServices.value.push({
+      name: paymentForm.value.serviceName,
+      amount: parseNumber(paymentForm.value.totalAmount)
+    })
+  } else {
+    if (!selectedServiceId.value) return
+    const service = servicesList.value.find(s => s.id === Number(selectedServiceId.value))
+    if (!service) return
+    availedServices.value.push({ name: service.name, amount: service.price })
+  }
+
+  // Reset the picker so another service can be added right away
+  selectedServiceId.value = ''
+  paymentForm.value.serviceName = ''
+  paymentForm.value.totalAmount = String(availedServicesTotal.value)
+}
+
+// Commits the current Discount Name/Amount into the Availed Services breakdown
+// as a negative-signed line item, then folds it into the running Total Amount.
+function addDiscount() {
+  const amount = parseNumber(paymentForm.value.discountAmount)
+  const name = paymentForm.value.discountName.trim()
+
+  if (!amount || amount <= 0) return
+  if (!name) return
+
+  availedServices.value.push({
+    name,
+    amount: -amount,
+    isDiscount: true
+  })
+
+  // Total Amount now reflects services minus discounts already applied
+  paymentForm.value.totalAmount = String(availedServicesTotal.value)
+
+  // Clear the discount inputs so the same box can be reused for another discount
+  paymentForm.value.discountName = ''
+  paymentForm.value.discountAmount = ''
+}
+
+function removeAvailedService(index) {
+  availedServices.value.splice(index, 1)
+  paymentForm.value.totalAmount = String(availedServicesTotal.value)
+}
 
 async function loadSoaList() {
   try {
@@ -120,15 +233,66 @@ function goToPaymentDashboard(soa) {
   router.push({ path: '/uikit/PaymentDashboard', query: { patientId: soa.patientId } })
 }
 
-function openAddPayment(soa) {
+async function openAddPayment(soa) {
   selectedSOA.value = { ...soa }
   paymentForm.value.serviceName = soa.serviceName || ''
   paymentForm.value.diagnosis = soa.otherDiagnosis || ''
   paymentForm.value.paymentDate = new Date().toISOString().slice(0, 10)
   paymentForm.value.totalAmount = soa.totalAmount != null ? String(soa.totalAmount) : ''
-  paymentForm.value.paidAmount = soa.amountPaid != null ? String(soa.amountPaid) : ''
+  paymentForm.value.paidAmount = ''
+  paymentForm.value.discountName = ''
+  paymentForm.value.discountAmount = ''
+
+  // Default seed from whatever this SOA has on record, in case there's no
+  // installment history yet to pull a richer breakdown from.
+  availedServices.value = soa.serviceName
+    ? [{ name: soa.serviceName, amount: soa.totalAmount || 0, isDiscount: false }]
+    : []
+
+  if (soa.serviceName) {
+    const found = servicesList.value.find(s => s.name.trim().toLowerCase() === soa.serviceName.trim().toLowerCase())
+    if (found) {
+      selectedServiceId.value = found.id
+    } else {
+      selectedServiceId.value = 'custom'
+    }
+  } else {
+    selectedServiceId.value = ''
+  }
+
   paymentMessage.value = ''
   showPaymentModal.value = true
+
+  // Pull the last saved installment for this SOA (if any) to rebuild the
+  // exact Availed Services breakdown, including any discount line items.
+  const soaId = resolveSoaId(soa)
+  if (soaId) {
+    try {
+      const response = await axios.get(`${INSTALLMENTS_URL}/soa/${soaId}`, {
+        params: { _: Date.now() }, // cache-buster: forces the browser to always fetch fresh data
+        headers: { 'Cache-Control': 'no-cache' }
+      })
+      const installments = response.data || []
+      const latest = installments.length ? installments[installments.length - 1] : null
+
+      if (latest?.serviceBreakdown) {
+        try {
+          const parsedBreakdown = JSON.parse(latest.serviceBreakdown)
+          if (Array.isArray(parsedBreakdown) && parsedBreakdown.length) {
+            availedServices.value = parsedBreakdown
+          }
+        } catch (parseError) {
+          console.error('Failed to parse saved service breakdown', parseError)
+        }
+      }
+
+      if (latest?.discountName) {
+        paymentForm.value.discountName = latest.discountName
+      }
+    } catch (error) {
+      console.error('Failed to load saved installment breakdown', error)
+    }
+  }
 }
 
 function closePaymentModal() {
@@ -137,7 +301,11 @@ function closePaymentModal() {
   paymentForm.value.totalAmount = ''
   paymentForm.value.paidAmount = ''
   paymentForm.value.paymentDate = ''
+  paymentForm.value.discountName = ''
+  paymentForm.value.discountAmount = ''
   paymentMessage.value = ''
+  selectedServiceId.value = ''
+  availedServices.value = []
 }
 
 function openReceiptModal() {
@@ -163,11 +331,23 @@ function printReceipt() {
 async function addPayment() {
   if (!selectedSOA.value) return
 
-  const totalAmount = parseNumber(paymentForm.value.totalAmount)
+  const grossAmount = parseNumber(paymentForm.value.totalAmount)
+  const discountAmount = parseNumber(paymentForm.value.discountAmount)
   const paidAmount = parseNumber(paymentForm.value.paidAmount)
+  const alreadyPaid = selectedSOA.value ? parseNumber(selectedSOA.value.amountPaid) : 0
 
-  if (!totalAmount || totalAmount <= 0) {
+  if (!grossAmount || grossAmount <= 0) {
     paymentMessage.value = 'Enter a valid total amount.'
+    return
+  }
+
+  if (discountAmount < 0) {
+    paymentMessage.value = 'Discount cannot be negative.'
+    return
+  }
+
+  if (discountAmount > 0 && !paymentForm.value.discountName.trim()) {
+    paymentMessage.value = 'Enter a name for the discount.'
     return
   }
 
@@ -176,10 +356,13 @@ async function addPayment() {
     return
   }
 
-  if (paidAmount > totalAmount) {
-    paymentMessage.value = 'Paid amount cannot exceed total amount.'
+  const remainingBalance = grossAmount - alreadyPaid
+  if (paidAmount > remainingBalance) {
+    paymentMessage.value = `Paid amount cannot exceed the remaining balance of ${formatCurrency(remainingBalance)}.`
     return
   }
+
+  const totalAmount = grossAmount
 
   let soaId = resolveSoaId(selectedSOA.value)
   if (!soaId) {
@@ -206,14 +389,58 @@ async function addPayment() {
     }
   }
 
+  // Build a readable list of every service availed in this payment session,
+  // and separately list any discounts that were added to the breakdown
+  const serviceNames = availedServices.value
+    .filter(s => !s.isDiscount)
+    .map(s => s.name)
+    .join(', ') || paymentForm.value.serviceName
+
+  const committedDiscounts = availedServices.value
+    .filter(s => s.isDiscount)
+    .map(s => `${s.name} (-${formatCurrency(Math.abs(s.amount))})`)
+
+  // Include the discount box too, in case it wasn't clicked into the list yet
+  if (discountAmount > 0 && paymentForm.value.discountName.trim()) {
+    committedDiscounts.push(`${paymentForm.value.discountName} (-${formatCurrency(discountAmount)})`)
+  }
+
+  const discountNote = committedDiscounts.length
+    ? ` | Discount: ${committedDiscounts.join(', ')}`
+    : ''
+
   try {
-    await axios.post(`${BASE_URL}/${soaId}/payments`, {
+    // Build the full breakdown to persist: everything already in the list,
+    // plus the discount box in case it wasn't clicked into the list yet.
+    const finalBreakdown = [...availedServices.value]
+    if (discountAmount > 0 && paymentForm.value.discountName.trim()) {
+      finalBreakdown.push({
+        name: paymentForm.value.discountName.trim(),
+        amount: -discountAmount,
+        isDiscount: true
+      })
+    }
+
+    const discountEntries = finalBreakdown.filter(s => s.isDiscount)
+    const aggregatedDiscountName = discountEntries.map(s => s.name).join(', ') || null
+    const aggregatedDiscountAmount = discountEntries.reduce((sum, s) => sum + Math.abs(s.amount), 0)
+
+    const payload = {
       amount: paidAmount,
-      totalAmount,
+      totalAmount, // gross bill total (discount applied on top for display/notes only)
       paymentDate: paymentForm.value.paymentDate ? new Date(paymentForm.value.paymentDate).toISOString() : null,
       paymentMethod: 'Cash',
-      notes: `${paymentForm.value.serviceName} - ${paymentForm.value.diagnosis}`
-    })
+      notes: `${serviceNames} - ${paymentForm.value.diagnosis}${discountNote}`,
+      discountName: aggregatedDiscountName,
+      discountAmount: aggregatedDiscountAmount || null,
+      serviceBreakdown: JSON.stringify(finalBreakdown)
+    }
+
+    // TEMP DEBUG — shows the exact outgoing payload directly on the page,
+    // so it can be read/copied without needing DevTools. Remove once confirmed working.
+    paymentMessage.value = 'SENDING: ' + JSON.stringify(payload, null, 2)
+
+    await axios.post(`${BASE_URL}/${soaId}/payments`, payload)
     paymentMessage.value = 'Payment recorded successfully.'
     await loadSoaList()
     showPaymentModal.value = false
@@ -230,6 +457,7 @@ function addService() {
     amount: Number(newService.value.amount)
   })
   newService.value = { name: '', amount: '' }
+  selectedAddSoaServiceId.value = ''
 }
 
 function removeService(index) {
@@ -279,6 +507,7 @@ function clearSearch() {
 
 onMounted(() => {
   loadSoaList()
+  loadServicesList()
 })
 </script>
 
@@ -393,12 +622,12 @@ onMounted(() => {
 
     <!-- ADD PAYMENT MODAL -->
     <div v-if="showPaymentModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div class="bg-white p-6 rounded-lg w-full max-w-md">
+      <div class="bg-white p-6 rounded-lg w-full max-w-2xl">
         <h2 class="text-xl font-bold mb-4">Patient Receipt Payment</h2>
         <p class="mb-4 text-sm text-gray-600">Patient: {{ selectedSOA.patientName }}</p>
 
         <div class="grid grid-cols-1 gap-4">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <label class="block">
               <span class="text-sm font-semibold mb-1 block">Total Amount</span>
               <input
@@ -411,18 +640,28 @@ onMounted(() => {
             </label>
 
             <label class="block">
-              <span class="text-sm font-semibold mb-1 block">Paid Amount</span>
+              <span class="text-sm font-semibold mb-1 block">Already Paid</span>
+              <input
+                :value="formatCurrency(selectedSOA ? selectedSOA.amountPaid : 0)"
+                type="text"
+                readonly
+                class="w-full border bg-gray-100 rounded px-4 py-2"
+              />
+            </label>
+
+            <label class="block">
+              <span class="text-sm font-semibold mb-1 block">Amount Paid Now</span>
               <input
                 v-model="paymentForm.paidAmount"
                 type="text"
                 inputmode="decimal"
                 class="w-full border rounded px-4 py-2"
-                placeholder="Enter paid amount"
+                placeholder="Enter amount"
               />
             </label>
 
             <label class="block">
-              <span class="text-sm font-semibold mb-1 block">Total Balance</span>
+              <span class="text-sm font-semibold mb-1 block">New Balance</span>
               <input
                 :value="formatCurrency(paymentBalance)"
                 type="text"
@@ -432,15 +671,110 @@ onMounted(() => {
             </label>
           </div>
 
+          <!-- DISCOUNT -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label class="block">
+              <span class="text-sm font-semibold mb-1 block">Discount Name</span>
+              <input
+                v-model="paymentForm.discountName"
+                type="text"
+                class="w-full border rounded px-4 py-2"
+                placeholder="e.g. Senior Citizen, PWD, PhilHealth"
+              />
+            </label>
+
+            <label class="block">
+              <span class="text-sm font-semibold mb-1 block">Discount Amount</span>
+              <input
+                v-model="paymentForm.discountAmount"
+                type="text"
+                inputmode="decimal"
+                class="w-full border rounded px-4 py-2"
+                placeholder="Enter discount amount"
+              />
+            </label>
+
+            <label class="block">
+              <span class="text-sm font-semibold mb-1 block">Total New Balance After Discount</span>
+              <input
+                :value="formatCurrency(totalNewBalanceAfterDiscount)"
+                type="text"
+                readonly
+                class="w-full border bg-gray-100 rounded px-4 py-2 font-semibold"
+              />
+            </label>
+          </div>
+
+          <button
+            type="button"
+            @click="addDiscount"
+            class="bg-red-600 text-white px-4 py-2 rounded text-sm w-fit"
+          >
+            + Add Discount
+          </button>
+
           <label class="block">
             <span class="text-sm font-semibold mb-1 block">Service Name</span>
+            <select
+              v-model="selectedServiceId"
+              @change="onPaymentServiceChange"
+              class="w-full border rounded px-4 py-2"
+            >
+              <option value="" disabled>Select a service</option>
+              <option v-for="service in servicesList" :key="service.id" :value="service.id">
+                {{ service.name }} (₱{{ service.price }})
+              </option>
+              <option value="custom">-- Custom Service --</option>
+            </select>
             <input
+              v-if="selectedServiceId === 'custom'"
               v-model="paymentForm.serviceName"
               type="text"
-              class="w-full border rounded px-4 py-2"
-              placeholder="Service name"
+              class="w-full border rounded px-4 py-2 mt-2"
+              placeholder="Enter custom service name"
             />
+            <input
+              v-if="selectedServiceId === 'custom'"
+              v-model="paymentForm.totalAmount"
+              type="number"
+              class="w-full border rounded px-4 py-2 mt-2"
+              placeholder="Enter amount"
+            />
+
+            <button
+              type="button"
+              @click="addAvailedService"
+              class="mt-2 bg-indigo-600 text-white px-4 py-2 rounded text-sm"
+            >
+              + Add New Availed Service
+            </button>
           </label>
+
+          <!-- AVAILED SERVICES LIST -->
+          <div class="border rounded">
+            <div class="bg-gray-100 px-4 py-2 font-semibold text-sm flex justify-between">
+              <span>Availed Services</span>
+              <span>{{ formatCurrency(availedServicesTotal) }}</span>
+            </div>
+            <div v-if="availedServices.length === 0" class="px-4 py-2 text-sm text-gray-400">
+              No services added yet
+            </div>
+            <div
+              v-for="(s, i) in availedServices"
+              :key="i"
+              class="flex justify-between items-center px-4 py-2 border-t text-sm"
+              :class="{ 'text-red-600': s.isDiscount }"
+            >
+              <span>
+                {{ s.name }}
+                <span v-if="s.isDiscount" class="text-xs italic">(Discount)</span>
+              </span>
+              <span class="flex items-center gap-3">
+                <span>{{ s.isDiscount ? '- ' : '' }}{{ formatCurrency(Math.abs(s.amount)) }}</span>
+                <button @click="removeAvailedService(i)" class="text-red-600">✕</button>
+              </span>
+            </div>
+          </div>
 
           <label class="block">
             <span class="text-sm font-semibold mb-1 block">Diagnosis</span>
@@ -484,13 +818,35 @@ onMounted(() => {
             <span class="font-semibold">Patient</span>
             <span>{{ selectedSOA.patientName }}</span>
           </div>
-          <div class="flex justify-between text-sm">
+
+          <div v-if="availedServices.length" class="border rounded">
+            <div class="bg-gray-100 px-3 py-1 font-semibold text-xs">Availed Services</div>
+            <div
+              v-for="(s, i) in availedServices"
+              :key="i"
+              class="flex justify-between px-3 py-1 border-t text-sm"
+              :class="{ 'text-red-600': s.isDiscount }"
+            >
+              <span>{{ s.name }}<span v-if="s.isDiscount" class="text-xs italic"> (Discount)</span></span>
+              <span>{{ s.isDiscount ? '- ' : '' }}{{ formatCurrency(Math.abs(s.amount)) }}</span>
+            </div>
+          </div>
+          <div v-else class="flex justify-between text-sm">
             <span class="font-semibold">Service</span>
             <span>{{ paymentForm.serviceName || selectedSOA.serviceName || 'N/A' }}</span>
           </div>
+
           <div class="flex justify-between text-sm">
             <span class="font-semibold">Diagnosis</span>
             <span>{{ paymentForm.diagnosis || selectedSOA.otherDiagnosis || 'N/A' }}</span>
+          </div>
+          <div v-if="parseNumber(paymentForm.discountAmount) > 0" class="flex justify-between text-sm text-red-600">
+            <span class="font-semibold">Discount ({{ paymentForm.discountName || 'Discount' }})</span>
+            <span>- {{ formatCurrency(parseNumber(paymentForm.discountAmount)) }}</span>
+          </div>
+          <div v-if="parseNumber(paymentForm.discountAmount) > 0" class="flex justify-between text-sm">
+            <span class="font-semibold">Total New Balance After Discount</span>
+            <span>{{ formatCurrency(totalNewBalanceAfterDiscount) }}</span>
           </div>
           <div class="flex justify-between text-sm">
             <span class="font-semibold">Amount Paid Now</span>
@@ -527,10 +883,28 @@ onMounted(() => {
         </div>
 
         <h3 class="mt-4 font-semibold">Services</h3>
-        <div class="flex gap-2 mt-2">
-          <input v-model="newService.name" placeholder="Service Name" class="border p-2 flex-1" />
-          <input v-model="newService.amount" type="number" placeholder="Amount" class="border p-2 w-32" />
-          <button @click="addService" class="bg-blue-600 text-white px-3 rounded">Add</button>
+        <div class="flex flex-col gap-2 mt-2">
+          <div class="flex gap-2">
+            <select
+              v-model="selectedAddSoaServiceId"
+              @change="onAddSoaServiceChange"
+              class="border p-2 flex-1 rounded"
+            >
+              <option value="" disabled>Select a service</option>
+              <option v-for="service in servicesList" :key="service.id" :value="service.id">
+                {{ service.name }} (₱{{ service.price }})
+              </option>
+              <option value="custom">-- Custom Service --</option>
+            </select>
+            <input v-model="newService.amount" type="number" placeholder="Amount" class="border p-2 w-32 rounded" />
+            <button @click="addService" class="bg-blue-600 text-white px-4 rounded">Add</button>
+          </div>
+          <input
+            v-if="selectedAddSoaServiceId === 'custom'"
+            v-model="newService.name"
+            placeholder="Enter custom service name"
+            class="border p-2 rounded"
+          />
         </div>
 
         <ul class="mt-3 space-y-1">

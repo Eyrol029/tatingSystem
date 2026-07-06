@@ -75,7 +75,16 @@ public class StatementOfAccountController {
         if (request.getNotes() != null && !request.getNotes().isBlank()) {
             soa.setDescription(request.getNotes());
         }
-        service.applyPayment(soa, request.getAmount());
+        // CHANGED: now forwards notes + discount + breakdown into the installment record,
+        // instead of only stashing notes on the SOA's description field.
+        service.applyPayment(
+                soa,
+                request.getAmount(),
+                request.getNotes(),
+                request.getDiscountName(),
+                request.getDiscountAmount(),
+                request.getServiceBreakdown()
+        );
         return soa;
     }
 
@@ -85,6 +94,13 @@ public class StatementOfAccountController {
         private LocalDateTime paymentDate;
         private String paymentMethod;
         private String notes;
+
+        // NEW: discount name/amount entered on this payment, if any
+        private String discountName;
+        private Double discountAmount;
+
+        // NEW: JSON string of the full availed-services breakdown (services + discount line items)
+        private String serviceBreakdown;
 
         public Double getAmount() {
             return amount;
@@ -124,6 +140,30 @@ public class StatementOfAccountController {
 
         public void setNotes(String notes) {
             this.notes = notes;
+        }
+
+        public String getDiscountName() {
+            return discountName;
+        }
+
+        public void setDiscountName(String discountName) {
+            this.discountName = discountName;
+        }
+
+        public Double getDiscountAmount() {
+            return discountAmount;
+        }
+
+        public void setDiscountAmount(Double discountAmount) {
+            this.discountAmount = discountAmount;
+        }
+
+        public String getServiceBreakdown() {
+            return serviceBreakdown;
+        }
+
+        public void setServiceBreakdown(String serviceBreakdown) {
+            this.serviceBreakdown = serviceBreakdown;
         }
     }
 }

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 
 const BASE_URL = 'http://localhost:8080';
@@ -9,6 +9,11 @@ const selectedUser = ref(null);
 const users = ref([]);
 const searchQuery = ref('');
 const roleFilter = ref('');
+
+// Lists of EXISTING patients/employees — used so a User Account can only ever
+// be linked to a record that already exists, never a free-typed ID.
+const patientsList = ref([]);
+const employeesList = ref([]);
 
 const formData = ref({
   username: '',
@@ -22,6 +27,9 @@ const formData = ref({
   employeeID: null
 });
 
+// True when the selected role is Patient — controls which dropdown shows
+const isPatientRole = computed(() => formData.value.role === 'Patient');
+
 // Fetch all users from backend
 async function fetchUsers() {
   try {
@@ -32,7 +40,31 @@ async function fetchUsers() {
   }
 }
 
-fetchUsers();
+// Fetch the existing Patient list (adjust the endpoint path if yours differs)
+async function fetchPatients() {
+  try {
+    const res = await axios.get(`${BASE_URL}/api/patients`);
+    patientsList.value = res.data;
+  } catch (e) {
+    console.error('Failed to fetch patients list', e);
+  }
+}
+
+// Fetch the existing Employee list (adjust the endpoint path if yours differs)
+async function fetchEmployees() {
+  try {
+    const res = await axios.get(`${BASE_URL}/api/employees`);
+    employeesList.value = res.data;
+  } catch (e) {
+    console.error('Failed to fetch employees list', e);
+  }
+}
+
+onMounted(() => {
+  fetchUsers();
+  fetchPatients();
+  fetchEmployees();
+});
 
 const filteredUsers = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
@@ -48,7 +80,20 @@ const filteredUsers = computed(() => {
     );
   });
 });
+const patientSearch = ref('');
 
+const filteredPatients = computed(() => {
+  const search = patientSearch.value.trim().toLowerCase();
+
+  if (!search) return patientsList.value;
+
+  return patientsList.value.filter(patient =>
+    String(patient.patientID).includes(search) ||
+    `${patient.fName} ${patient.lName}`.toLowerCase().includes(search) ||
+    (patient.fName || '').toLowerCase().includes(search) ||
+    (patient.lName || '').toLowerCase().includes(search)
+  );
+});
 function clearSearch() {
   searchQuery.value = '';
 }
@@ -74,9 +119,30 @@ function resetForm() {
   view.value = 'list';
 }
 
+// When role changes, clear out whichever ID no longer applies so a stale
+// selection can't sneak through (e.g. switching from Patient to Admin).
+function onRoleChange() {
+  if (isPatientRole.value) {
+    formData.value.employeeID = null;
+  } else {
+    formData.value.patientID = null;
+  }
+}
+
 async function handleAddUser() {
   if (formData.value.passwordHash !== formData.value.confirmPassword) {
     alert('Passwords do not match');
+    return;
+  }
+
+  // Enforce: Patient role must link to an existing patient; Staff roles must
+  // link to an existing employee. No free-typed IDs allowed either way.
+  if (isPatientRole.value && !formData.value.patientID) {
+    alert('Please select an existing patient from the list.');
+    return;
+  }
+  if (!isPatientRole.value && !formData.value.employeeID) {
+    alert('Please select an existing employee from the list.');
     return;
   }
 
@@ -88,8 +154,8 @@ async function handleAddUser() {
       passwordSalt: formData.value.passwordSalt || '',
       role: formData.value.role,
       status: formData.value.status,
-      patientID: formData.value.patientID || null,
-      employeeID: formData.value.employeeID || null
+      patientID: isPatientRole.value ? formData.value.patientID : null,
+      employeeID: isPatientRole.value ? null : formData.value.employeeID
     });
 
     await fetchUsers();
@@ -122,6 +188,15 @@ async function handleEditUser() {
     return;
   }
 
+  if (isPatientRole.value && !formData.value.patientID) {
+    alert('Please select an existing patient from the list.');
+    return;
+  }
+  if (!isPatientRole.value && !formData.value.employeeID) {
+    alert('Please select an existing employee from the list.');
+    return;
+  }
+
   try {
     await axios.put(`${BASE_URL}/user`, {
       userID: selectedUser.value.userID,
@@ -131,8 +206,8 @@ async function handleEditUser() {
       passwordSalt: formData.value.passwordSalt || selectedUser.value.passwordSalt,
       role: formData.value.role,
       status: formData.value.status,
-      patientID: formData.value.patientID || null,
-      employeeID: formData.value.employeeID || null
+      patientID: isPatientRole.value ? formData.value.patientID : null,
+      employeeID: isPatientRole.value ? null : formData.value.employeeID
     });
 
     await fetchUsers();
@@ -195,6 +270,7 @@ async function handleDeleteUser(userID) {
             <label class="block text-sm font-semibold mb-2">Role *</label>
             <select
               v-model="formData.role"
+              @change="onRoleChange"
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
             >
               <option>Admin</option>
@@ -215,25 +291,73 @@ async function handleDeleteUser(userID) {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-semibold mb-2">Patient ID</label>
-            <input
-              type="number"
-              v-model="formData.patientID"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-              placeholder="Optional"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-semibold mb-2">Employee ID</label>
-            <input
-              type="number"
-              v-model="formData.employeeID"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-              placeholder="Optional"
-            />
-          </div>
+        <!-- Patient Search -->
+<div v-if="isPatientRole">
+  <label class="block text-sm font-semibold mb-2">
+    Link to Existing Patient *
+  </label>
+
+  <!-- Search Box -->
+  <input
+    v-model="patientSearch"
+    type="text"
+    placeholder="🔍 Search Patient Name or ID..."
+    class="w-full px-4 py-2 mb-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+  />
+
+  <!-- Patient Dropdown -->
+  <select
+    v-model="formData.patientID"
+    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+  >
+    <option :value="null" disabled>
+      -- Select a patient --
+    </option>
+
+    <option
+      v-for="patient in filteredPatients"
+      :key="patient.patientID"
+      :value="patient.patientID"
+    >
+      {{ patient.patientID }} - {{ patient.fName }} {{ patient.lName }}
+    </option>
+  </select>
+
+  <p
+    v-if="filteredPatients.length === 0"
+    class="text-xs text-red-500 mt-1"
+  >
+    No matching patient found.
+  </p>
+
+  <p
+    v-if="patientsList.length === 0"
+    class="text-xs text-gray-400 mt-1"
+  >
+    No patients found. Add a patient record first before creating this account.
+  </p>
+</div>
+        
+        
+        <!-- Employee dropdown — only shown & required when role is Admin/Midwife -->
+        <div v-else>
+          <label class="block text-sm font-semibold mb-2">Link to Existing Employee *</label>
+          <select
+            v-model="formData.employeeID"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+          >
+            <option :value="null" disabled>-- Select an employee --</option>
+            <option
+              v-for="employee in employeesList"
+              :key="employee.employeeID"
+              :value="employee.employeeID"
+            >
+              {{ employee.fName }} {{ employee.lName }} (ID: {{ employee.employeeID }})
+            </option>
+          </select>
+          <p v-if="employeesList.length === 0" class="text-xs text-gray-400 mt-1">
+            No employees found. Add an employee record first before creating this account.
+          </p>
         </div>
 
         <div class="grid grid-cols-2 gap-4">

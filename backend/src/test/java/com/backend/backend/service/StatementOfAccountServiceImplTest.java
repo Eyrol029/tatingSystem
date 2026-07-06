@@ -1,14 +1,13 @@
 package com.backend.backend.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.backend.backend.model.Billing.PatientPaymentSummaryDTO;
@@ -38,7 +37,7 @@ class StatementOfAccountServiceImplTest {
         soa.setAmountPaid(0.0);
         soa.setBalanceAmount(5000.0);
 
-        service.applyPayment(soa, 1500.0);
+        service.applyPayment(soa, 1500.0, null, null, null, null);
 
         assertEquals(1500.0, soa.getAmountPaid());
         assertEquals(3500.0, soa.getBalanceAmount());

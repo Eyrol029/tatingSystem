@@ -1,14 +1,12 @@
 package com.backend.backend.model.Billing;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 
 @Entity
@@ -19,59 +17,137 @@ public class Billing {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer billingID;
 
-    private Integer patientServiceID;
+    @Column(name = "soaId")
+    private Integer soaId;
 
-    private LocalDate billingDate;
+    @Column(name = "patientServiceId")
+    private Integer patientServiceId;
 
-    @Enumerated(EnumType.STRING)
-    private PaymentStatus paymentStatus;
+    @Column(name = "patientId")
+    private Integer patientId;
 
-    @Lob
-    private String remarks;
+    @Column(name = "amountPaid")
+    private Double amountPaid;
 
-    public enum PaymentStatus {
-        Pending,
-        Paid,
-        Partial
-    }
+    @Column(name = "paymentDate")
+    private LocalDateTime paymentDate;
 
-    public Integer getBillingID() {
+    @Column(name = "paymentMethod", length = 50)
+    private String paymentMethod;
+
+    @Column(name = "notes", columnDefinition = "TEXT")
+    private String notes;
+
+    @Column(name = "installmentNumber")
+    private Integer installmentNumber;
+
+    // NEW: name of the discount applied on this payment, if any (e.g. "Senior Citizen")
+    @Column(name = "discountName")
+    private String discountName;
+
+    // NEW: peso amount of the discount applied on this payment, if any
+    @Column(name = "discountAmount")
+    private Double discountAmount;
+
+    // NEW: JSON array of the availed services / discounts shown in the frontend breakdown,
+    // e.g. [{"name":"Consultation","amount":500,"isDiscount":false},{"name":"Senior Citizen","amount":-200,"isDiscount":true}]
+    // Stored as raw JSON text so the frontend can reconstruct the exact breakdown when reopening.
+    @Column(name = "serviceBreakdown", columnDefinition = "TEXT")
+    private String serviceBreakdown;
+
+    public Integer getbillingID() {
         return billingID;
     }
 
-    public void setBillingID(Integer billingID) {
+    public void setbillingID(Integer billingID) {
         this.billingID = billingID;
     }
 
-    public Integer getPatientServiceID() {
-        return patientServiceID;
+    public Integer getSoaId() {
+        return soaId;
     }
 
-    public void setPatientServiceID(Integer patientServiceID) {
-        this.patientServiceID = patientServiceID;
+    public void setSoaId(Integer soaId) {
+        this.soaId = soaId;
     }
 
-    public LocalDate getBillingDate() {
-        return billingDate;
+    public Integer getPatientServiceId() {
+        return patientServiceId;
     }
 
-    public void setBillingDate(LocalDate billingDate) {
-        this.billingDate = billingDate;
+    public void setPatientServiceId(Integer patientServiceId) {
+        this.patientServiceId = patientServiceId;
     }
 
-    public PaymentStatus getPaymentStatus() {
-        return paymentStatus;
+    public Integer getPatientId() {
+        return patientId;
     }
 
-    public void setPaymentStatus(PaymentStatus paymentStatus) {
-        this.paymentStatus = paymentStatus;
+    public void setPatientId(Integer patientId) {
+        this.patientId = patientId;
     }
 
-    public String getRemarks() {
-        return remarks;
+    public Double getAmountPaid() {
+        return amountPaid;
     }
 
-    public void setRemarks(String remarks) {
-        this.remarks = remarks;
+    public void setAmountPaid(Double amountPaid) {
+        this.amountPaid = amountPaid;
+    }
+
+    public LocalDateTime getPaymentDate() {
+        return paymentDate;
+    }
+
+    public void setPaymentDate(LocalDateTime paymentDate) {
+        this.paymentDate = paymentDate;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
+    public Integer getInstallmentNumber() {
+        return installmentNumber;
+    }
+
+    public void setInstallmentNumber(Integer installmentNumber) {
+        this.installmentNumber = installmentNumber;
+    }
+
+    public String getDiscountName() {
+        return discountName;
+    }
+
+    public void setDiscountName(String discountName) {
+        this.discountName = discountName;
+    }
+
+    public Double getDiscountAmount() {
+        return discountAmount;
+    }
+
+    public void setDiscountAmount(Double discountAmount) {
+        this.discountAmount = discountAmount;
+    }
+
+    public String getServiceBreakdown() {
+        return serviceBreakdown;
+    }
+
+    public void setServiceBreakdown(String serviceBreakdown) {
+        this.serviceBreakdown = serviceBreakdown;
     }
 }

@@ -41,6 +41,20 @@ public class PaymentInstallment {
     @Column(name = "installmentNumber")
     private Integer installmentNumber;
 
+    // NEW: name of the discount applied on this payment, if any (e.g. "Senior Citizen")
+    @Column(name = "discountName")
+    private String discountName;
+
+    // NEW: peso amount of the discount applied on this payment, if any
+    @Column(name = "discountAmount")
+    private Double discountAmount;
+
+    // NEW: JSON array of the availed services / discounts shown in the frontend breakdown,
+    // e.g. [{"name":"Consultation","amount":500,"isDiscount":false},{"name":"Senior Citizen","amount":-200,"isDiscount":true}]
+    // Stored as raw JSON text so the frontend can reconstruct the exact breakdown when reopening.
+    @Column(name = "serviceBreakdown", columnDefinition = "TEXT")
+    private String serviceBreakdown;
+
     public Integer getInstallmentId() {
         return installmentId;
     }
@@ -111,5 +125,29 @@ public class PaymentInstallment {
 
     public void setInstallmentNumber(Integer installmentNumber) {
         this.installmentNumber = installmentNumber;
+    }
+
+    public String getDiscountName() {
+        return discountName;
+    }
+
+    public void setDiscountName(String discountName) {
+        this.discountName = discountName;
+    }
+
+    public Double getDiscountAmount() {
+        return discountAmount;
+    }
+
+    public void setDiscountAmount(Double discountAmount) {
+        this.discountAmount = discountAmount;
+    }
+
+    public String getServiceBreakdown() {
+        return serviceBreakdown;
+    }
+
+    public void setServiceBreakdown(String serviceBreakdown) {
+        this.serviceBreakdown = serviceBreakdown;
     }
 }

@@ -18,7 +18,17 @@ public interface StatementOfAccountService {
 
     void deleteSoa(Integer id);
 
-    void applyPayment(StatementOfAccount soa, Double amount);
+    // CHANGED: now accepts the payment notes plus the structured discount / service
+    // breakdown so they can be persisted on the PaymentInstallment record, not just
+    // used to overwrite the SOA's description.
+    void applyPayment(
+            StatementOfAccount soa,
+            Double amount,
+            String notes,
+            String discountName,
+            Double discountAmount,
+            String serviceBreakdown
+    );
 
     List<PatientPaymentSummaryDTO> getDashboardSummaries();
 
