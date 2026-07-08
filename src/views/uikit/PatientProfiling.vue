@@ -27,9 +27,44 @@ const patientData = reactive({
     email: ''
 });
 
+// A separate editable copy — so changes can be discarded on Cancel without
+// mutating the displayed data until Save is actually confirmed.
+const editForm = reactive({ ...patientData });
+
 const loading = ref(true);
 const error = ref('');
 const services = ref([]);
+
+// ── General Information edit state ──────────────────────────────────────────
+const editingProfile = ref(false);
+const savingProfile = ref(false);
+const profileError = ref('');
+
+function startEditProfile() {
+    Object.assign(editForm, patientData);
+    profileError.value = '';
+    editingProfile.value = true;
+}
+
+function cancelEditProfile() {
+    editingProfile.value = false;
+    profileError.value = '';
+}
+
+async function saveProfile() {
+    savingProfile.value = true;
+    profileError.value = '';
+    try {
+        await axios.put(BASE_URL, { ...editForm, patientID: patientData.patientID });
+        Object.assign(patientData, editForm);
+        editingProfile.value = false;
+    } catch (e) {
+        console.error('Failed to update patient info', e);
+        profileError.value = 'Failed to save changes. Please try again.';
+    } finally {
+        savingProfile.value = false;
+    }
+}
 
 async function fetchPatient() {
     try {
@@ -57,6 +92,18 @@ async function fetchServices() {
         }));
     } catch (e) {
         console.error('Failed to load services data.', e);
+    }
+}
+
+// ── Delete a mistaken service record ─────────────────────────────────────────
+async function deleteService(serviceId) {
+    if (!confirm('Are you sure you want to delete this service record? This cannot be undone.')) return;
+    try {
+        await axios.delete(`http://localhost:8080/api/patient-services/${serviceId}`);
+        await fetchServices();
+    } catch (e) {
+        console.error('Failed to delete service record', e);
+        alert('Failed to delete this service record: ' + (e.response?.data || e.message));
     }
 }
 
@@ -205,12 +252,31 @@ async function handleSubmit() {
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-semibold text-gray-800">General Information</h3>
                     <button
+                        v-if="!editingProfile"
+                        @click="startEditProfile"
                         class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700 transition">
                         Edit
                     </button>
+                    <div v-else class="flex gap-2">
+                        <button
+                            @click="cancelEditProfile"
+                            :disabled="savingProfile"
+                            class="bg-gray-200 text-gray-700 px-4 py-1.5 rounded text-sm hover:bg-gray-300 transition disabled:opacity-50">
+                            Cancel
+                        </button>
+                        <button
+                            @click="saveProfile"
+                            :disabled="savingProfile"
+                            class="bg-green-600 text-white px-4 py-1.5 rounded text-sm hover:bg-green-700 transition disabled:opacity-50">
+                            {{ savingProfile ? 'Saving...' : 'Save Changes' }}
+                        </button>
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-6">
+                <p v-if="profileError" class="text-red-600 text-sm mb-3">{{ profileError }}</p>
+
+                <!-- READ-ONLY VIEW -->
+                <div v-if="!editingProfile" class="grid grid-cols-3 gap-6">
                     <div>
                         <p class="text-sm text-gray-500">Patient ID</p>
                         <p class="font-medium text-gray-900">{{ patientData.patientID }}</p>
@@ -264,6 +330,70 @@ async function handleSubmit() {
                         <p class="font-medium text-gray-900">{{ patientData.email ?? '—' }}</p>
                     </div>
                 </div>
+
+                <!-- EDIT FORM -->
+                <div v-else class="grid grid-cols-3 gap-6">
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">First Name</label>
+                        <input v-model="editForm.fName" type="text" class="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Middle Initial</label>
+                        <input v-model="editForm.middleI" type="text" class="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Last Name</label>
+                        <input v-model="editForm.lName" type="text" class="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Age</label>
+                        <input v-model="editForm.age" type="number" class="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Birth Date</label>
+                        <input v-model="editForm.bDate" type="date" class="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">House No</label>
+                        <input v-model="editForm.houseNo" type="text" class="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Street</label>
+                        <input v-model="editForm.street" type="text" class="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Barangay</label>
+                        <input v-model="editForm.barangay" type="text" class="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Contact Number</label>
+                        <input v-model="editForm.contactNumber" type="text" class="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Municipality</label>
+                        <input v-model="editForm.municipality" type="text" class="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Province</label>
+                        <input v-model="editForm.province" type="text" class="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Religion</label>
+                        <input v-model="editForm.religion" type="text" class="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Education</label>
+                        <input v-model="editForm.educationalAttainment" type="text" class="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Occupation</label>
+                        <input v-model="editForm.occupation" type="text" class="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Email</label>
+                        <input v-model="editForm.email" type="email" class="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                </div>
             </div>
 
             <!-- Services Table -->
@@ -287,10 +417,16 @@ async function handleSubmit() {
                             <td class="td">{{ service.dateAvailed }}</td>
                             <td class="td">{{ service.remarks }}</td>
                             <td class="td">
-                                <button @click="viewService(service)"
-                                    class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700">
-                                    View
-                                </button>
+                                <div class="flex gap-2">
+                                    <button @click="viewService(service)"
+                                        class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700">
+                                        View
+                                    </button>
+                                    <button @click="deleteService(service.id)"
+                                        class="bg-red-50 text-red-700 px-3 py-1.5 rounded text-sm hover:bg-red-100 font-semibold">
+                                        Delete
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <tr v-if="!services.length">

@@ -7,6 +7,21 @@ const SOA_PATIENT_URL = 'http://localhost:8080/api/billing/soa/patient'
 
 const revenues = ref([])
 const showModal = ref(false)
+const tableSearchQuery = ref('')
+
+// Filters the Revenue Records table by dealer name, patient ID, or description.
+const filteredRevenues = computed(() => {
+  const q = tableSearchQuery.value.trim().toLowerCase()
+  if (!q) return revenues.value
+  return revenues.value.filter((rev) => {
+    return (
+      String(rev.dealer || '').toLowerCase().includes(q) ||
+      String(rev.patientID || '').includes(q) ||
+      String(rev.description || '').toLowerCase().includes(q) ||
+      `REV-${String(rev.id).padStart(5, '0')}`.toLowerCase().includes(q)
+    )
+  })
+})
 
 // List of existing patients — lets revenue be traced to a real billing record
 // instead of a free-typed name.
@@ -35,6 +50,16 @@ const form = ref({
   amount: '',
   patientID: null
 })
+
+// Returns today's date as YYYY-MM-DD using LOCAL time, not UTC — avoids the
+// off-by-one-day bug that .toISOString() causes for PH (UTC+8) users.
+function todayLocalDateString() {
+  const now = new Date()
+  const yyyy = now.getFullYear()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
 
 async function fetchRevenues() {
   try {
@@ -111,7 +136,7 @@ async function saveRevenue() {
       dealer: form.value.dealer,
       description: form.value.description,
       amount: Number(form.value.amount),
-      revenueDate: new Date().toISOString().slice(0, 10), // YYYY-MM-DD
+      revenueDate: todayLocalDateString(), // YYYY-MM-DD, local time
       patientID: form.value.patientID
     })
 
@@ -155,6 +180,21 @@ onMounted(() => {
       </button>
     </div>
 
+    <!-- SEARCH BAR -->
+    <div class="relative mb-4 max-w-md">
+      <input
+        v-model="tableSearchQuery"
+        type="text"
+        placeholder="Search by patient name, ID, or description…"
+        class="w-full border rounded px-4 py-2 pr-8"
+      />
+      <button
+        v-if="tableSearchQuery"
+        @click="tableSearchQuery = ''"
+        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+      >×</button>
+    </div>
+
     <!-- TABLE -->
     <div class="bg-white shadow rounded-lg overflow-hidden">
       <table class="w-full text-sm">
@@ -163,6 +203,7 @@ onMounted(() => {
             <th class="p-3 text-left">Revenue ID / Invoice No.</th>
             <th class="p-3 text-left">Paid by</th>
             <th class="p-3 text-left">Patient ID</th>
+            <th class="p-3 text-left">Date Paid</th>
             <th class="p-3 text-left">Description</th>
             <th class="p-3 text-left">Amount</th>
             <th class="p-3 text-left">Action</th>
@@ -170,10 +211,13 @@ onMounted(() => {
         </thead>
 
         <tbody>
-          <tr v-for="rev in revenues" :key="rev.id" class="border-t">
+          <tr v-for="rev in filteredRevenues" :key="rev.id" class="border-t">
             <td class="p-3 font-mono text-xs text-gray-500">REV-{{ String(rev.id).padStart(5, '0') }}</td>
             <td class="p-3">{{ rev.dealer }}</td>
             <td class="p-3 text-gray-500">{{ rev.patientID ?? '—' }}</td>
+            <td class="p-3 text-gray-600">
+              {{ rev.revenueDate ? new Date(rev.revenueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' }}
+            </td>
             <td class="p-3">{{ rev.description }}</td>
             <td class="p-3 font-semibold">₱{{ rev.amount }}</td>
             <td class="p-3">
@@ -190,6 +234,9 @@ onMounted(() => {
 
       <div v-if="revenues.length === 0" class="text-center py-8 text-gray-400 text-sm">
         No revenue records yet.
+      </div>
+      <div v-else-if="filteredRevenues.length === 0" class="text-center py-8 text-gray-400 text-sm">
+        No revenue records match "{{ tableSearchQuery }}".
       </div>
     </div>
 

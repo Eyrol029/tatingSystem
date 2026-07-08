@@ -14,8 +14,19 @@ const form = ref({
   category: '',
   description: '',
   amount: '',
-  payee: ''
+  payee: '',
+  expenseDate: ''
 })
+
+// Returns today's date as YYYY-MM-DD using LOCAL time, not UTC — avoids the
+// off-by-one-day bug that .toISOString() causes for PH (UTC+8) users.
+function todayLocalDateString() {
+  const now = new Date()
+  const yyyy = now.getFullYear()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
 
 // Load all expenses from the backend
 async function fetchExpenses() {
@@ -31,6 +42,7 @@ async function fetchExpenses() {
 function openAddModal() {
   isEditing.value = false
   editingId.value = null
+  form.value.expenseDate = todayLocalDateString()
   showModal.value = true
 }
 
@@ -41,7 +53,8 @@ function openEditModal(expense) {
     category: expense.category,
     description: expense.description,
     amount: expense.amount,
-    payee: expense.payee
+    payee: expense.payee,
+    expenseDate: expense.expenseDate ? String(expense.expenseDate).slice(0, 10) : todayLocalDateString()
   }
   showModal.value = true
 }
@@ -56,7 +69,8 @@ function resetForm() {
     category: '',
     description: '',
     amount: '',
-    payee: ''
+    payee: '',
+    expenseDate: ''
   }
   isEditing.value = false
   editingId.value = null
@@ -72,7 +86,8 @@ async function saveExpense() {
         category: form.value.category,
         description: form.value.description,
         amount: Number(form.value.amount),
-        payee: form.value.payee
+        payee: form.value.payee,
+        expenseDate: form.value.expenseDate || todayLocalDateString()
       })
     } else {
       await axios.post(BASE_URL, {
@@ -80,7 +95,7 @@ async function saveExpense() {
         description: form.value.description,
         amount: Number(form.value.amount),
         payee: form.value.payee,
-        expenseDate: new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+        expenseDate: form.value.expenseDate || todayLocalDateString() // YYYY-MM-DD, local time
       })
     }
 
@@ -129,6 +144,7 @@ onMounted(() => {
         <thead class="bg-gray-100">
           <tr>
             <th class="p-3 text-left">Expense ID</th>
+            <th class="p-3 text-left">Date</th>
             <th class="p-3 text-left">Category</th>
             <th class="p-3 text-left">Description</th>
             <th class="p-3 text-left">Amount</th>
@@ -140,6 +156,9 @@ onMounted(() => {
         <tbody>
           <tr v-for="expense in expenses" :key="expense.id" class="border-t">
             <td class="p-3 font-mono text-xs text-gray-500">EXP-{{ String(expense.id).padStart(5, '0') }}</td>
+            <td class="p-3 text-gray-600">
+              {{ expense.expenseDate ? new Date(expense.expenseDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' }}
+            </td>
             <td class="p-3">{{ expense.category }}</td>
             <td class="p-3">{{ expense.description }}</td>
             <td class="p-3 font-semibold">₱{{ expense.amount }}</td>
@@ -180,6 +199,11 @@ onMounted(() => {
         <div v-else class="mb-4"></div>
 
         <div class="space-y-3">
+          <div>
+            <label class="text-sm font-medium">Date</label>
+            <input type="date" v-model="form.expenseDate" class="w-full border rounded px-3 py-2" />
+          </div>
+
           <div>
             <label class="text-sm font-medium">Expense Category</label>
             <select v-model="form.category" class="w-full border rounded px-3 py-2">

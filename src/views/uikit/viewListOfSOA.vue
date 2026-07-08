@@ -36,6 +36,14 @@ function parseNumber(value) {
   return Number(normalized) || 0
 }
 
+// Detects placeholder text like "No services" / "SOA Service" that the
+// backend uses as a fallback label — these are not real clinical services
+// and should never be saved as if they were an actual availed service.
+function isPlaceholderServiceName(name) {
+  const normalized = (name || '').trim().toLowerCase()
+  return !normalized || normalized === 'no services' || normalized === 'soa service'
+}
+
 // Tries every likely casing/field name the backend might be using for the SOA's ID.
 function resolveSoaId(soa) {
   if (!soa) return null
@@ -93,6 +101,7 @@ const newService = ref({ name: '', amount: '' })
 const BASE_URL = 'http://localhost:8080/api/billing/soa'
 const DASHBOARD_URL = `${BASE_URL}/dashboard`
 const INSTALLMENTS_URL = 'http://localhost:8080/api/billing/installments'
+const REVENUE_URL = 'http://localhost:8080/api/revenue'
 
 async function loadServicesList() {
   try {
@@ -237,15 +246,15 @@ async function openAddPayment(soa) {
   selectedSOA.value = { ...soa }
   paymentForm.value.serviceName = soa.serviceName || ''
   paymentForm.value.diagnosis = soa.otherDiagnosis || ''
-  paymentForm.value.paymentDate = new Date().toISOString().slice(0, 10)
+  paymentForm.value.paymentDate = todayLocalDateString()
   paymentForm.value.totalAmount = soa.totalAmount != null ? String(soa.totalAmount) : ''
   paymentForm.value.paidAmount = ''
   paymentForm.value.discountName = ''
   paymentForm.value.discountAmount = ''
 
-  // Default seed from whatever this SOA has on record, in case there's no
-  // installment history yet to pull a richer breakdown from.
-  availedServices.value = soa.serviceName
+  // Default seed from whatever this SOA has on record — but skip placeholder
+  // labels like "No services" so they never get saved as a fake line item.
+  availedServices.value = (soa.serviceName && !isPlaceholderServiceName(soa.serviceName))
     ? [{ name: soa.serviceName, amount: soa.totalAmount || 0, isDiscount: false }]
     : []
 
@@ -390,11 +399,13 @@ async function addPayment() {
   }
 
   // Build a readable list of every service availed in this payment session,
-  // and separately list any discounts that were added to the breakdown
+  // and separately list any discounts that were added to the breakdown.
+  // Placeholder labels like "No services" are excluded — they're not real
+  // services and shouldn't be saved as if they were.
   const serviceNames = availedServices.value
-    .filter(s => !s.isDiscount)
+    .filter(s => !s.isDiscount && !isPlaceholderServiceName(s.name))
     .map(s => s.name)
-    .join(', ') || paymentForm.value.serviceName
+    .join(', ') || (isPlaceholderServiceName(paymentForm.value.serviceName) ? '' : paymentForm.value.serviceName)
 
   const committedDiscounts = availedServices.value
     .filter(s => s.isDiscount)
@@ -410,9 +421,12 @@ async function addPayment() {
     : ''
 
   try {
-    // Build the full breakdown to persist: everything already in the list,
-    // plus the discount box in case it wasn't clicked into the list yet.
-    const finalBreakdown = [...availedServices.value]
+    // Build the full breakdown to persist: everything already in the list
+    // (minus any leftover placeholder entries), plus the discount box in
+    // case it wasn't clicked into the list yet.
+    const finalBreakdown = availedServices.value.filter(
+      s => s.isDiscount || !isPlaceholderServiceName(s.name)
+    )
     if (discountAmount > 0 && paymentForm.value.discountName.trim()) {
       finalBreakdown.push({
         name: paymentForm.value.discountName.trim(),
@@ -436,12 +450,27 @@ async function addPayment() {
       serviceBreakdown: JSON.stringify(finalBreakdown)
     }
 
-    // TEMP DEBUG — shows the exact outgoing payload directly on the page,
-    // so it can be read/copied without needing DevTools. Remove once confirmed working.
-    paymentMessage.value = 'SENDING: ' + JSON.stringify(payload, null, 2)
-
     await axios.post(`${BASE_URL}/${soaId}/payments`, payload)
     paymentMessage.value = 'Payment recorded successfully.'
+
+    // Automatically record this payment as Revenue — using ONLY the amount
+    // paid in THIS transaction (paidAmount), not the running total, since a
+    // patient can pay multiple times across several visits.
+    if (paidAmount > 0) {
+      try {
+        await axios.post(REVENUE_URL, {
+          dealer: selectedSOA.value.patientName,
+          patientID: selectedSOA.value.patientId,
+          amount: paidAmount,
+          description: `Payment for: ${serviceNames}${discountNote}`,
+          revenueDate: paymentForm.value.paymentDate || todayLocalDateString()
+        })
+      } catch (revenueError) {
+        // Don't block the payment flow if revenue logging fails — just warn.
+        console.error('Payment saved, but failed to auto-record revenue', revenueError)
+      }
+    }
+
     await loadSoaList()
     showPaymentModal.value = false
   } catch (error) {
@@ -488,6 +517,16 @@ async function saveSOA() {
 
 function totalAmount(services) {
   return services.reduce((sum, s) => sum + s.amount, 0)
+}
+
+// Returns today's date as YYYY-MM-DD using LOCAL time, not UTC — avoids the
+// off-by-one-day bug that .toISOString() causes for PH (UTC+8) users.
+function todayLocalDateString() {
+  const now = new Date()
+  const yyyy = now.getFullYear()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
 }
 
 function formatCurrency(value) {
