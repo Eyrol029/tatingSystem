@@ -2,11 +2,22 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+import { useUserDataStore, UserRole } from '@/stores/userData'
 
 const route = useRoute()
 const router = useRouter()
 const BASE = 'http://localhost:8080/api/prenatal'
 const PATIENT_SERVICE_BASE = 'http://localhost:8080/api/patient-services'
+
+// ── Read-only mode for Patient accounts ──────────────────────────────────────
+// Patients can view and print this form but cannot type/check/select anything.
+// Wrapping the form fields in a <fieldset :disabled="isReadOnly"> below handles
+// this for every input/select/textarea/checkbox at once.
+const userStore = useUserDataStore()
+if (!userStore.user) {
+  userStore.init()
+}
+const isReadOnly = computed(() => userStore.userRole === UserRole.PATIENT)
 
 // ─── Get both clientId and serviceId from route ───────────────────────────────
 const clientId  = route.params.clientId
@@ -23,9 +34,16 @@ const submitStatus = ref({ loading: false, error: '', success: '' })
 
 const riskResult   = ref(null)
 const riskLoading  = ref(false)
+const employeesList = ref([])
+
+const onAttendingStaffChange = () => {
+  const staffID = form.value.attendingStaffID != null ? Number(form.value.attendingStaffID) : null
+  const staff = employeesList.value.find(e => Number(e.employeeID) === staffID)
+  form.value.attendingMidwife = staff ? `${staff.fName || ''} ${staff.lName || ''}`.trim() : ''
+}
 
 const form = ref({
-  lmp: '', edc: '', gpal: '',
+  lmp: '', edc: '', gpal: '', attendingMidwife: '', attendingStaffID: null,
   obstetricRisk: {
     multiplePregnancy: false, ovarianCyst: false, myomaUteri: false,
     thyroidDisorder: false, miscarriage: false, preeclampsia: false,
@@ -112,6 +130,7 @@ const HIGH_RISK_US_TAGS = ['Placenta Previa', 'Oligohydramnios', 'Fetal Anomaly'
 const ultrasoundTags = ref([])
 
 function toggleUltrasoundTag(tag) {
+  if (isReadOnly.value) return
   const idx = ultrasoundTags.value.indexOf(tag)
   if (idx === -1) { ultrasoundTags.value.push(tag) }
   else { ultrasoundTags.value.splice(idx, 1) }
@@ -149,10 +168,33 @@ function isVisitRowHighRisk(v) {
   return isVisitBpHigh(v) || isVisitFhtAbnormal(v) || isVisitPresentationAbnormal(v)
 }
 
+// ── Load the employees/staff list for the Attending Staff dropdown ──────────
+// Defensive: normalizes a few common response shapes (raw array, {data:[...]},
+// {employees:[...]}) so an empty dropdown is easy to diagnose.
+async function fetchEmployees() {
+  try {
+    const res = await axios.get('http://localhost:8080/api/employees')
+    const raw = res.data
+    employeesList.value = Array.isArray(raw)
+      ? raw
+      : (Array.isArray(raw?.data) ? raw.data
+        : (Array.isArray(raw?.employees) ? raw.employees : []))
+
+    if (!employeesList.value.length) {
+      console.warn('Employees list loaded but is empty. Raw response:', raw)
+    }
+  } catch (error) {
+    console.error('Failed to load employees list', error)
+    submitStatus.value.error = '⚠️ Could not load staff list: ' + (error?.response?.status || error.message)
+  }
+}
+
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 onMounted(async () => {
   window.addEventListener('beforeprint', handleBeforePrint)
   window.addEventListener('afterprint',  handleAfterPrint)
+
+  await fetchEmployees()
 
   if (serviceId) {
     // ✅ KEY CHANGE: directly use the serviceId from URL
@@ -285,6 +327,19 @@ async function loadExistingPrenatalData(sid) {
     form.value.deliveryDetails.type                 = latestRecord.typeOfDelivery || ''
     form.value.deliveryDetails.referralHospitalNeeded = !!latestRecord.referralHospitalNeeded
     form.value.deliveryDetails.referralHospitalName   = latestRecord.referralHospitalName || ''
+
+    // Restore attending staff selection, matching against the loaded employee list.
+    // Coerce to Number on both sides — the API may return attendingStaffID (and/or
+    // employeeID) as a string, which would otherwise fail the select's v-model match.
+    if (latestRecord.attendingStaffID != null && latestRecord.attendingStaffID !== '') {
+      const staffID = Number(latestRecord.attendingStaffID)
+      form.value.attendingStaffID = staffID
+      const staff = employeesList.value.find(e => Number(e.employeeID) === staffID)
+      form.value.attendingMidwife = staff ? `${staff.fName || ''} ${staff.lName || ''}`.trim() : (latestRecord.attendingMidwife || '')
+    } else {
+      form.value.attendingStaffID = null
+      form.value.attendingMidwife = latestRecord.attendingMidwife || ''
+    }
 
     await loadClinicalHistoryData(latestRecord.prenatalrecordID)
     await loadPrenatalDetailData(latestRecord.prenatalrecordID)
@@ -430,8 +485,31 @@ async function loadPrenatalDetailData(prenatalrecordID) {
   } catch (e) { console.error('Load prenatal detail data error:', e) }
 }
 
+// ── Sync the assigned employee name back onto PatientService so it displays
+// correctly in the "Services Availed" tables (patient profile + patient's own
+// "My Services" view). PUT /api/patient-services has no /{id} path — it
+// requires the FULL PatientService object in the body — so we fetch the
+// current record first, merge in the new employeeName, then PUT it back.
+async function syncEmployeeNameToPatientService() {
+  if (!form.value.attendingMidwife || !serviceID.value) return
+  try {
+    const currentRes = await axios.get(`${PATIENT_SERVICE_BASE}/${serviceID.value}`)
+    const currentService = currentRes.data
+    await axios.put(PATIENT_SERVICE_BASE, {
+      ...currentService,
+      employeeName: form.value.attendingMidwife
+    })
+  } catch (syncErr) {
+    console.error('Failed to sync employee name to PatientService', syncErr)
+  }
+}
+
 // ─── Submit ───────────────────────────────────────────────────────────────────
 async function submitForm() {
+  // Extra safety net — even if the button were somehow clicked while
+  // read-only, block the actual save from happening.
+  if (isReadOnly.value) return
+
   submitStatus.value.loading = true
   submitStatus.value.error   = ''
   submitStatus.value.success = ''
@@ -461,7 +539,9 @@ async function submitForm() {
       placeOfDelivery:      form.value.deliveryDetails.place || null,
       typeOfDelivery:       form.value.deliveryDetails.type || null,
       referralHospitalNeeded: form.value.deliveryDetails.referralHospitalNeeded,
-      referralHospitalName:   form.value.deliveryDetails.referralHospitalName || null
+      referralHospitalName:   form.value.deliveryDetails.referralHospitalName || null,
+      attendingMidwife:     form.value.attendingMidwife || null,
+      attendingStaffID:     form.value.attendingStaffID != null ? Number(form.value.attendingStaffID) : null
     })
     const prenatalrecordID = prenatalRes.data.prenatalrecordID
     prenatalID.value = prenatalrecordID
@@ -607,6 +687,7 @@ async function submitForm() {
 
     submitStatus.value.success = '✅ Prenatal record saved successfully!'
     await fetchRiskAssessment(prenatalrecordID)
+    await syncEmployeeNameToPatientService()
 
   } catch (error) {
     const msg = error?.response?.data?.message || error?.message || 'Unknown error'
@@ -636,6 +717,11 @@ async function submitForm() {
       </svg>
       Print / Save as PDF
     </button>
+
+    <!-- View-only banner for Patient accounts -->
+    <span v-if="isReadOnly" class="ml-2 text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1.5 rounded-full">
+      👁️ View Only
+    </span>
   </div>
 
   <!-- Printable form -->
@@ -704,6 +790,11 @@ async function submitForm() {
         {{ submitStatus.success }}
       </div>
     </div>
+
+    <!-- READ-ONLY WRAPPER: everything inside this fieldset becomes non-editable
+         (inputs, selects, textareas, checkboxes, radios) whenever a Patient is
+         logged in — one attribute handles the whole form. -->
+    <fieldset :disabled="isReadOnly" style="border:none;padding:0;margin:0;min-width:0;">
 
     <!-- Basic Info -->
     <div class="grid grid-cols-3 gap-4 mb-6">
@@ -1030,7 +1121,8 @@ async function submitForm() {
               v-for="tag in ['Normal','Placenta Previa','Oligohydramnios','Polyhydramnios','Fetal Anomaly','IUGR','Breech Presentation','Multiple Gestation']"
               :key="tag"
               @click="toggleUltrasoundTag(tag)"
-              class="text-xs px-2 py-1 rounded border transition"
+              :disabled="isReadOnly"
+              class="text-xs px-2 py-1 rounded border transition disabled:opacity-50 disabled:cursor-not-allowed"
               :class="ultrasoundTags.includes(tag)
                 ? (['Placenta Previa','Oligohydramnios','Fetal Anomaly','IUGR'].includes(tag) ? 'bg-red-500 text-white border-red-500' : 'bg-indigo-500 text-white border-indigo-500')
                 : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'">
@@ -1057,20 +1149,29 @@ async function submitForm() {
 
     <!-- Signatures -->
     <div class="grid grid-cols-2 gap-16 mt-10">
-      <div class="text-center">
-        <div class="border-t border-gray-800 pt-1 mt-10">
+      <div class="text-center flex flex-col justify-end min-h-[4rem]">
+        <div class="border-t border-gray-800 pt-1">
           <p class="text-xs font-semibold">Patient's Signature / Date</p>
         </div>
       </div>
-      <div class="text-center">
-        <div class="border-t border-gray-800 pt-1 mt-10">
+      <div class="text-center flex flex-col justify-end min-h-[4rem]">
+        <select v-model="form.attendingStaffID" @change="onAttendingStaffChange" class="input-line text-center w-full mb-1">
+          <option :value="null">-- Select Attending Staff --</option>
+          <option v-for="staff in employeesList" :key="staff.employeeID" :value="Number(staff.employeeID)">
+            {{ staff.fName }} {{ staff.lName }}
+          </option>
+        </select>
+        <div class="border-t border-gray-800 pt-1">
           <p class="text-xs font-semibold">Attending Midwife / Physician</p>
         </div>
       </div>
     </div>
 
-    <!-- Save button -->
-    <div class="no-print mt-6">
+    </fieldset>
+    <!-- END read-only wrapper -->
+
+    <!-- Save button — hidden entirely for Patient accounts -->
+    <div v-if="!isReadOnly" class="no-print mt-6">
       <div v-if="submitStatus.error"
         class="text-sm text-red-700 bg-red-100 border border-red-200 rounded p-3 mb-2">
         {{ submitStatus.error }}
@@ -1099,6 +1200,16 @@ async function submitForm() {
 .select-field { width:100%; padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; background:white; outline:none; cursor:pointer; transition:border-color 0.15s; }
 .select-field:focus { border-color: #6366f1; }
 .select-risk { border-color:#f87171 !important; color:#dc2626; font-weight:600; background-color:#fff5f5; }
+
+/* Fieldset is disabled but keep it looking like normal text, not greyed-out
+   form controls, since patients should read this like a document. */
+fieldset:disabled input,
+fieldset:disabled select,
+fieldset:disabled textarea {
+  opacity: 1;
+  color: inherit;
+  cursor: default;
+}
 </style>
 
 <style>
@@ -1113,7 +1224,7 @@ async function submitForm() {
   body.printing-prenatal .layout-main-container,
   body.printing-prenatal .layout-main { display:block !important; padding:0 !important; margin:0 !important; width:100% !important; }
   body.printing-prenatal #printable-area { display:block !important; width:100% !important; margin:0 !important; padding:0 !important; border:none !important; box-shadow:none !important; }
-  input[type="text"], input[type="date"] { border:none !important; border-bottom:1px solid #000 !important; border-radius:0 !important; background:transparent !important; }
+  input[type="text"], input[type="date"], select { border:none !important; border-bottom:1px solid #000 !important; border-radius:0 !important; background:transparent !important; -webkit-appearance:none; -moz-appearance:none; appearance:none; }
   textarea { border:1px solid #555 !important; background:transparent !important; resize:none !important; }
   table { border-collapse:collapse !important; width:100% !important; }
   th, td { border:1px solid #333 !important; }

@@ -1,13 +1,20 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { createFamilyPlanningRecord } from '../../service/FamilyPlanningService.js';
 import axios from 'axios';
+import { useUserDataStore, UserRole } from '@/stores/userData';
 
 const route = useRoute();
 const router = useRouter();
 const isViewMode = ref(false);
 const existingRecordId = ref(null);
+
+const userStore = useUserDataStore();
+if (!userStore.user) {
+    userStore.init();
+}
+const isReadOnly = computed(() => userStore.userRole === UserRole.PATIENT);
 
 const BASE = 'http://localhost:8080/api/familyplanning';
 
@@ -788,21 +795,27 @@ onMounted(async () => {
                         Back
                     </button>
                 </div>
-                <h1 class="text-2xl font-bold text-center mb-2">FAMILY PLANNING CLIENT ASSESSMENT RECORD</h1>
+                <h1 class="text-2xl font-bold text-center mb-2 flex items-center justify-center gap-3">
+                    FAMILY PLANNING CLIENT ASSESSMENT RECORD
+                    <span v-if="isReadOnly" class="text-xs font-semibold text-blue-700 bg-blue-100 px-3 py-1.5 rounded-full">
+                      👁️ View Only
+                    </span>
+                </h1>
                 <div class="bg-yellow-50 border border-yellow-300 rounded p-3 text-sm">
                     <p><strong>Instructions for Physician, Nurses and Midwife:</strong> Make sure that the client is not Pregnant by using the questions Listed by Side B. Completely fill out or check the required information; refer accordingly for any abnormal history or medical evaluation</p>
                 </div>
             </div>
 
             <form @submit.prevent="submitForm" class="space-y-8">
-                <div class="space-y-2">
-                    <div v-if="submitStatus.error" class="text-sm text-red-700 bg-red-100 border border-red-200 rounded p-3">
-                        {{ submitStatus.error }}
+                <fieldset :disabled="isReadOnly" class="space-y-8" style="border:none;padding:0;margin:0;min-width:0;">
+                    <div class="space-y-2">
+                        <div v-if="submitStatus.error" class="text-sm text-red-700 bg-red-100 border border-red-200 rounded p-3">
+                            {{ submitStatus.error }}
+                        </div>
+                        <div v-if="submitStatus.success" class="text-sm text-green-700 bg-green-100 border border-green-200 rounded p-3">
+                            {{ submitStatus.success }}
+                        </div>
                     </div>
-                    <div v-if="submitStatus.success" class="text-sm text-green-700 bg-green-100 border border-green-200 rounded p-3">
-                        {{ submitStatus.success }}
-                    </div>
-                </div>
 
                 <!-- Client Information -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1145,12 +1158,14 @@ onMounted(async () => {
                         </div>
                     </div>
                 </div>
+                </fieldset>
 
                 <!-- Side B -->
                 <div class="border-t-4 border-blue-600 pt-8 mt-12">
                     <h2 class="text-xl font-bold mb-6 text-blue-900">SIDE B: FAMILY PLANNING ASSESSMENT RECORD</h2>
                     <div class="bg-white border rounded-xl shadow-sm p-6 space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <fieldset :disabled="isReadOnly" class="space-y-6" style="border:none;padding:0;margin:0;min-width:0;">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-sm font-semibold mb-1">Date of Visit</label>
                                 <input v-model="formData.physical.sideB.dateOfVisit" type="date" class="w-full p-2 border rounded-md" />
@@ -1211,11 +1226,12 @@ onMounted(async () => {
                                 </div>
                             </div>
                         </div>
+                        </fieldset>
                         <div class="flex gap-4 mt-8 no-print">
-                            <button type="submit" :disabled="submitStatus.loading" class="bg-blue-600 text-white px-8 py-3 rounded font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button v-if="!isReadOnly" type="submit" :disabled="submitStatus.loading" class="bg-blue-600 text-white px-8 py-3 rounded font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
                                 {{ submitStatus.loading ? 'Saving...' : 'SUBMIT RECORD' }}
                             </button>
-                            <button @click="resetForm" type="button" class="bg-gray-200 px-8 py-3 rounded font-bold">RESET</button>
+                            <button v-if="!isReadOnly" @click="resetForm" type="button" class="bg-gray-200 px-8 py-3 rounded font-bold">RESET</button>
                             <button @click="printForm" type="button" class="bg-green-600 text-white px-8 py-3 rounded font-bold hover:bg-green-700 flex items-center gap-2">
                                 🖨️ PRINT / SAVE PDF
                             </button>

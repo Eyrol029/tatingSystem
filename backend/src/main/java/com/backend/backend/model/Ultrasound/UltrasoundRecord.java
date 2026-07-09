@@ -29,6 +29,9 @@ public class UltrasoundRecord {
     @Column(columnDefinition = "TEXT")
     private String remarks;
 
+    private Integer attendingStaffID;
+    private String attendingMidwife;
+
     // Getters and Setters
     public Integer getUltrasoundRecordID() {
         return ultrasoundRecordID;
@@ -100,5 +103,21 @@ public class UltrasoundRecord {
 
     public void setRemarks(String remarks) {
         this.remarks = remarks;
+    }
+
+    public Integer getAttendingStaffID() {
+        return attendingStaffID;
+    }
+
+    public void setAttendingStaffID(Integer attendingStaffID) {
+        this.attendingStaffID = attendingStaffID;
+    }
+
+    public String getAttendingMidwife() {
+        return attendingMidwife;
+    }
+
+    public void setAttendingMidwife(String attendingMidwife) {
+        this.attendingMidwife = attendingMidwife;
     }
 }

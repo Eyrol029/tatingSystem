@@ -61,6 +61,12 @@ public class PrenatalRecord {
     @Column(name = "referralHospitalName", columnDefinition = "TEXT")
     private String referralHospitalName;
 
+    @Column(name = "attendingMidwife")
+    private String attendingMidwife;
+
+    @Column(name = "attendingStaffID")
+    private Integer attendingStaffID;
+
     // Getters and Setters
     public Integer getPrenatalrecordID() {
         return prenatalrecordID;
@@ -148,5 +154,21 @@ public class PrenatalRecord {
 
     public void setReferralHospitalName(String referralHospitalName) {
         this.referralHospitalName = referralHospitalName;
+    }
+
+    public String getAttendingMidwife() {
+        return attendingMidwife;
+    }
+
+    public void setAttendingMidwife(String attendingMidwife) {
+        this.attendingMidwife = attendingMidwife;
+    }
+
+    public Integer getAttendingStaffID() {
+        return attendingStaffID;
+    }
+
+    public void setAttendingStaffID(Integer attendingStaffID) {
+        this.attendingStaffID = attendingStaffID;
     }
 }

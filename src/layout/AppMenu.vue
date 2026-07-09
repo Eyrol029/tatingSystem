@@ -32,6 +32,7 @@ const model = [
             { label: 'Clinic Services', icon: 'pi pi-fw pi-book', to: '/uikit/PatientService', roles: [UserRole.PATIENT] },
             { label: 'My Services and Appointments', icon: 'pi pi-fw pi-list', to: '/uikit/MyServicesAndAppointment', roles: [UserRole.PATIENT] },
             { label: 'Payment History', icon: 'pi pi-fw pi-money-bill', to: '/uikit/PaymentHistory', roles: [UserRole.PATIENT] },  
+            { label: 'My Profile', icon: 'pi pi-fw pi-user', to: '/uikit/PatientProfileview', roles: [UserRole.PATIENT] },
       ]   
     }
 ];

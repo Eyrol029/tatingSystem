@@ -115,7 +115,7 @@ onMounted(() => {
 const showModal = ref(false);
 const selectedType = ref('');
 const loadingSubmit = ref(false);
-const types = ['Prenatal', 'Family Planning', 'Ultrasound Service', 'Other Services'];
+const types = ['Prenatal', 'Family Planning', 'Ultrasound', 'Other Services'];
 const step = ref<'select' | 'form'>('select');
 
 const form = reactive({
@@ -167,6 +167,26 @@ async function selectType(type: string) {
         }
         return;
     }
+    if (type === 'Ultrasound') {
+        try {
+            const res = await axios.post('http://localhost:8080/api/patient-services', {
+                patientID: Number(route.params.id),
+                serviceName: 'Ultrasound',
+                employeeName: '---',
+                wardName: '---',
+                dateAvailed: new Date().toISOString().split('T')[0],
+                remarks: ''
+            });
+            await fetchServices();
+            const newServiceID = res.data.patientServiceID;
+            showModal.value = false;
+            step.value = 'select';
+            router.push(`/uikit/UltrasoundAdmission/${route.params.id}/${newServiceID}`);
+        } catch (e) {
+            console.error('Failed to save Ultrasound service', e);
+        }
+        return;
+    }
 
     selectedType.value = type;
     step.value = 'form';
@@ -191,6 +211,8 @@ function viewService(service) {
         router.push(`/uikit/PrenatalAdmission/${patientId}/${serviceId}`);
     } else if (name === 'family planning') {
         router.push(`/uikit/FamilyPlanningAdmission/${patientId}/${serviceId}`);
+    } else if (name === 'ultrasound') {
+        router.push(`/uikit/UltrasoundAdmission/${patientId}/${serviceId}`);
     } else {
         alert(`No dedicated view page for "${service.service}" yet.`);
     }
