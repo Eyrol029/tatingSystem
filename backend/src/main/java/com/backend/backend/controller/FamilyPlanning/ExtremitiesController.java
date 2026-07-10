@@ -23,21 +23,25 @@ public class ExtremitiesController {
 
     @Autowired
     private ExtremitiesService extremitiesService;
+
     @CrossOrigin(origins = "*")
     @PostMapping
     public Extremities addExtremities(@RequestBody Extremities extremities) {
         return extremitiesService.addExtremities(extremities);
     }
+
     @CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public Extremities getExtremities(@PathVariable Integer id) {
         return extremitiesService.getExtremitiesById(id);
     }
+
     @CrossOrigin(origins = "*")
     @GetMapping
     public List<Extremities> getExtremities() {
         return extremitiesService.getExtremities();
     }
+
     @CrossOrigin(origins = "*")
     @PutMapping
     public Extremities updateExtremities(@RequestBody Extremities extremities) {
@@ -50,9 +54,20 @@ public class ExtremitiesController {
         extremitiesService.deleteExtremities(id);
         return "Extremities deleted.";
     }
+
     @CrossOrigin(origins = "*")
     @GetMapping("/pExam/{pExamID}")
     public List<Extremities> getByPExam(@PathVariable Integer pExamID) {
         return extremitiesService.getByPExamID(pExamID);
+    }
+
+    @CrossOrigin(origins = "*")
+    @DeleteMapping("/pExam/{pExamID}")
+    public String deleteByPExam(@PathVariable Integer pExamID) {
+        List<Extremities> records = extremitiesService.getByPExamID(pExamID);
+        for (Extremities e : records) {
+            extremitiesService.deleteExtremities(e.getExtremitiesID());
+        }
+        return "Extremities records deleted for pExamID: " + pExamID;
     }
 }

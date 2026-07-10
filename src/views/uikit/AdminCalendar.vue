@@ -74,16 +74,23 @@ function formatLocalDate(date) {
 //   "appointment"  → blue appointment tile
 //   "expected-delivery" | "edc" | "delivery" | "labor" → pink labor tile
 //   "prenatal-exam" | "prenatal-visit" | "next-visit"   → teal prenatal tile
-//   "manual"       → indigo manual tile
+//   "manual", or any other custom type on a manually-created event
+//   (e.g. "family-planning-followup") → indigo manual tile
 function normalizeEvent(raw) {
-  const et = (raw.eventType || raw.source || 'manual').toLowerCase()
+  const et     = (raw.eventType || raw.source || 'manual').toLowerCase()
+  const source = (raw.source || '').toLowerCase()
 
   let type = 'appointment'
   if (['expected-delivery','edc','delivery','labor'].includes(et)) {
     type = 'labor'
   } else if (['prenatal-exam','prenatal-visit','next-visit'].includes(et)) {
     type = 'prenatal'
-  } else if (et === 'manual') {
+  } else if (source === 'manual' || et === 'manual') {
+    // Any event that came from the manual events table — including custom
+    // eventType values like "family-planning-followup" that don't match
+    // the known appointment/prenatal/labor lists above — should be styled
+    // and treated as a manual event, not silently fall through to the
+    // "appointment" default.
     type = 'manual'
   }
 
@@ -205,15 +212,16 @@ function dividerCss(type) {
 
 function typeLabel(type, eventType) {
   const labels = {
-    'expected-delivery': 'Expected Delivery',
-    'edc':               'Estimated Delivery',
-    'delivery':          'Delivery Date',
-    'prenatal-exam':     'Prenatal Exam',
-    'prenatal-visit':    'Prenatal Visit',
-    'next-visit':        'Next Visit',
-    'appointment':       'Appointment',
-    'manual':            'Manual Event',
-    'labor':             'Labor Day'
+    'expected-delivery':          'Expected Delivery',
+    'edc':                        'Estimated Delivery',
+    'delivery':                   'Delivery Date',
+    'prenatal-exam':              'Prenatal Exam',
+    'prenatal-visit':             'Prenatal Visit',
+    'next-visit':                 'Next Visit',
+    'appointment':                'Appointment',
+    'manual':                     'Manual Event',
+    'labor':                      'Labor Day',
+    'family-planning-followup':   'Family Planning Follow-up'
   }
   return labels[eventType] || labels[type] || type
 }
@@ -416,8 +424,15 @@ watch([currentMonth, currentYear], fetchEventsForMonth)
                 Notify Patient
               </button>
 
-              <button v-else-if="event.type === 'prenatal' || event.type === 'appointment'"
-                @click="$router.push(`/uikit/PatientProfiling/${event.patientId || ''}`)"
+              <!-- Any event carrying a patientId can jump to that patient's
+                   profile — this used to be limited to type === 'prenatal'
+                   or 'appointment' only, which meant manually-sourced events
+                   with a real patientId (e.g. Family Planning follow-up
+                   syncs) never showed a working link even once the backend
+                   started sending patientId. Checking patientId directly
+                   works for every event source. -->
+              <button v-else-if="event.patientId"
+                @click="$router.push(`/uikit/PatientProfiling/${event.patientId}`)"
                 class="w-full text-center text-sm font-medium transition"
                 :class="event.type === 'prenatal' ? 'text-teal-600 hover:text-teal-800' : 'text-blue-600 hover:text-blue-800'">
                 View Patient Record →

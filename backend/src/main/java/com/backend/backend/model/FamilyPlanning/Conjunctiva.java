@@ -2,8 +2,6 @@ package com.backend.backend.model.FamilyPlanning;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -21,16 +19,8 @@ public class Conjunctiva {
     @Column(name = "pExamID")
     private Integer pExamID;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "Condition")
-    private ConjunctivaCondition condition;
-
-    // ENUM values based on SQL
-    public enum ConjunctivaCondition {
-        normal,
-        pale,
-        yellowish
-    }
+    private String condition;
 
     // Getters and Setters
     public Integer getConjunctivaID() {
@@ -41,19 +31,20 @@ public class Conjunctiva {
         this.conjunctivaID = conjunctivaID;
     }
 
-    public Integer getpExamID() {
-        return pExamID;
-    }
+    // Conjunctiva.java
+public Integer getPExamID() {
+    return pExamID;
+}
 
-    public void setpExamID(Integer pExamID) {
-        this.pExamID = pExamID;
-    }
+public void setPExamID(Integer pExamID) {
+    this.pExamID = pExamID;
+}
 
-    public ConjunctivaCondition getCondition() {
+    public String getCondition() {
         return condition;
     }
 
-    public void setCondition(ConjunctivaCondition condition) {
+    public void setCondition(String condition) {
         this.condition = condition;
     }
 }

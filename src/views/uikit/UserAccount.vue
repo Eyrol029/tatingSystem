@@ -80,6 +80,16 @@ const filteredUsers = computed(() => {
     );
   });
 });
+
+// Counts shown on the filter buttons/badges so it's clear at a glance how
+// many accounts fall into each bucket, regardless of the current search text.
+const patientCount = computed(() => users.value.filter(u => u.role === 'Patient').length);
+const employeeCount = computed(() => users.value.filter(u => u.role !== 'Patient').length);
+
+function setRoleFilter(value) {
+  roleFilter.value = value;
+}
+
 const patientSearch = ref('');
 
 const filteredPatients = computed(() => {
@@ -426,11 +436,6 @@ async function handleDeleteUser(userID) {
             >×</button>
           </div>
 
-          <div class="flex items-center gap-2">
-            <button @click="$router.push('/uikit/UserAccount')" class="px-3 py-2 rounded bg-teal-100 text-teal-700 hover:bg-teal-200">Employees</button>
-            <button @click="$router.push('/uikit/UserAccountPatient')" class="px-3 py-2 rounded bg-teal-100 text-teal-700 hover:bg-teal-200">Patients</button>
-          </div>
-
           <button
             @click="openAddForm()"
             class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-2"
@@ -438,6 +443,43 @@ async function handleDeleteUser(userID) {
             <span class="text-xl">+</span> Add User
           </button>
         </div>
+      </div>
+
+      <!-- Role filter tabs — filters the table below by Patient vs Employee (Admin/Midwife) -->
+      <div class="flex items-center gap-2 mb-4">
+        <button
+          @click="setRoleFilter('')"
+          :class="[
+            'px-4 py-2 rounded-lg text-sm font-semibold transition',
+            roleFilter === ''
+              ? 'bg-teal-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          ]"
+        >
+          All ({{ users.length }})
+        </button>
+        <button
+          @click="setRoleFilter('Employee')"
+          :class="[
+            'px-4 py-2 rounded-lg text-sm font-semibold transition',
+            roleFilter === 'Employee'
+              ? 'bg-teal-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          ]"
+        >
+          Employees ({{ employeeCount }})
+        </button>
+        <button
+          @click="setRoleFilter('Patient')"
+          :class="[
+            'px-4 py-2 rounded-lg text-sm font-semibold transition',
+            roleFilter === 'Patient'
+              ? 'bg-teal-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          ]"
+        >
+          Patients ({{ patientCount }})
+        </button>
       </div>
 
       <div class="bg-white rounded-lg shadow overflow-hidden">
@@ -450,7 +492,7 @@ async function handleDeleteUser(userID) {
                 <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Email</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Role</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Employee ID</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700"></th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Patient ID</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
                 <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Actions</th>
               </tr>
@@ -463,7 +505,7 @@ async function handleDeleteUser(userID) {
                 <td class="px-6 py-4 text-sm text-gray-900">{{ user.email }}</td>
                 <td class="px-6 py-4 text-sm text-gray-900">{{ user.role }}</td>
                 <td class="px-6 py-4 text-sm text-gray-900">{{ user.employeeID ?? '—' }}</td>
-                <td class="px-6 py-4 text-sm text-gray-900">{{ ' ' }}</td>
+                <td class="px-6 py-4 text-sm text-gray-900">{{ user.patientID ?? '—' }}</td>
                 <td class="px-6 py-4">
                   <span
                     :class="[
@@ -499,7 +541,7 @@ async function handleDeleteUser(userID) {
       </div>
 
       <div v-if="filteredUsers.length === 0" class="text-center py-12">
-        <p class="text-gray-500">{{ searchQuery ? 'No users match your search' : 'No users found' }}</p>
+        <p class="text-gray-500">{{ searchQuery || roleFilter ? 'No users match your filters' : 'No users found' }}</p>
       </div>
     </div>
   </div>

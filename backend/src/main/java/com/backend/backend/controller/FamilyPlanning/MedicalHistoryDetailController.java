@@ -60,4 +60,14 @@ public class MedicalHistoryDetailController {
     public List<MedicalHistoryDetail> getByMedicalHistoryid(@PathVariable Integer medicalHistoryid) {
         return medicalHistoryDetailService.getMedicalHistoryDetailsByMedicalHistoryid(medicalHistoryid);
     }
+
+    @CrossOrigin(origins = "*")
+    @DeleteMapping("/medicalHistory/{medicalHistoryid}")
+    public String deleteByMedicalHistoryid(@PathVariable Integer medicalHistoryid) {
+        List<MedicalHistoryDetail> details = medicalHistoryDetailService.getMedicalHistoryDetailsByMedicalHistoryid(medicalHistoryid);
+        for (MedicalHistoryDetail detail : details) {
+            medicalHistoryDetailService.deleteMedicalHistoryDetail(detail.getHistoryDetailID());
+        }
+        return "MedicalHistoryDetails deleted for medicalHistoryid: " + medicalHistoryid;
+    }
 }

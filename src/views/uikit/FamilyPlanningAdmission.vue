@@ -17,6 +17,9 @@ if (!userStore.user) {
 const isReadOnly = computed(() => userStore.userRole === UserRole.PATIENT);
 
 const BASE = 'http://localhost:8080/api/familyplanning';
+const PATIENT_SERVICE_BASE = 'http://localhost:8080/api/patient-services';
+const CALENDAR_BASE = 'http://localhost:8080/api/calendar';
+const PATIENTS_BASE = 'http://localhost:8080/api/patients';
 
 // ✅ Get both patientID and serviceId from route
 const patientID = route.params.patientID;
@@ -26,11 +29,77 @@ function goBack() {
     router.back();
 }
 
+// ── Date normalization ────────────────────────────────────────────────────
+// <input type="date"> only accepts an exact "YYYY-MM-DD" string. If the
+// backend returns a datetime string, a different date format, or anything
+// else, the input just silently renders blank — which is why dates like
+// LMP / date of last delivery / date of visit appeared empty even though
+// the rest of the record loaded fine. This normalizes any reasonable
+// incoming date value to the format <input type="date"> requires.
+function parseLocalDate(value) {
+    if (!value) return null;
+    const dateString = String(value).trim();
+
+    const isoMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+        return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+    }
+
+    const mdyMatch = dateString.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (mdyMatch) {
+        let year = Number(mdyMatch[3]);
+        if (year < 100) {
+            year += year < 70 ? 2000 : 1900;
+        }
+        return new Date(Number(year), Number(mdyMatch[1]) - 1, Number(mdyMatch[2]));
+    }
+
+    const parsed = new Date(dateString);
+    if (Number.isNaN(parsed.getTime())) {
+        return null;
+    }
+    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+}
+
+function formatLocalDate(value) {
+    const date = parseLocalDate(value);
+    if (!date) return null;
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function parseDateForForm(value) {
+    return formatLocalDate(value) || '';
+}
+
 const submitStatus = ref({
     loading: false,
     error: '',
     success: ''
 });
+
+// Tracks which sub-sections failed to save during the last submit, so
+// failures aren't silently swallowed behind a blanket "success" message.
+const failedSections = ref([]);
+
+// ── Calendar sync for Follow-up Date ─────────────────────────────────────────
+// The Calendar module has no foreign key back to a Family Planning record,
+// so we can't "update" a previously-created event — only avoid creating a
+// duplicate one. We do that by remembering what the follow-up date was when
+// the form loaded, and only pushing a new calendar event when it changes.
+const patientName = ref('');
+const originalFollowUpDate = ref('');
+
+async function fetchPatientName(clientId) {
+    try {
+        const res = await axios.get(`${PATIENTS_BASE}/${clientId}`);
+        const p = res.data;
+        patientName.value = `${p.fName || ''} ${p.lName || ''}`.trim();
+    } catch (e) {
+        console.error('Failed to fetch patient name for calendar sync', e);
+    }
+}
 
 const formData = ref({
     clientId: '',
@@ -93,6 +162,7 @@ const formData = ref({
     },
     obstetric: {
         numPregnancies: '',
+        para: '',
         fullTerm: '',
         premature: '',
         abortion: '',
@@ -143,21 +213,89 @@ const formData = ref({
             methodAccepted: '',
             followUpDate: '',
             pregnancyCheck: {
-                isFullyBreastfeeding: false,
-                abstinence: false,
-                babyInLast4Weeks: false,
-                mensesInPast7Days: false,
-                miscarriageInPast7Days: false,
-                reliableContraceptive: false
+                isFullyBreastfeeding: null,
+                abstinence: null,
+                babyInLast4Weeks: null,
+                mensesInPast7Days: null,
+                miscarriageInPast7Days: null,
+                reliableContraceptive: null
             }
         }
     }
 });
 
+// ── Service Provider — real Employees dropdown ───────────────────────────────
+const employeesList = ref([]);
+const selectedServiceProviderId = ref('');
+
+// Defensive: normalizes a few common response shapes (raw array, {data:[...]},
+// {employees:[...]}) so an empty dropdown is easy to diagnose.
+async function fetchEmployees() {
+    try {
+        const res = await axios.get('http://localhost:8080/api/employees');
+        const raw = res.data;
+        employeesList.value = Array.isArray(raw)
+            ? raw
+            : (Array.isArray(raw?.data) ? raw.data
+                : (Array.isArray(raw?.employees) ? raw.employees : []));
+
+        if (!employeesList.value.length) {
+            console.warn('Employees list loaded but is empty. Raw response:', raw);
+        }
+    } catch (e) {
+        console.error('Failed to fetch employees list', e);
+    }
+}
+
+function onServiceProviderChange() {
+    if (selectedServiceProviderId.value === 'custom') {
+        formData.value.physical.sideB.serviceProvider = '';
+        return;
+    }
+    const employee = employeesList.value.find(
+        emp => Number(emp.employeeID) === Number(selectedServiceProviderId.value)
+    );
+    formData.value.physical.sideB.serviceProvider = employee
+        ? `${employee.fName || ''} ${employee.lName || ''}`.trim()
+        : '';
+}
+
+// Tries to match a previously-saved provider name back to an employee in the
+// list, so the dropdown pre-selects correctly when viewing/editing a record.
+function matchServiceProviderToEmployee(name) {
+    if (!name) return;
+    const found = employeesList.value.find(
+        emp => `${emp.fName || ''} ${emp.lName || ''}`.trim().toLowerCase() === name.trim().toLowerCase()
+    );
+    selectedServiceProviderId.value = found ? Number(found.employeeID) : 'custom';
+}
+
+// ── Sync the assigned service provider name back onto PatientService so it
+// displays correctly in the "Services Availed" tables (patient profile +
+// patient's own "My Services" view). PUT /api/patient-services has no /{id}
+// path — it requires the FULL PatientService object in the body — so we
+// fetch the current record first, merge in the new employeeName, then PUT it back.
+async function syncEmployeeNameToPatientService() {
+    const providerName = formData.value.physical.sideB.serviceProvider;
+    if (!providerName || !serviceId) return;
+    try {
+        const currentRes = await axios.get(`${PATIENT_SERVICE_BASE}/${serviceId}`);
+        const currentService = currentRes.data;
+        await axios.put(PATIENT_SERVICE_BASE, {
+            ...currentService,
+            employeeName: providerName
+        });
+    } catch (syncErr) {
+        console.error('Failed to sync employee name to PatientService', syncErr);
+        failedSections.value.push('Service provider sync');
+    }
+}
+
 async function submitForm() {
     submitStatus.value.loading = true;
     submitStatus.value.error = '';
     submitStatus.value.success = '';
+    failedSections.value = [];
 
     if (!formData.value.clientId) {
         if (patientID) formData.value.clientId = String(patientID);
@@ -181,7 +319,7 @@ async function submitForm() {
                 is4PSMember: formData.value._4psMember ? 'Y' : 'N',
                 civilStatus: formData.value.civilStatus || null
             });
-        } catch (e) { console.error('Client save error:', e); }
+        } catch (e) { console.error('Client save error:', e); failedSections.value.push('Client info'); }
 
         // 2. Save Spouse
         try {
@@ -192,12 +330,12 @@ async function submitForm() {
                     fName: nameParts[0] || '',
                     lName: nameParts[nameParts.length - 1] || '',
                     midInitial: nameParts.length > 2 ? nameParts[1] : '',
-                    dateOfBirth: formData.value.birthDate || null,
+                    dateOfBirth: formatLocalDate(formData.value.birthDate),
                     age: formData.value.age ? Number(formData.value.age) : null,
                     occupation: formData.value.occupation || null
                 });
             }
-        } catch (e) { console.error('Spouse save error:', e); }
+        } catch (e) { console.error('Spouse save error:', e); failedSections.value.push('Spouse info'); }
 
         // 3. Save FamilyPlanningRecord — use serviceId from route
         const savedRecord = await createFamilyPlanningRecord({
@@ -227,6 +365,7 @@ async function submitForm() {
                 isDropOutRestart: formData.value.clientType.dropoutRestart,
                 reasonForFp: reasonFp,
                 reasonOtherDetails: formData.value.reasonOthers || '',
+                medicalCondition: formData.value.medicalCondition,
                 changeReason: formData.value.sideEffects || '',
                 changeReasonOthers: ''
             });
@@ -237,6 +376,7 @@ async function submitForm() {
                 await axios.post(`${BASE}/methods`, {
                     typeID,
                     coc: formData.value.currentMethod.coc,
+                    iud: formData.value.currentMethod.iud,
                     pop: formData.value.currentMethod.pop,
                     injectable: formData.value.currentMethod.injectable,
                     implant: formData.value.currentMethod.implant,
@@ -250,8 +390,8 @@ async function submitForm() {
                     lam: formData.value.currentMethod.lam,
                     otherMethod: formData.value.currentMethod.others || ''
                 });
-            } catch (e) { console.error('Method save error:', e); }
-        } catch (e) { console.error('TypeOfClient save error:', e); }
+            } catch (e) { console.error('Method save error:', e); failedSections.value.push('Method currently used'); }
+        } catch (e) { console.error('TypeOfClient save error:', e); failedSections.value.push('Type of client'); }
 
         // 6. Save MedicalHistory
         let medicalHistoryID = null;
@@ -278,17 +418,26 @@ async function submitForm() {
                 { id: 11, value: formData.value.medicalHistory.phenobarbital },
                 { id: 12, value: formData.value.medicalHistory.smoker },
             ];
+            // Delete existing detail records first, then re-insert every
+            // answered question (Yes AND No) so "No" isn't indistinguishable
+            // from "never answered" on reload.
+            try {
+                await axios.delete(`${BASE}/medicalhistory/detail/medicalHistory/${medicalHistoryID}`);
+            } catch (e) { /* may 404 if none exist */ }
+            let medicalDetailFailed = false;
             for (const cond of medicalConditions) {
-                if (cond.value === true) {
+                if (cond.value === true || cond.value === false) {
                     try {
                         await axios.post(`${BASE}/medicalhistory/detail`, {
                             medicalHistoryid: medicalHistoryID,
-                            medicalConditionID: cond.id
+                            medicalConditionID: cond.id,
+                            hasCondition: cond.value
                         });
-                    } catch (e) { console.error(`MedicalHistoryDetail ${cond.id} error:`, e); }
+                    } catch (e) { console.error(`MedicalHistoryDetail ${cond.id} error:`, e); medicalDetailFailed = true; }
                 }
             }
-        } catch (e) { console.error('MedicalHistory save error:', e); }
+            if (medicalDetailFailed) failedSections.value.push('Medical history details');
+        } catch (e) { console.error('MedicalHistory save error:', e); failedSections.value.push('Medical history'); }
 
         // 7. Save ObstetricalHistory
         let obstetricalHistoryID = null;
@@ -296,15 +445,15 @@ async function submitForm() {
             const ohRes = await axios.post(`${BASE}/obstetrical-history`, {
                 clientID,
                 gravida: formData.value.obstetric.numPregnancies ? Number(formData.value.obstetric.numPregnancies) : null,
-                para: null,
+                para: formData.value.obstetric.para ? Number(formData.value.obstetric.para) : null,
                 fullTerm: formData.value.obstetric.fullTerm ? Number(formData.value.obstetric.fullTerm) : null,
                 premature: formData.value.obstetric.premature ? Number(formData.value.obstetric.premature) : null,
                 abortion: formData.value.obstetric.abortion ? Number(formData.value.obstetric.abortion) : null,
                 livingChildren: formData.value.obstetric.livingChildren ? Number(formData.value.obstetric.livingChildren) : null,
-                dateOfLastDelivery: formData.value.obstetric.lastDeliveryDate || null,
+                dateOfLastDelivery: formatLocalDate(formData.value.obstetric.lastDeliveryDate),
                 typeOfLastDelivery: formData.value.obstetric.deliveryType || null,
-                lastMenstrualPeriod: formData.value.obstetric.lastMenstrualStart || null,
-                previousMenstrualPeriod: formData.value.obstetric.previousMenstrualPeriod || null,
+                lastMenstrualPeriod: formatLocalDate(formData.value.obstetric.lastMenstrualStart),
+                previousMenstrualPeriod: formatLocalDate(formData.value.obstetric.previousMenstrualPeriod),
                 menstrualFlowType: formData.value.obstetric.menstrualFlow || null
             });
             obstetricalHistoryID = ohRes.data.obstetricalHistoryID;
@@ -314,17 +463,19 @@ async function submitForm() {
                 { id: 2, value: formData.value.obstetric.hydatidiformMole },
                 { id: 3, value: formData.value.obstetric.ectopicPregnancy },
             ];
+            let obstetricDetailFailed = false;
             for (const cond of obstetricConditions) {
                 if (cond.value === true) {
                     try {
-                        await axios.post(`${BASE}/obstetrical-condition-details`, {
+                        await axios.post(`${BASE}/obstetrical-condition-detail`, {
                             obstetricalHistoryID,
                             obstetricConditionID: cond.id
                         });
-                    } catch (e) { console.error(`ObstetricalConditionDetail ${cond.id} error:`, e); }
+                    } catch (e) { console.error(`ObstetricalConditionDetail ${cond.id} error:`, e); obstetricDetailFailed = true; }
                 }
             }
-        } catch (e) { console.error('ObstetricalHistory save error:', e); }
+            if (obstetricDetailFailed) failedSections.value.push('Obstetric condition details');
+        } catch (e) { console.error('ObstetricalHistory save error:', e); failedSections.value.push('Obstetric history'); }
 
         // 8. Save RiskForVAW
         try {
@@ -342,7 +493,7 @@ async function submitForm() {
                 historyOfDomesticViolence: formData.value.vaw.domesticViolence === true,
                 referredToAgency: referredAgencies
             });
-        } catch (e) { console.error('RiskForVAW save error:', e); }
+        } catch (e) { console.error('RiskForVAW save error:', e); failedSections.value.push('Risk for VAW'); }
 
         // 9. Save PhysicalExamination
         let pExamID = null;
@@ -350,6 +501,17 @@ async function submitForm() {
             const existingPE = await axios.get(`${BASE}/physical-exam/client/${clientID}`);
             if (existingPE.data && existingPE.data.length > 0) {
                 pExamID = existingPE.data[existingPE.data.length - 1].pExamID;
+                // UPDATE existing physical exam record
+                await axios.put(`${BASE}/physical-exam`, {
+                    pExamID,
+                    clientID,
+                    weight: formData.value.physical.weight ? Number(formData.value.physical.weight) : null,
+                    height: formData.value.physical.height ? Number(formData.value.physical.height) : null,
+                    bloodPressure: formData.value.physical.bloodPressure || null,
+                    pulseRate: formData.value.physical.pulseRate ? Number(formData.value.physical.pulseRate) : null,
+                    dateExamined: today,
+                    examinerName: formData.value.physical.sideB.serviceProvider || null
+                });
             } else {
                 const peRes = await axios.post(`${BASE}/physical-exam`, {
                     clientID,
@@ -363,6 +525,8 @@ async function submitForm() {
                 pExamID = peRes.data.pExamID;
             }
 
+            // Delete existing sub-detail records first, then re-insert
+            try { await axios.delete(`${BASE}/skin/exam/${pExamID}`); } catch (e) { /* may 404 */ }
             const skinConditions = [
                 { condition: 'normal', value: formData.value.physical.skin.normal },
                 { condition: 'pale', value: formData.value.physical.skin.pale },
@@ -372,10 +536,11 @@ async function submitForm() {
             for (const s of skinConditions) {
                 if (s.value) {
                     try { await axios.post(`${BASE}/skin`, { pExamID, condition: s.condition }); }
-                    catch (e) { console.error('Skin save error:', e); }
+                    catch (e) { console.error('Skin save error:', e); failedSections.value.push('Physical exam - skin'); }
                 }
             }
 
+            try { await axios.delete(`${BASE}/conjunctiva/exam/${pExamID}`); } catch (e) { /* may 404 */ }
             const conjunctivaConditions = [
                 { condition: 'normal', value: formData.value.physical.conjunctiva.normal },
                 { condition: 'pale', value: formData.value.physical.conjunctiva.pale },
@@ -384,10 +549,11 @@ async function submitForm() {
             for (const c of conjunctivaConditions) {
                 if (c.value) {
                     try { await axios.post(`${BASE}/conjunctiva`, { pExamID, condition: c.condition }); }
-                    catch (e) { console.error('Conjunctiva save error:', e); }
+                    catch (e) { console.error('Conjunctiva save error:', e); failedSections.value.push('Physical exam - conjunctiva'); }
                 }
             }
 
+            try { await axios.delete(`${BASE}/neck/pExam/${pExamID}`); } catch (e) { /* may 404 */ }
             const neckConditions = [
                 { condition: 'normal', value: formData.value.physical.neck.normal },
                 { condition: 'neck mass', value: formData.value.physical.neck.neckMass },
@@ -396,10 +562,11 @@ async function submitForm() {
             for (const n of neckConditions) {
                 if (n.value) {
                     try { await axios.post(`${BASE}/neck`, { pExamID, condition: n.condition }); }
-                    catch (e) { console.error('Neck save error:', e); }
+                    catch (e) { console.error('Neck save error:', e); failedSections.value.push('Physical exam - neck'); }
                 }
             }
 
+            try { await axios.delete(`${BASE}/breast/pExam/${pExamID}`); } catch (e) { /* may 404 */ }
             const breastConditions = [
                 { condition: 'normal', value: formData.value.physical.breast.normal },
                 { condition: 'mass', value: formData.value.physical.breast.mass },
@@ -408,10 +575,11 @@ async function submitForm() {
             for (const b of breastConditions) {
                 if (b.value) {
                     try { await axios.post(`${BASE}/breast`, { pExamID, condition: b.condition }); }
-                    catch (e) { console.error('Breast save error:', e); }
+                    catch (e) { console.error('Breast save error:', e); failedSections.value.push('Physical exam - breast'); }
                 }
             }
 
+            try { await axios.delete(`${BASE}/abdomen/pExam/${pExamID}`); } catch (e) { /* may 404 */ }
             const abdomenConditions = [
                 { condition: 'normal', value: formData.value.physical.abdomen.normal },
                 { condition: 'abdominal mass', value: formData.value.physical.abdomen.abdominalMass },
@@ -420,10 +588,11 @@ async function submitForm() {
             for (const a of abdomenConditions) {
                 if (a.value) {
                     try { await axios.post(`${BASE}/abdomen`, { pExamID, condition: a.condition }); }
-                    catch (e) { console.error('Abdomen save error:', e); }
+                    catch (e) { console.error('Abdomen save error:', e); failedSections.value.push('Physical exam - abdomen'); }
                 }
             }
 
+            try { await axios.delete(`${BASE}/extremities/pExam/${pExamID}`); } catch (e) { /* may 404 */ }
             const extremitiesConditions = [
                 { condition: 'normal', value: formData.value.physical.extremities.normal },
                 { condition: 'edema', value: formData.value.physical.extremities.edema },
@@ -432,7 +601,7 @@ async function submitForm() {
             for (const ex of extremitiesConditions) {
                 if (ex.value) {
                     try { await axios.post(`${BASE}/extremities`, { pExamID, condition: ex.condition }); }
-                    catch (e) { console.error('Extremities save error:', e); }
+                    catch (e) { console.error('Extremities save error:', e); failedSections.value.push('Physical exam - extremities'); }
                 }
             }
 
@@ -456,20 +625,46 @@ async function submitForm() {
                     uterinePosition: formData.value.physical.pelvicExam.uterinePosition || null,
                     uterineDepth: formData.value.physical.pelvicExam.uterineDepth ? Number(formData.value.physical.pelvicExam.uterineDepth) : null
                 });
-            } catch (e) { console.error('PelvicExamination save error:', e); }
+            } catch (e) { console.error('PelvicExamination save error:', e); failedSections.value.push('Pelvic examination'); }
 
-        } catch (e) { console.error('PhysicalExamination save error:', e); }
+        } catch (e) { console.error('PhysicalExamination save error:', e); failedSections.value.push('Physical examination'); }
 
         // 10. FpAssessmentRecord
         try {
             await axios.post(`${BASE}/fpassessment`, {
                 clientID,
-                dateOfVisit: formData.value.physical.sideB.dateOfVisit || today,
+                dateOfVisit: formatLocalDate(formData.value.physical.sideB.dateOfVisit) || today,
                 medicalFindings: formData.value.physical.sideB.medicalFindings || null,
                 methodAccepted: formData.value.physical.sideB.methodAccepted || null,
-                dateOfFollowUpVisit: formData.value.physical.sideB.followUpDate || null
+                dateOfFollowUpVisit: formatLocalDate(formData.value.physical.sideB.followUpDate)
             });
-        } catch (e) { console.error('FpAssessmentRecord save error:', e); }
+        } catch (e) { console.error('FpAssessmentRecord save error:', e); failedSections.value.push('FP assessment record'); }
+
+        // 10b. Sync Follow-up Date to the Calendar module. The Calendar
+        // module has no link back to this specific record, so we only
+        // create a new event when the follow-up date is set AND different
+        // from what was loaded — this avoids stacking up a duplicate event
+        // every time the form is re-saved with the same date.
+        const followUpDateFormatted = formatLocalDate(formData.value.physical.sideB.followUpDate);
+        if (followUpDateFormatted && followUpDateFormatted !== originalFollowUpDate.value) {
+            try {
+                await axios.post(`${CALENDAR_BASE}/manual`, {
+                    title: 'Family Planning Follow-up',
+                    eventDate: followUpDateFormatted,
+                    eventType: 'family-planning-followup',
+                    patientName: patientName.value || `Client ID ${clientID}`,
+                    description: formData.value.physical.sideB.methodAccepted
+                        ? `Follow-up visit — method accepted: ${formData.value.physical.sideB.methodAccepted}`
+                        : 'Family Planning follow-up visit'
+                });
+                // Update our tracked value so re-saving without further
+                // changes won't create another duplicate event.
+                originalFollowUpDate.value = followUpDateFormatted;
+            } catch (e) {
+                console.error('Calendar sync error:', e);
+                failedSections.value.push('Calendar sync (follow-up date)');
+            }
+        }
 
         // 11. PregnancyExclusionChecklist
         try {
@@ -483,9 +678,17 @@ async function submitForm() {
                 question5: formData.value.physical.sideB.pregnancyCheck.miscarriageInPast7Days,
                 question6: formData.value.physical.sideB.pregnancyCheck.reliableContraceptive
             });
-        } catch (e) { console.error('PregnancyChecklist save error:', e); }
+        } catch (e) { console.error('PregnancyChecklist save error:', e); failedSections.value.push('Pregnancy checklist'); }
 
-        submitStatus.value.success = '✅ All records saved successfully!';
+        // 12. Sync assigned service provider name onto PatientService so it
+        // shows correctly in the "Services Availed" tables.
+        await syncEmployeeNameToPatientService();
+
+        if (failedSections.value.length) {
+            submitStatus.value.error = `⚠️ Saved, but these sections failed: ${failedSections.value.join(', ')}. Check the console for details and try again.`;
+        } else {
+            submitStatus.value.success = '✅ All records saved successfully!';
+        }
 
     } catch (error) {
         const msg = error?.response?.data?.message || error?.response?.data || error?.message || 'Unknown error';
@@ -507,6 +710,8 @@ function printForm() {
 }
 
 onMounted(async () => {
+    await fetchEmployees();
+
     // ✅ Set clientId from route
     if (patientID) formData.value.clientId = String(patientID);
 
@@ -515,6 +720,19 @@ onMounted(async () => {
 
     isViewMode.value = true;
 
+    fetchPatientName(clientId);
+
+    // Tracks whether THIS specific service (serviceId) already has its own
+    // FamilyPlanningRecord saved. Most of the sections below (TypeOfClient,
+    // MedicalHistory, ObstetricalHistory, PhysicalExamination, etc.) are only
+    // ever queryable by clientID — the backend has no serviceID column on
+    // them. So if we always loaded them unconditionally, adding a brand NEW
+    // Family Planning service for a client who already has an OLDER visit on
+    // file would incorrectly pre-fill the new form with that old visit's
+    // data. Only run the "pull in existing data" steps when this exact
+    // service already has a record of its own.
+    let hasRecordForThisService = false;
+
     // ✅ Load FP Record — filter by serviceId so only THIS record loads
     try {
         const res = await axios.get(`${BASE}/records/client/${clientId}`);
@@ -522,24 +740,46 @@ onMounted(async () => {
             // Find the record matching this specific serviceId
             let record = null;
             if (serviceId) {
-                record = res.data.find(r => String(r.serviceID) === String(serviceId));
+                // Multiple FamilyPlanningRecord rows can exist for the same
+                // service (every save creates a NEW row, never an update).
+                // .find() would grab the FIRST match in the array — usually
+                // the oldest, often-blank submission — instead of the most
+                // recent one. Pick the highest fpRecordID among matches so
+                // the newest data always wins.
+                const matches = res.data.filter(r => String(r.serviceID) === String(serviceId));
+                if (matches.length) {
+                    record = matches.reduce((latest, current) =>
+                        (!latest || current.fpRecordID > latest.fpRecordID) ? current : latest, null);
+                    hasRecordForThisService = true;
+                }
             }
-            // Fallback to latest if not found by serviceId
+            // Fallback to latest if not found by serviceId — this is only
+            // used to satisfy the "record" variable below for display
+            // purposes when nothing matches this service; it deliberately
+            // does NOT set hasRecordForThisService, so the rest of the form
+            // stays blank for a genuinely new service.
             if (!record) {
                 record = res.data[res.data.length - 1];
             }
-            existingRecordId.value = record.fpRecordID;
-            formData.value.philhealthNo = record.philHealthNumber || '';
-            formData.value.civilStatus = record.civilStatus || '';
-            formData.value.averageMonthlyIncome = record.averageMonthlyIncome || '';
-            formData.value.numLivingChildren = record.noOfLivingChildren || '';
-            if (record.planToHaveMoreChildren === 'Y') formData.value.planMoreChildren = true;
-            else if (record.planToHaveMoreChildren === 'N') formData.value.planMoreChildren = false;
-            submitStatus.value.success = `Viewing record #${record.fpRecordID} for Client ID ${clientId}`;
+            if (hasRecordForThisService) {
+                existingRecordId.value = record.fpRecordID;
+                formData.value.philhealthNo = record.philHealthNumber || '';
+                formData.value.civilStatus = record.civilStatus || '';
+                formData.value.averageMonthlyIncome = record.averageMonthlyIncome || '';
+                formData.value.numLivingChildren = record.noOfLivingChildren || '';
+                if (record.planToHaveMoreChildren === 'Y') formData.value.planMoreChildren = true;
+                else if (record.planToHaveMoreChildren === 'N') formData.value.planMoreChildren = false;
+                submitStatus.value.success = `Viewing record #${record.fpRecordID} for Client ID ${clientId}`;
+            } else {
+                submitStatus.value.success = `New Family Planning record for Client ID ${clientId}`;
+            }
         }
     } catch (e) { console.error('Failed to load FP record', e); }
 
-    // 2. Load TypeOfClient
+    // Everything below pulls in data that's only scoped by clientID (not by
+    // this specific service visit). Skip all of it for a brand-new service
+    // so the form starts blank instead of showing an older visit's answers.
+    if (hasRecordForThisService) {
     try {
         const res = await axios.get(`${BASE}/typeofclient/client/${clientId}`);
         if (res.data && res.data.length > 0) {
@@ -552,6 +792,7 @@ onMounted(async () => {
             formData.value.reasonSpacing = t.reasonForFp === 'Spacing';
             formData.value.reasonLimiting = t.reasonForFp === 'Limiting';
             formData.value.reasonOthers = t.reasonOtherDetails || '';
+            formData.value.medicalCondition = t.medicalCondition || false;
             formData.value.sideEffects = t.changeReason || '';
 
             try {
@@ -560,6 +801,7 @@ onMounted(async () => {
                     const m = Array.isArray(mRes.data) ? mRes.data[0] : mRes.data;
                     if (m) {
                         formData.value.currentMethod.coc = m.coc || false;
+                        formData.value.currentMethod.iud = m.iud || false;
                         formData.value.currentMethod.pop = m.pop || false;
                         formData.value.currentMethod.injectable = m.injectable || false;
                         formData.value.currentMethod.implant = m.implant || false;
@@ -588,20 +830,29 @@ onMounted(async () => {
             try {
                 const detailRes = await axios.get(`${BASE}/medicalhistory/detail/medicalHistory/${m.medicalHistoryid}`);
                 if (detailRes.data) {
-                    detailRes.data.forEach(d => {
-                        if (d.medicalConditionID === 1) formData.value.medicalHistory.severeHeadache = true;
-                        if (d.medicalConditionID === 2) formData.value.medicalHistory.strokeHistory = true;
-                        if (d.medicalConditionID === 3) formData.value.medicalHistory.hematoma = true;
-                        if (d.medicalConditionID === 4) formData.value.medicalHistory.breastCancer = true;
-                        if (d.medicalConditionID === 5) formData.value.medicalHistory.chestPain = true;
-                        if (d.medicalConditionID === 6) formData.value.medicalHistory.cough = true;
-                        if (d.medicalConditionID === 7) formData.value.medicalHistory.jaundice = true;
-                        if (d.medicalConditionID === 8) formData.value.medicalHistory.vaginalBleeding = true;
-                        if (d.medicalConditionID === 9) formData.value.medicalHistory.abnormalVaginalDischarge = true;
-                        if (d.medicalConditionID === 10) formData.value.medicalHistory.abnormalPenileDischarge = true;
-                        if (d.medicalConditionID === 11) formData.value.medicalHistory.phenobarbital = true;
-                        if (d.medicalConditionID === 12) formData.value.medicalHistory.smoker = true;
-                    });
+                    // Map conditionID -> hasCondition (true/false). A row now
+                    // always represents an explicit answer (Yes or No); no
+                    // row at all means the question was never answered.
+                    const conditionAnswers = new Map(
+                        detailRes.data.map(d => [d.medicalConditionID, d.hasCondition])
+                    );
+                    const conditionMap = {
+                        1: 'severeHeadache', 2: 'strokeHistory', 3: 'hematoma',
+                        4: 'breastCancer', 5: 'chestPain', 6: 'cough',
+                        7: 'jaundice', 8: 'vaginalBleeding', 9: 'abnormalVaginalDischarge',
+                        10: 'abnormalPenileDischarge', 11: 'phenobarbital', 12: 'smoker'
+                    };
+                    for (const [id, key] of Object.entries(conditionMap)) {
+                        if (conditionAnswers.has(Number(id))) {
+                            const answer = conditionAnswers.get(Number(id));
+                            // Older rows saved before the hasCondition column
+                            // existed have no value here — treat those as
+                            // Yes, since only "Yes" rows used to be inserted.
+                            formData.value.medicalHistory[key] =
+                                answer === false ? false : true;
+                        }
+                        // else leave null (unanswered)
+                    }
                 }
             } catch (e) { console.error('Failed to load MedicalHistoryDetails', e); }
         }
@@ -613,15 +864,28 @@ onMounted(async () => {
         if (res.data && res.data.length > 0) {
             const o = res.data[res.data.length - 1];
             formData.value.obstetric.numPregnancies = o.gravida || '';
+            formData.value.obstetric.para = o.para || '';
             formData.value.obstetric.fullTerm = o.fullTerm || '';
             formData.value.obstetric.premature = o.premature || '';
             formData.value.obstetric.abortion = o.abortion || '';
             formData.value.obstetric.livingChildren = o.livingChildren || '';
-            formData.value.obstetric.lastDeliveryDate = o.dateOfLastDelivery || '';
+            formData.value.obstetric.lastDeliveryDate = parseDateForForm(o.dateOfLastDelivery);
             formData.value.obstetric.deliveryType = o.typeOfLastDelivery || '';
-            formData.value.obstetric.lastMenstrualStart = o.lastMenstrualPeriod || '';
-            formData.value.obstetric.previousMenstrualPeriod = o.previousMenstrualPeriod || '';
+            formData.value.obstetric.lastMenstrualStart = parseDateForForm(o.lastMenstrualPeriod);
+            formData.value.obstetric.previousMenstrualPeriod = parseDateForForm(o.previousMenstrualPeriod);
             formData.value.obstetric.menstrualFlow = o.menstrualFlowType || '';
+
+            // Load obstetrical condition details (dysmenorrhea, hydatidiform mole, ectopic pregnancy)
+            try {
+                const ocdRes = await axios.get(`${BASE}/obstetrical-condition-detail/history/${o.obstetricalHistoryID}`);
+                if (ocdRes.data) {
+                    ocdRes.data.forEach(d => {
+                        if (d.obstetricConditionID === 1) formData.value.obstetric.dysmenorrhea = true;
+                        if (d.obstetricConditionID === 2) formData.value.obstetric.hydatidiformMole = true;
+                        if (d.obstetricConditionID === 3) formData.value.obstetric.ectopicPregnancy = true;
+                    });
+                }
+            } catch (e) { console.error('Failed to load ObstetricalConditionDetails', e); }
         }
     } catch (e) { console.error('Failed to load ObstetricalHistory', e); }
 
@@ -630,9 +894,13 @@ onMounted(async () => {
         const res = await axios.get(`${BASE}/risk-vaw/client/${clientId}`);
         if (res.data && res.data.length > 0) {
             const v = res.data[res.data.length - 1];
-            formData.value.vaw.unpleasantRelationship = v.hasUnpleasantSituation || false;
-            formData.value.vaw.partnerDisapproval = v.partnerDisapproveVisit || false;
-            formData.value.vaw.domesticViolence = v.historyOfDomesticViolence || false;
+            // Only set true/false if the field was explicitly saved; leave null if not
+            if (v.hasUnpleasantSituation === true) formData.value.vaw.unpleasantRelationship = true;
+            else if (v.hasUnpleasantSituation === false) formData.value.vaw.unpleasantRelationship = false;
+            if (v.partnerDisapproveVisit === true) formData.value.vaw.partnerDisapproval = true;
+            else if (v.partnerDisapproveVisit === false) formData.value.vaw.partnerDisapproval = false;
+            if (v.historyOfDomesticViolence === true) formData.value.vaw.domesticViolence = true;
+            else if (v.historyOfDomesticViolence === false) formData.value.vaw.domesticViolence = false;
             const agencies = v.referredToAgency || '';
             formData.value.vaw.referredTo.dswd = agencies.includes('DSWD');
             formData.value.vaw.referredTo.wcpu = agencies.includes('WCPU');
@@ -646,11 +914,21 @@ onMounted(async () => {
         if (res.data && res.data.length > 0) {
             const s = res.data[res.data.length - 1];
             formData.value.spouseName = `${s.fName || ''} ${s.midInitial || ''} ${s.lName || ''}`.trim();
-            formData.value.birthDate = s.dateOfBirth || '';
+            formData.value.birthDate = parseDateForForm(s.dateOfBirth);
             formData.value.age = s.age || '';
             formData.value.occupation = s.occupation || '';
         }
     } catch (e) { console.error('Failed to load Spouse', e); }
+
+    // 6b. Load Client (NHTS, 4PS Member)
+    try {
+        const res = await axios.get(`${BASE}/clients/${clientId}`);
+        if (res.data) {
+            formData.value.nhtsYes = res.data.nhts === 'Y';
+            formData.value.nhtsNo = res.data.nhts === 'N';
+            formData.value._4psMember = res.data.is4PSMember === 'Y';
+        }
+    } catch (e) { console.error('Failed to load Client', e); }
 
     // 7. Load PhysicalExamination
     try {
@@ -661,6 +939,10 @@ onMounted(async () => {
             formData.value.physical.height = p.height || '';
             formData.value.physical.bloodPressure = p.bloodPressure || '';
             formData.value.physical.pulseRate = p.pulseRate || '';
+            // Load service provider name from examinerName
+            if (p.examinerName) {
+                formData.value.physical.sideB.serviceProvider = p.examinerName;
+            }
 
             try {
                 const skinRes = await axios.get(`${BASE}/skin/exam/${p.pExamID}`);
@@ -731,8 +1013,14 @@ onMounted(async () => {
 
             try {
                 const pelvicRes = await axios.get(`${BASE}/pelvic-examination/pExam/${p.pExamID}`);
-                if (pelvicRes.data && pelvicRes.data.length > 0) {
-                    const pv = pelvicRes.data[0];
+                // Backend returns a List<PelvicExamination>. Every submit
+                // creates a NEW row (POST, never update), so multiple rows
+                // can exist for the same pExamID — take the LAST one
+                // (most recently created), not the first, so the newest
+                // saved data wins instead of an old/blank submission.
+                const records = Array.isArray(pelvicRes.data) ? pelvicRes.data : [];
+                const pv = records.length ? records[records.length - 1] : null;
+                if (pv) {
                     formData.value.physical.pelvicExam.cervicalConsistency = pv.cervicalConsistency || null;
                     formData.value.physical.pelvicExam.cervicalTenderness = pv.cervicalTenderness || false;
                     formData.value.physical.pelvicExam.adnexalMass = pv.adnexalMassTenderness || false;
@@ -758,10 +1046,11 @@ onMounted(async () => {
         const res = await axios.get(`${BASE}/fpassessment/client/${clientId}`);
         if (res.data && res.data.length > 0) {
             const a = res.data[res.data.length - 1];
-            formData.value.physical.sideB.dateOfVisit = a.dateOfVisit || '';
+            formData.value.physical.sideB.dateOfVisit = parseDateForForm(a.dateOfVisit) || new Date().toISOString().split('T')[0];
             formData.value.physical.sideB.medicalFindings = a.medicalFindings || '';
             formData.value.physical.sideB.methodAccepted = a.methodAccepted || '';
-            formData.value.physical.sideB.followUpDate = a.dateOfFollowUpVisit || '';
+            formData.value.physical.sideB.followUpDate = parseDateForForm(a.dateOfFollowUpVisit);
+            originalFollowUpDate.value = formData.value.physical.sideB.followUpDate;
         }
     } catch (e) { console.error('Failed to load FpAssessmentRecord', e); }
 
@@ -770,14 +1059,26 @@ onMounted(async () => {
         const res = await axios.get(`${BASE}/pregnancychecklist/client/${clientId}`);
         if (res.data && res.data.length > 0) {
             const p = res.data[res.data.length - 1];
-            formData.value.physical.sideB.pregnancyCheck.isFullyBreastfeeding = p.question1 || false;
-            formData.value.physical.sideB.pregnancyCheck.abstinence = p.question2 || false;
-            formData.value.physical.sideB.pregnancyCheck.babyInLast4Weeks = p.question3 || false;
-            formData.value.physical.sideB.pregnancyCheck.mensesInPast7Days = p.question4 || false;
-            formData.value.physical.sideB.pregnancyCheck.miscarriageInPast7Days = p.question5 || false;
-            formData.value.physical.sideB.pregnancyCheck.reliableContraceptive = p.question6 || false;
+            // Only set true/false if the field was explicitly saved; leave null if not
+            if (p.question1 === true) formData.value.physical.sideB.pregnancyCheck.isFullyBreastfeeding = true;
+            else if (p.question1 === false) formData.value.physical.sideB.pregnancyCheck.isFullyBreastfeeding = false;
+            if (p.question2 === true) formData.value.physical.sideB.pregnancyCheck.abstinence = true;
+            else if (p.question2 === false) formData.value.physical.sideB.pregnancyCheck.abstinence = false;
+            if (p.question3 === true) formData.value.physical.sideB.pregnancyCheck.babyInLast4Weeks = true;
+            else if (p.question3 === false) formData.value.physical.sideB.pregnancyCheck.babyInLast4Weeks = false;
+            if (p.question4 === true) formData.value.physical.sideB.pregnancyCheck.mensesInPast7Days = true;
+            else if (p.question4 === false) formData.value.physical.sideB.pregnancyCheck.mensesInPast7Days = false;
+            if (p.question5 === true) formData.value.physical.sideB.pregnancyCheck.miscarriageInPast7Days = true;
+            else if (p.question5 === false) formData.value.physical.sideB.pregnancyCheck.miscarriageInPast7Days = false;
+            if (p.question6 === true) formData.value.physical.sideB.pregnancyCheck.reliableContraceptive = true;
+            else if (p.question6 === false) formData.value.physical.sideB.pregnancyCheck.reliableContraceptive = false;
         }
     } catch (e) { console.error('Failed to load PregnancyChecklist', e); }
+    } // end if (hasRecordForThisService)
+
+    // Now that both employees and the saved provider name are loaded,
+    // try to pre-select the matching employee in the dropdown.
+    matchServiceProviderToEmployee(formData.value.physical.sideB.serviceProvider);
 });
 </script>
 
@@ -874,10 +1175,6 @@ onMounted(async () => {
                         <span>4Ps Member:</span>
                         <input v-model="formData._4psMember" type="checkbox" class="w-4 h-4" />
                         <span>YES</span>
-                    </label>
-                    <label class="flex items-center gap-2">
-                        <input v-model="formData.no_4psMember" type="checkbox" class="w-4 h-4" />
-                        <span>NO</span>
                     </label>
                 </div>
 
@@ -995,7 +1292,7 @@ onMounted(async () => {
                             <span class="text-sm">Number of pregnancies: G</span>
                             <input v-model="formData.obstetric.numPregnancies" type="text" class="w-16 px-2 py-1 border border-gray-300 rounded" />
                             <span>P</span>
-                            <input type="text" class="w-16 px-2 py-1 border border-gray-300 rounded" />
+                            <input v-model="formData.obstetric.para" type="text" class="w-16 px-2 py-1 border border-gray-300 rounded" />
                         </div>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div class="flex items-center gap-2"><label class="text-sm">Full Term</label><input v-model="formData.obstetric.fullTerm" type="text" class="w-20 px-2 py-1 border border-gray-300 rounded" /></div>
@@ -1172,12 +1469,63 @@ onMounted(async () => {
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold mb-1">Service Provider Name</label>
-                                <input v-model="formData.physical.sideB.serviceProvider" type="text" class="w-full p-2 border rounded-md" />
+                                <select
+                                    v-model="selectedServiceProviderId"
+                                    @change="onServiceProviderChange"
+                                    class="w-full p-2 border rounded-md"
+                                >
+                                    <option value="" disabled>-- Select service provider --</option>
+                                    <option
+                                        v-for="employee in employeesList"
+                                        :key="employee.employeeID"
+                                        :value="Number(employee.employeeID)"
+                                    >
+                                        {{ employee.fName }} {{ employee.lName }}
+                                    </option>
+                                    <option value="custom">-- Custom / Not Listed --</option>
+                                </select>
+                                <input
+                                    v-if="selectedServiceProviderId === 'custom'"
+                                    v-model="formData.physical.sideB.serviceProvider"
+                                    type="text"
+                                    placeholder="Enter provider name"
+                                    class="w-full p-2 border rounded-md mt-2"
+                                />
+                                <p v-if="employeesList.length === 0" class="text-xs text-gray-400 mt-1">
+                                    No employees found — check the employees endpoint.
+                                </p>
                             </div>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold mb-1">Medical Findings</label>
                             <textarea v-model="formData.physical.sideB.medicalFindings" rows="3" class="w-full p-2 border rounded-md"></textarea>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold mb-1">Method Accepted</label>
+                                <select v-model="formData.physical.sideB.methodAccepted" class="w-full p-2 border rounded-md">
+                                    <option value="">-- Select method accepted --</option>
+                                    <option>COC</option>
+                                    <option>IUD</option>
+                                    <option>BOM/CCM</option>
+                                    <option>POP</option>
+                                    <option>Injectable</option>
+                                    <option>Implant</option>
+                                    <option>Condom</option>
+                                    <option>BBT</option>
+                                    <option>STM</option>
+                                    <option>SDM</option>
+                                    <option>LAM</option>
+                                    <option>Others</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold mb-1">
+                                    Follow-up Date
+                                    <span class="text-xs font-normal text-gray-400">(syncs to Calendar on save)</span>
+                                </label>
+                                <input v-model="formData.physical.sideB.followUpDate" type="date" class="w-full p-2 border rounded-md" />
+                            </div>
                         </div>
                         <div class="mt-8">
                             <h3 class="font-bold text-lg mb-4 text-blue-900 underline">How to be Reasonably Sure a Client is Not Pregnant</h3>

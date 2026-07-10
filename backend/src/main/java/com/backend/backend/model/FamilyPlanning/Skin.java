@@ -2,8 +2,6 @@ package com.backend.backend.model.FamilyPlanning;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -21,17 +19,8 @@ public class Skin {
     @Column(name = "pExamID")
     private Integer pExamID;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "Condition")
-    private SkinCondition condition;
-
-    // ENUM mapping
-    public enum SkinCondition {
-        normal,
-        pale,
-        yellowish,
-        hematoma
-    }
+    private String condition;
 
     // Getters and Setters
     public Integer getSkinID() {
@@ -42,19 +31,20 @@ public class Skin {
         this.skinID = skinID;
     }
 
-    public Integer getpExamID() {
-        return pExamID;
-    }
+   // Skin.java
+public Integer getPExamID() {
+    return pExamID;
+}
 
-    public void setpExamID(Integer pExamID) {
-        this.pExamID = pExamID;
-    }
+public void setPExamID(Integer pExamID) {
+    this.pExamID = pExamID;
+}
 
-    public SkinCondition getCondition() {
+    public String getCondition() {
         return condition;
     }
 
-    public void setCondition(SkinCondition condition) {
+    public void setCondition(String condition) {
         this.condition = condition;
     }
 }

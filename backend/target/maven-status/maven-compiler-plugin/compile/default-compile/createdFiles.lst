@@ -99,7 +99,6 @@ com\backend\backend\controller\Billing\PaymentInstallmentController.class
 com\backend\backend\repository\Ultrasound\UltrasoundRecordRepository.class
 com\backend\backend\repository\FamilyPlanning\STI_RiskRepository.class
 com\backend\backend\repository\Prenatal\AscertainPregnancyLowRiskRepository.class
-com\backend\backend\model\FamilyPlanning\Skin$SkinCondition.class
 com\backend\backend\service\FamilyPlanning\AbdomenService.class
 com\backend\backend\service\FamilyPlanning\SkinServiceImpl.class
 com\backend\backend\model\Prenatal\PrenatalRecord.class
@@ -131,7 +130,6 @@ com\backend\backend\model\Prenatal\MedicalSurgicalFactors.class
 com\backend\backend\service\Prenatal\HighRiskAssessmentService.class
 com\backend\backend\controller\FamilyPlanning\MethodCurrentlyUsedController.class
 com\backend\backend\model\FamilyPlanning\PregnancyExclusionChecklist.class
-com\backend\backend\model\FamilyPlanning\Conjunctiva$ConjunctivaCondition.class
 com\backend\backend\service\Billing\ExpenseService.class
 com\backend\backend\controller\FamilyPlanning\ConjunctivaController.class
 com\backend\backend\repository\FamilyPlanning\MedicalConditionRepository.class

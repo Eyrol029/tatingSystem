@@ -5,7 +5,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,14 +16,13 @@ import com.backend.backend.model.CalendarEventDto;
 import com.backend.backend.model.Patient;
 import com.backend.backend.model.PatientService;
 import com.backend.backend.model.Prenatal.PrenatalRecord;
-import com.backend.backend.model.Prenatal.ConsultationRecord;
 import com.backend.backend.model.Prenatal.VitalSigns;
 import com.backend.backend.repository.Appointment.AppointmentRepository;
 import com.backend.backend.repository.Calendar.CalendarEventRepository;
 import com.backend.backend.repository.PatientRepository;
 import com.backend.backend.repository.PatientServiceRepository;
-import com.backend.backend.repository.Prenatal.PrenatalRecordRepository;
 import com.backend.backend.repository.Prenatal.ConsultationRecordRepository;
+import com.backend.backend.repository.Prenatal.PrenatalRecordRepository;
 import com.backend.backend.repository.Prenatal.VitalSignsRepository;
 
 @Service

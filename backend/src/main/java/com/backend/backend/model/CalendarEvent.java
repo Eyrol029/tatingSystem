@@ -80,4 +80,14 @@ public class CalendarEvent {
     public void setDescription(String description) {
         this.description = description;
     }
+    @Column(name = "patientID")
+    private Integer patientID;
+
+    public Integer getPatientID() {
+        return patientID;
+    }
+
+public void setPatientID(Integer patientID) {
+    this.patientID = patientID;
+}
 }

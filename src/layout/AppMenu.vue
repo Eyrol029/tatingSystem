@@ -28,11 +28,8 @@ const model = [
             { label: 'Appointments', icon: 'pi pi-fw pi-calendar', to: '/uikit/AppointmentManagement', roles: [UserRole.ADMIN, UserRole.MIDWIFE] }, // new sa appointment 
             { label: 'Calendar', icon: 'pi pi-fw pi-calendar', to: '/uikit/AdminCalendar', roles: [UserRole.ADMIN] },
             { label: 'Patient Dashboard', icon: 'pi pi-fw pi-user', to: '/uikit/PatientDashboard', roles: [UserRole.PATIENT] },
-            { label: 'Create Appointment', icon: 'pi pi-fw pi-calendar-plus', to: '/uikit/PatientCreateAppointment', roles: [UserRole.PATIENT] },
-            { label: 'Clinic Services', icon: 'pi pi-fw pi-book', to: '/uikit/PatientService', roles: [UserRole.PATIENT] },
-            { label: 'My Services and Appointments', icon: 'pi pi-fw pi-list', to: '/uikit/MyServicesAndAppointment', roles: [UserRole.PATIENT] },
-            { label: 'Payment History', icon: 'pi pi-fw pi-money-bill', to: '/uikit/PaymentHistory', roles: [UserRole.PATIENT] },  
-            { label: 'My Profile', icon: 'pi pi-fw pi-user', to: '/uikit/PatientProfileview', roles: [UserRole.PATIENT] },
+            { label: 'Clinic Services', icon: 'pi pi-fw pi-book', to: '/uikit/PatientService', roles: [UserRole.PATIENT] }, 
+            { label: 'My Medical Records', icon: 'pi pi-fw pi-file', to: '/uikit/PatientProfileview', roles: [UserRole.PATIENT] },
       ]   
     }
 ];

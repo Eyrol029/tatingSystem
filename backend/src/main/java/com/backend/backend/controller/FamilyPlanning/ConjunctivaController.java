@@ -54,4 +54,14 @@ public class ConjunctivaController {
     public List<Conjunctiva> getByExam(@PathVariable Integer pExamID) {
         return conjunctivaService.getByPExamID(pExamID);
     }
+
+    @CrossOrigin(origins = "*")
+    @DeleteMapping("/exam/{pExamID}")
+    public String deleteByExam(@PathVariable Integer pExamID) {
+        List<Conjunctiva> records = conjunctivaService.getByPExamID(pExamID);
+        for (Conjunctiva c : records) {
+            conjunctivaService.deleteConjunctiva(c.getConjunctivaID());
+        }
+        return "Conjunctiva records deleted for pExamID: " + pExamID;
+    }
 }

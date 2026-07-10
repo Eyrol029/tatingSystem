@@ -22,6 +22,9 @@ public class MethodCurrentlyUsed {
     @Column(name = "COC")
     private Boolean coc;
 
+    @Column(name = "IUD")
+    private Boolean iud;
+
     @Column(name = "POP")
     private Boolean pop;
 
@@ -81,6 +84,14 @@ public class MethodCurrentlyUsed {
 
     public void setCoc(Boolean coc) {
         this.coc = coc;
+    }
+
+    public Boolean getIud() {
+        return iud;
+    }
+
+    public void setIud(Boolean iud) {
+        this.iud = iud;
     }
 
     public Boolean getPop() {

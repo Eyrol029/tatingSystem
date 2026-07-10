@@ -45,4 +45,15 @@ public class MedicalHistoryDetail {
     public void setMedicalConditionID(Integer medicalConditionID) {
         this.medicalConditionID = medicalConditionID;
     }
+
+   @Column(name = "hasCondition")
+private Boolean hasCondition;
+
+public Boolean getHasCondition() {
+    return hasCondition;
+}
+
+public void setHasCondition(Boolean hasCondition) {
+    this.hasCondition = hasCondition;
+}
 }

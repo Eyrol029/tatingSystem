@@ -49,9 +49,19 @@ public class SkinController {
         skinService.deleteSkin(id);
         return "Skin record deleted.";
     }
-@CrossOrigin(origins = "*")
+    @CrossOrigin(origins = "*")
     @GetMapping("/exam/{pExamID}")
     public List<Skin> getByExam(@PathVariable Integer pExamID) {
         return skinService.getByPExamID(pExamID);
+    }
+
+    @CrossOrigin(origins = "*")
+    @DeleteMapping("/exam/{pExamID}")
+    public String deleteByExam(@PathVariable Integer pExamID) {
+        List<Skin> skins = skinService.getByPExamID(pExamID);
+        for (Skin skin : skins) {
+            skinService.deleteSkin(skin.getSkinID());
+        }
+        return "Skin records deleted for pExamID: " + pExamID;
     }
 }

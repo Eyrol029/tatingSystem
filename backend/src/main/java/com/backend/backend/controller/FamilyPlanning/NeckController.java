@@ -54,4 +54,14 @@ public class NeckController {
     public List<Neck> getByPExam(@PathVariable Integer pExamID) {
         return neckService.getByPExamID(pExamID);
     }
+
+    @CrossOrigin(origins = "*")
+    @DeleteMapping("/pExam/{pExamID}")
+    public String deleteByPExam(@PathVariable Integer pExamID) {
+        List<Neck> records = neckService.getByPExamID(pExamID);
+        for (Neck n : records) {
+            neckService.deleteNeck(n.getNeckID());
+        }
+        return "Neck records deleted for pExamID: " + pExamID;
+    }
 }

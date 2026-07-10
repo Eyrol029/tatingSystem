@@ -54,4 +54,14 @@ public class BreastController {
     public List<Breast> getByPExam(@PathVariable Integer pExamID) {
         return breastService.getByPExamID(pExamID);
     }
+
+    @CrossOrigin(origins = "*")
+    @DeleteMapping("/pExam/{pExamID}")
+    public String deleteByPExam(@PathVariable Integer pExamID) {
+        List<Breast> records = breastService.getByPExamID(pExamID);
+        for (Breast b : records) {
+            breastService.deleteBreast(b.getBreastID());
+        }
+        return "Breast records deleted for pExamID: " + pExamID;
+    }
 }
