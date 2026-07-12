@@ -30,6 +30,7 @@ const model = [
             { label: 'Patient Dashboard', icon: 'pi pi-fw pi-user', to: '/uikit/PatientDashboard', roles: [UserRole.PATIENT] },
             { label: 'Clinic Services', icon: 'pi pi-fw pi-book', to: '/uikit/PatientService', roles: [UserRole.PATIENT] }, 
             { label: 'My Medical Records', icon: 'pi pi-fw pi-file', to: '/uikit/PatientProfileview', roles: [UserRole.PATIENT] },
+            { label: 'My Statement of Account', icon: 'pi pi-fw pi-file', to: '/uikit/MySOA', roles: [UserRole.PATIENT] },
       ]   
     }
 ];

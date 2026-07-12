@@ -44,6 +44,7 @@ const routes = [
             { path: 'uikit/MidwifeDashboard', component: () => import('@/views/Dashboard/MidwifeDashboard.vue') },
             { path: 'uikit/PatientProfileview', component: () => import('@/views/uikit/PatientProfileview.vue') },
             { path: 'uikit/UltrasoundAdmission/:patientID/:serviceId', component: () => import('@/views/uikit/UltrasoundAdmission.vue') },
+            { path: 'uikit/MySOA', component: () => import('@/views/uikit/MySOA.vue') },    
         ]
     },
     {
