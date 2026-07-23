@@ -95,6 +95,17 @@ async function fetchServices() {
     }
 }
 
+/** Fetch the list of clinical services so the modal is always up to date. */
+async function fetchClinicalServices() {
+    try {
+        const res = await axios.get('http://localhost:8080/api/clinical-services');
+        clinicalServices.value = res.data;
+    } catch (e) {
+        console.error('Failed to load clinical services.', e);
+        // fallback: keep an empty list so the user sees nothing
+    }
+}
+
 // ── Delete a mistaken service record ─────────────────────────────────────────
 async function deleteService(serviceId) {
     if (!confirm('Are you sure you want to delete this service record? This cannot be undone.')) return;
@@ -110,12 +121,13 @@ async function deleteService(serviceId) {
 onMounted(() => {
     fetchPatient();
     fetchServices();
+    fetchClinicalServices();
 });
 
 const showModal = ref(false);
 const selectedType = ref('');
 const loadingSubmit = ref(false);
-const types = ['Prenatal', 'Family Planning', 'Ultrasound', 'Other Services'];
+const clinicalServices = ref<Array<{ id: number; name: string; category: string }>>([]);
 const step = ref<'select' | 'form'>('select');
 
 const form = reactive({
@@ -125,12 +137,31 @@ const form = reactive({
     remarks: ''
 });
 
+/**
+ * Map a clinical‑service name to its dedicated route path, or null if it
+ * does not have a dedicated form.
+ */
+function getDedicatedRoute(serviceName) {
+    // Normalize: lowercase + strip all whitespace, so "Ultra Sound",
+    // "UltraSound", and "ultrasound" all match the same way. Also handles
+    // common typos like "Admision" (missing a letter) via startsWith.
+    const normalized = serviceName.toLowerCase().replace(/\s+/g, '');
+
+    if (normalized === 'prenatal') return 'PrenatalAdmission';
+    if (normalized === 'familyplanning') return 'FamilyPlanningAdmission';
+    if (normalized === 'ultrasound') return 'UltrasoundAdmission';
+    if (normalized.startsWith('admi')) return 'Admission';  // covers "Admission" and "Admision" (typo)
+    return null;
+}
+
 async function selectType(type: string) {
-    if (type === 'Prenatal') {
+    // Check if this service has a dedicated form → redirect there
+    const routeName = getDedicatedRoute(type);
+    if (routeName) {
         try {
             const res = await axios.post('http://localhost:8080/api/patient-services', {
                 patientID: Number(route.params.id),
-                serviceName: 'Prenatal',
+                serviceName: type,
                 employeeName: '---',
                 wardName: '---',
                 dateAvailed: new Date().toISOString().split('T')[0],
@@ -140,54 +171,14 @@ async function selectType(type: string) {
             const newServiceID = res.data.patientServiceID;
             showModal.value = false;
             step.value = 'select';
-            router.push(`/uikit/PrenatalAdmission/${route.params.id}/${newServiceID}`);
+            router.push(`/uikit/${routeName}/${route.params.id}/${newServiceID}`);
         } catch (e) {
-            console.error('Failed to save Prenatal service', e);
+            console.error(`Failed to save ${type} service`, e);
         }
         return;
     }
 
-    if (type === 'Family Planning') {
-        try {
-            const res = await axios.post('http://localhost:8080/api/patient-services', {
-                patientID: Number(route.params.id),
-                serviceName: 'Family Planning',
-                employeeName: '---',
-                wardName: '---',
-                dateAvailed: new Date().toISOString().split('T')[0],
-                remarks: ''
-            });
-            await fetchServices();
-            const newServiceID = res.data.patientServiceID;
-            showModal.value = false;
-            step.value = 'select';
-            router.push(`/uikit/FamilyPlanningAdmission/${route.params.id}/${newServiceID}`);
-        } catch (e) {
-            console.error('Failed to save Family Planning service', e);
-        }
-        return;
-    }
-    if (type === 'Ultrasound') {
-        try {
-            const res = await axios.post('http://localhost:8080/api/patient-services', {
-                patientID: Number(route.params.id),
-                serviceName: 'Ultrasound',
-                employeeName: '---',
-                wardName: '---',
-                dateAvailed: new Date().toISOString().split('T')[0],
-                remarks: ''
-            });
-            await fetchServices();
-            const newServiceID = res.data.patientServiceID;
-            showModal.value = false;
-            step.value = 'select';
-            router.push(`/uikit/UltrasoundAdmission/${route.params.id}/${newServiceID}`);
-        } catch (e) {
-            console.error('Failed to save Ultrasound service', e);
-        }
-        return;
-    }
-
+    // Generic service → show the inline form
     selectedType.value = type;
     step.value = 'form';
     showModal.value = true;
@@ -203,16 +194,12 @@ function closeModal() {
 }
 
 function viewService(service) {
-    const name = service.service?.toLowerCase();
     const patientId = route.params.id;
-    const serviceId = service.id; // specific patientServiceID sa row
+    const serviceId = service.id;
 
-    if (name === 'prenatal') {
-        router.push(`/uikit/PrenatalAdmission/${patientId}/${serviceId}`);
-    } else if (name === 'family planning') {
-        router.push(`/uikit/FamilyPlanningAdmission/${patientId}/${serviceId}`);
-    } else if (name === 'ultrasound') {
-        router.push(`/uikit/UltrasoundAdmission/${patientId}/${serviceId}`);
+    const routeName = getDedicatedRoute(service.service);
+    if (routeName) {
+        router.push(`/uikit/${routeName}/${patientId}/${serviceId}`);
     } else {
         alert(`No dedicated view page for "${service.service}" yet.`);
     }
@@ -470,13 +457,22 @@ async function handleSubmit() {
                 </div>
 
                 <div class="p-6 bg-gray-50">
-                    <!-- Step 1: Selection -->
+                    <!-- Step 1: Selection — dynamic from clinical‑services API -->
                     <div v-if="step === 'select'" class="space-y-4">
-                        <button v-for="type in types" :key="type" @click="selectType(type)"
-                            class="w-full p-4 bg-white border rounded-lg text-left hover:border-blue-500 hover:bg-blue-50 transition flex justify-between items-center group">
-                            <span class="font-semibold text-gray-700">{{ type }}</span>
+                        <button
+                            v-for="svc in clinicalServices"
+                            :key="svc.id"
+                            @click="selectType(svc.name)"
+                            class="w-full p-4 bg-white border rounded-lg text-left hover:border-blue-500 hover:bg-blue-50 transition flex justify-between items-center group"
+                        >
+                            <span class="font-semibold text-gray-700">{{ svc.name }}</span>
+                            <span class="text-gray-400 text-xs mr-2">{{ svc.category }}</span>
                             <span class="text-blue-500 opacity-0 group-hover:opacity-100">➔</span>
                         </button>
+                        <!-- Show a friendly message when the list is empty -->
+                        <p v-if="!clinicalServices.length" class="text-gray-400 text-center py-6">
+                            No clinical services available. Please add one in Service Management first.
+                        </p>
                     </div>
 
                     <!-- Step 2: Form -->

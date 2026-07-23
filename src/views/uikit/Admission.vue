@@ -1,23 +1,36 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 
+const route = useRoute();
+const router = useRouter();
+
 // ── API endpoints ────────────────────────────────────────────────────────────
-// NOTE: /api/patients and /api/wards are ASSUMED paths based on patterns used
-// elsewhere in this project. If your actual endpoints differ, update these.
 const PATIENTS_URL    = 'http://localhost:8080/api/patients';
 const WARDS_URL       = 'http://localhost:8080/api/wards';
 const EMPLOYEES_URL   = 'http://localhost:8080/api/employees';
 const ADMISSIONS_URL  = 'http://localhost:8080/api/admissions';
 const SOA_URL         = 'http://localhost:8080/api/billing/soa';
+const PATIENT_SERVICE_BASE = 'http://localhost:8080/api/patient-services';
+
+// ── Route params — tries multiple common param names since different routes
+// in this project use different conventions (patientID, id, clientId).
+const patientID = route.params.patientID || route.params.id || route.params.clientId;
+const serviceId = route.params.serviceId;
+
+function goBack() {
+    router.back();
+}
 
 const currentStep = ref('arrival');
 const saving = ref(false);
+const loadingExisting = ref(true);
 const saveError = ref('');
 
 // Backend-linked record IDs — populated as the workflow progresses
 const admissionId = ref(null);
-const patientId = ref(null);
+const patientId = ref(patientID ? Number(patientID) : null);
 const soaId = ref(null);
 
 // Real lists pulled from the backend for the Ward/Staff assignment step
@@ -130,6 +143,59 @@ async function fetchEmployees() {
     }
 }
 
+// Loads the existing Patient record for this route's patientID, so the
+// form shows the real name instead of asking staff to re-type it.
+async function fetchExistingPatient() {
+    console.log('route.params:', route.params);
+    console.log('resolved patientId.value:', patientId.value);
+
+    if (!patientId.value) {
+        console.warn('No patientId resolved from route — cannot fetch patient info.');
+        return;
+    }
+    try {
+        const res = await axios.get(`${PATIENTS_URL}/${patientId.value}`);
+        console.log('Fetched patient:', res.data);
+        patientData.value.firstName = res.data.fName || '';
+        patientData.value.lastName = res.data.lName || '';
+        patientData.value.age = res.data.age ?? '';
+    } catch (error) {
+        console.error('Failed to load existing patient record', error);
+    }
+}
+
+// If an Admission record already exists for THIS specific serviceId, resume
+// the workflow from wherever it left off instead of restarting at Arrival.
+async function loadExistingAdmission() {
+    if (!serviceId) { loadingExisting.value = false; return; }
+    try {
+        const res = await axios.get(`${ADMISSIONS_URL}/service/${serviceId}`);
+        const records = Array.isArray(res.data) ? res.data : (res.data ? [res.data] : []);
+        if (!records.length) { loadingExisting.value = false; return; }
+
+        const latest = records.reduce((best, cur) =>
+            (!best || cur.admissionID > best.admissionID) ? cur : best, null);
+
+        admissionId.value = latest.admissionID;
+        soaId.value = latest.soaID || null;
+        patientData.value.age = latest.age ?? patientData.value.age;
+        patientData.value.gestationalAge = latest.gestationalAge || '';
+        patientData.value.readyForDelivery = latest.readyForDelivery ?? null;
+        patientData.value.isHighRisk = latest.isHighRisk ?? null;
+        patientData.value.wardID = latest.wardID ?? null;
+        patientData.value.attendingStaffID = latest.attendingStaffID ?? null;
+        patientData.value.hasPhilHealth = latest.hasPhilHealth ?? null;
+        patientData.value.paymentComplete = !!latest.paymentComplete;
+        if (latest.currentStep && steps[latest.currentStep]) {
+            currentStep.value = latest.currentStep;
+        }
+    } catch (error) {
+        console.error('Failed to load existing admission record (this is OK if none exists yet):', error);
+    } finally {
+        loadingExisting.value = false;
+    }
+}
+
 // Saves/updates the Admission record so the workflow can be resumed later.
 async function saveAdmission(extraFields = {}) {
     saving.value = true;
@@ -137,6 +203,7 @@ async function saveAdmission(extraFields = {}) {
     try {
         const payload = {
             admissionID: admissionId.value,
+            serviceID: serviceId ? Number(serviceId) : null,
             patientID: patientId.value,
             patientName: `${patientData.value.firstName} ${patientData.value.lastName}`.trim(),
             age: patientData.value.age ? Number(patientData.value.age) : null,
@@ -170,38 +237,58 @@ async function saveAdmission(extraFields = {}) {
     }
 }
 
+// Sync the assigned attending staff name back onto PatientService so it
+// displays correctly in the "Services Availed" tables, same pattern as the
+// Ultrasound/Prenatal/Family Planning forms.
+async function syncEmployeeNameToPatientService() {
+    if (!selectedStaffName.value || !serviceId) return;
+    try {
+        const currentRes = await axios.get(`${PATIENT_SERVICE_BASE}/${serviceId}`);
+        const currentService = currentRes.data;
+        await axios.put(PATIENT_SERVICE_BASE, {
+            ...currentService,
+            employeeName: selectedStaffName.value
+        });
+    } catch (syncErr) {
+        console.error('Failed to sync employee name to PatientService', syncErr);
+    }
+}
+
 function navigateToStep(step) {
     currentStep.value = step;
     saveAdmission({ currentStep: step });
 }
 
-// ── Step 1: Arrival — creates the real Patient record, then the Admission ────
+// ── Step 1: Arrival — uses the EXISTING patient from the route; no longer
+// creates a duplicate Patient record. Just confirms the name/age shown and
+// moves on, saving the Admission tied to this serviceId.
 async function proceedFromArrival() {
     if (!patientData.value.firstName) return;
     saving.value = true;
     saveError.value = '';
 
     try {
-        const patientRes = await axios.post(PATIENTS_URL, {
-            fName: patientData.value.firstName,
-            lName: patientData.value.lastName
-        });
-        patientId.value = patientRes.data.patientID ?? patientRes.data.id;
+        if (!patientId.value) {
+            // Fallback: no patientID in the route at all (shouldn't normally
+            // happen since this form is always opened via a PatientService).
+            const patientRes = await axios.post(PATIENTS_URL, {
+                fName: patientData.value.firstName,
+                lName: patientData.value.lastName
+            });
+            patientId.value = patientRes.data.patientID ?? patientRes.data.id;
+        }
 
         currentStep.value = 'assessment';
         await saveAdmission({ currentStep: 'assessment' });
     } catch (error) {
-        console.error('Failed to create patient/admission', error);
-        saveError.value = 'Failed to create the patient record. Please check the patient endpoint and try again.';
+        console.error('Failed to save admission', error);
+        saveError.value = 'Failed to save the admission record. Please check the endpoint and try again.';
     } finally {
         saving.value = false;
     }
 }
 
 // ── Billing step — creates the real Statement of Account ────────────────────
-// Just navigates to the Billing step — the itemized fees are entered/edited
-// there, and the real Statement of Account isn't created until the PhilHealth
-// question is answered (see finalizeBillingAndProceed below).
 function proceedToBilling() {
     navigateToStep('billing');
 }
@@ -273,6 +360,8 @@ async function confirmPayment() {
         patientData.value.paymentComplete = true;
         currentStep.value = 'discharge';
         await saveAdmission({ currentStep: 'discharge', paymentComplete: true });
+
+        await syncEmployeeNameToPatientService();
     } catch (error) {
         console.error('Failed to record payment', error);
         saveError.value = 'Failed to record the payment. Please try again.';
@@ -282,28 +371,31 @@ async function confirmPayment() {
 }
 
 function resetProcess() {
-    patientData.value = {
-        firstName: '', lastName: '', age: '', gestationalAge: '',
-        readyForDelivery: null, isHighRisk: null,
-        wardID: null, attendingStaffID: null,
-        hasPhilHealth: null, paymentComplete: false, paymentMethod: 'Cash'
-    };
-    currentStep.value = 'arrival';
-    admissionId.value = null;
-    patientId.value = null;
-    soaId.value = null;
-    saveError.value = '';
+    router.back();
 }
 
-onMounted(() => {
-    fetchWards();
-    fetchEmployees();
+onMounted(async () => {
+    await fetchWards();
+    await fetchEmployees();
+    await fetchExistingPatient();
+    await loadExistingAdmission();
 });
 </script>
 
 <template>
     <div class="min-h-screen bg-gradient-to-br from-blue-50 to-pink-50 p-6">
         <div class="max-w-4xl mx-auto">
+            <!-- Toolbar -->
+            <div class="mb-4">
+                <button @click="goBack"
+                    class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow transition">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Back
+                </button>
+            </div>
+
             <div class="bg-white rounded-2xl shadow-xl p-8">
                 <!-- Header -->
                 <div class="text-center mb-8">
@@ -311,6 +403,11 @@ onMounted(() => {
                     <p class="text-gray-600">Complete patient care workflow management</p>
                 </div>
 
+                <div v-if="loadingExisting" class="text-center py-10 text-gray-500">
+                    Loading admission record…
+                </div>
+
+                <template v-else>
                 <!-- Save error banner -->
                 <div v-if="saveError" class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm flex justify-between">
                     {{ saveError }}
@@ -406,7 +503,7 @@ onMounted(() => {
                         </div>
                         <button @click="resetProcess"
                             class="w-full bg-gray-500 text-white py-3 rounded-lg hover:bg-gray-600 transition-colors font-semibold">
-                            Complete & Return to Start
+                            Complete & Return
                         </button>
                     </div>
 
@@ -493,7 +590,7 @@ onMounted(() => {
                         </div>
                         <button @click="resetProcess"
                             class="w-full bg-red-500 text-white py-3 rounded-lg hover:bg-red-600 transition-colors font-semibold">
-                            Complete Referral & Return to Start
+                            Complete Referral & Return
                         </button>
                     </div>
 
@@ -681,10 +778,11 @@ onMounted(() => {
                         </div>
                         <button @click="resetProcess"
                             class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold">
-                            Complete Discharge & Return to Start
+                            Complete Discharge & Return
                         </button>
                     </div>
                 </div>
+                </template>
 
                 <!-- Footer -->
                 <div class="mt-6 text-center text-sm text-gray-500">

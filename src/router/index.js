@@ -31,6 +31,7 @@ const routes = [
             { path: 'uikit/PatientProfiling/:id', component: () => import('@/views/uikit/PatientProfiling.vue') },
             { path: 'uikit/patientIndividual', component: () => import('@/views/uikit/PatientIndividual.vue') },
             { path: 'uikit/ReferralForm', component: () => import('@/views/uikit/ReferralForm.vue') },
+            { path: 'uikit/Admission/:patientID/:serviceId', component: () => import('@/views/uikit/Admission.vue') },
             { path: 'uikit/Admission', component: () => import('@/views/uikit/Admission.vue') },
             { path: 'uikit/Logs', component: () => import('@/views/uikit/Logs.vue') },
             { path: 'uikit/AppointmentManagement', component: () => import('@/views/uikit/AppointmentManagement.vue') },
@@ -44,7 +45,7 @@ const routes = [
             { path: 'uikit/MidwifeDashboard', component: () => import('@/views/Dashboard/MidwifeDashboard.vue') },
             { path: 'uikit/PatientProfileview', component: () => import('@/views/uikit/PatientProfileview.vue') },
             { path: 'uikit/UltrasoundAdmission/:patientID/:serviceId', component: () => import('@/views/uikit/UltrasoundAdmission.vue') },
-            { path: 'uikit/MySOA', component: () => import('@/views/uikit/MySOA.vue') },    
+            { path: 'uikit/MySOA', component: () => import('@/views/uikit/MySOA.vue') },  
         ]
     },
     {
