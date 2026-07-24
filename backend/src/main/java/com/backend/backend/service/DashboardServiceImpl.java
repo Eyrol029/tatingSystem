@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.backend.backend.model.Admission;
 import com.backend.backend.model.Appointment.Appointment;
 import com.backend.backend.model.Billing.Expense;
 import com.backend.backend.model.Billing.Revenue;
@@ -20,6 +21,7 @@ import com.backend.backend.model.DashboardSummaryDTO.ActivityItem;
 import com.backend.backend.model.DashboardSummaryDTO.PendingItem;
 import com.backend.backend.model.Patient;
 import com.backend.backend.model.Prenatal.PrenatalRecord;
+import com.backend.backend.repository.AdmissionRepository;
 import com.backend.backend.repository.Appointment.AppointmentRepository;
 import com.backend.backend.repository.Billing.ExpenseRepository;
 import com.backend.backend.repository.Billing.RevenueRepository;
@@ -37,6 +39,10 @@ public class DashboardServiceImpl implements DashboardService {
     @Autowired private RevenueRepository revenueRepository;
     @Autowired private ExpenseRepository expenseRepository;
 
+    // NEW: wired in so "Total Deliveries" reflects real Lying-In Admission
+    // discharges instead of just any PrenatalRecord with a delivery date.
+    @Autowired private AdmissionRepository admissionRepository;
+
     private static final DateTimeFormatter TIME_FMT =
             DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a");
 
@@ -48,19 +54,24 @@ public class DashboardServiceImpl implements DashboardService {
         List<Patient>        allPatients     = patientRepository.findAll();
         List<Appointment>    allAppointments = appointmentRepository.findAll();
         List<PrenatalRecord> allPrenatal     = prenatalRecordRepository.findAll();
+        List<Admission>      allAdmissions   = admissionRepository.findAll();
 
         // Filter by date range if provided
         List<Patient>        patients     = filterPatients(allPatients, start, end);
         List<Appointment>    appointments = filterAppointments(allAppointments, start, end);
         List<PrenatalRecord> prenatal     = filterPrenatal(allPrenatal, start, end);
+        List<Admission>      admissions   = filterAdmissions(allAdmissions, start, end);
 
         dto.setTotalPatients(patients.size());
         dto.setTotalAppointments(appointments.size());
         dto.setTotalPrenatalRecords(prenatal.size());
 
-        // Deliveries = prenatal records that have an actual delivery date recorded
-        long deliveries = prenatal.stream()
-                .filter(p -> p.getDeliveryDate() != null)
+        // Deliveries = Lying-In Admissions that have actually reached the
+        // "discharge" step of the workflow (i.e. the birth was completed and
+        // the patient was sent home), not just any prenatal record that
+        // happens to have a delivery date filled in.
+        long deliveries = admissions.stream()
+                .filter(a -> "discharge".equalsIgnoreCase(a.getCurrentStep()))
                 .count();
         dto.setTotalDeliveries(deliveries);
 
@@ -126,6 +137,18 @@ public class DashboardServiceImpl implements DashboardService {
                         "Record ID " + p.getPrenatalrecordID(),
                         "prenatal")));
 
+        // NEW: Recent completed deliveries (Admissions discharged) — shown
+        // alongside the other activity types.
+        allAdmissions.stream()
+                .filter(a -> "discharge".equalsIgnoreCase(a.getCurrentStep()))
+                .sorted(Comparator.comparing(Admission::getAdmissionID, Comparator.nullsLast(Integer::compareTo)).reversed())
+                .limit(3)
+                .forEach(a -> activities.add(new ActivityItem(
+                        "Delivery completed & discharged — "
+                                + (a.getPatientName() != null ? a.getPatientName() : "Unknown patient"),
+                        a.getAdmissionDate() != null ? a.getAdmissionDate().format(TIME_FMT) : "recently",
+                        "prenatal")));
+
         // NEW: Recent revenue entries — shows up with the green "payment" dot
         // that the dashboard UI already has a color mapping for.
         allRevenue.stream()
@@ -185,6 +208,19 @@ public class DashboardServiceImpl implements DashboardService {
         if (start == null && end == null) return list;
         return list.stream()
                 .filter(p -> isInRange(p.getInitialPreConsultationDate(), start, end))
+                .collect(Collectors.toList());
+    }
+
+    // NEW: filters Admission records by admissionDate, same pattern as the
+    // other filter* helpers.
+    private List<Admission> filterAdmissions(List<Admission> list, LocalDate start, LocalDate end) {
+        if (start == null && end == null) return list;
+        return list.stream()
+                .filter(a -> {
+                    LocalDateTime admittedAt = a.getAdmissionDate();
+                    if (admittedAt == null) return true; // include if no date
+                    return isInRange(admittedAt.toLocalDate(), start, end);
+                })
                 .collect(Collectors.toList());
     }
 

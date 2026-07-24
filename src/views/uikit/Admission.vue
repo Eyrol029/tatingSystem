@@ -146,16 +146,12 @@ async function fetchEmployees() {
 // Loads the existing Patient record for this route's patientID, so the
 // form shows the real name instead of asking staff to re-type it.
 async function fetchExistingPatient() {
-    console.log('route.params:', route.params);
-    console.log('resolved patientId.value:', patientId.value);
-
     if (!patientId.value) {
         console.warn('No patientId resolved from route — cannot fetch patient info.');
         return;
     }
     try {
         const res = await axios.get(`${PATIENTS_URL}/${patientId.value}`);
-        console.log('Fetched patient:', res.data);
         patientData.value.firstName = res.data.fName || '';
         patientData.value.lastName = res.data.lName || '';
         patientData.value.age = res.data.age ?? '';
@@ -164,17 +160,37 @@ async function fetchExistingPatient() {
     }
 }
 
+// Picks the record with the highest numeric ID field from an array, instead
+// of trusting array order (the backend does not guarantee ordering).
+function pickLatestRecord(records) {
+    if (!Array.isArray(records) || records.length === 0) return null;
+    const sample = records[0];
+    const idKey = Object.keys(sample).find(
+        k => /id$/i.test(k) && typeof sample[k] === 'number'
+    );
+    if (!idKey) return records[records.length - 1];
+    return records.reduce((latest, current) =>
+        (!latest || current[idKey] > latest[idKey]) ? current : latest, null);
+}
+
 // If an Admission record already exists for THIS specific serviceId, resume
-// the workflow from wherever it left off instead of restarting at Arrival.
+// the workflow from wherever it left off instead of creating a duplicate.
+//
+// IMPORTANT: uses the plain "get all admissions" endpoint (GET /api/admissions)
+// and filters client-side by serviceID, rather than a dedicated
+// /api/admissions/service/{id} endpoint — since that dedicated endpoint may
+// not exist on the backend yet, and silently failing there was the root
+// cause of duplicate Admission rows being created on every reload.
 async function loadExistingAdmission() {
     if (!serviceId) { loadingExisting.value = false; return; }
     try {
-        const res = await axios.get(`${ADMISSIONS_URL}/service/${serviceId}`);
-        const records = Array.isArray(res.data) ? res.data : (res.data ? [res.data] : []);
-        if (!records.length) { loadingExisting.value = false; return; }
+        const res = await axios.get(ADMISSIONS_URL);
+        const all = Array.isArray(res.data) ? res.data : [];
+        const matches = all.filter(a => String(a.serviceID) === String(serviceId));
 
-        const latest = records.reduce((best, cur) =>
-            (!best || cur.admissionID > best.admissionID) ? cur : best, null);
+        if (!matches.length) { loadingExisting.value = false; return; }
+
+        const latest = pickLatestRecord(matches);
 
         admissionId.value = latest.admissionID;
         soaId.value = latest.soaID || null;
@@ -197,6 +213,9 @@ async function loadExistingAdmission() {
 }
 
 // Saves/updates the Admission record so the workflow can be resumed later.
+// Because admissionId.value is now reliably populated by loadExistingAdmission()
+// above (once it succeeds), this correctly PUTs (updates) on every subsequent
+// save instead of creating a new row each time.
 async function saveAdmission(extraFields = {}) {
     saving.value = true;
     saveError.value = '';

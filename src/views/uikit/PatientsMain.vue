@@ -200,7 +200,7 @@ async function deletePatient(patient) {
                 @click="$router.push('/uikit/Admission')"
                 class="px-6 py-2 bg-purple-700 text-white rounded-full hover:bg-purple-800 transition-colors"
             >
-                Admission
+                Lying-In Admission
             </button>
             <button
                 @click="addPatient"

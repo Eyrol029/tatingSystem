@@ -208,7 +208,8 @@ function handleSort(field) {
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <button @click="openDetails(p)" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-black shadow-md transition-all active:scale-95">VIEW</button>
+                                <button @click="$router.push(`/uikit/MySOA/${p.patientId}`)"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-black shadow-md transition-all active:scale-95">VIEW</button>
                             </td>
                         </tr>
                     </tbody>
