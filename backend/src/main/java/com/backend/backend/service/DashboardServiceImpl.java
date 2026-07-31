@@ -71,7 +71,7 @@ public class DashboardServiceImpl implements DashboardService {
         // the patient was sent home), not just any prenatal record that
         // happens to have a delivery date filled in.
         long deliveries = admissions.stream()
-                .filter(a -> "discharge".equalsIgnoreCase(a.getCurrentStep()))
+                .filter(a -> "discharge".equalsIgnoreCase(a.getCurrentStep()) || "discharged".equalsIgnoreCase(a.getCurrentStep()))
                 .count();
         dto.setTotalDeliveries(deliveries);
 
@@ -191,7 +191,7 @@ public class DashboardServiceImpl implements DashboardService {
         return list.stream()
                 .filter(p -> {
                     LocalDateTime created = getPatientCreatedAt(p);
-                    if (created == null) return true; // include if no date
+                    if (created == null) return false;
                     return isInRange(created.toLocalDate(), start, end);
                 })
                 .collect(Collectors.toList());
@@ -217,9 +217,12 @@ public class DashboardServiceImpl implements DashboardService {
         if (start == null && end == null) return list;
         return list.stream()
                 .filter(a -> {
-                    LocalDateTime admittedAt = a.getAdmissionDate();
-                    if (admittedAt == null) return true; // include if no date
-                    return isInRange(admittedAt.toLocalDate(), start, end);
+                    LocalDateTime dateToUse = a.getDischargeDate();
+                    if (dateToUse == null) {
+                        dateToUse = a.getAdmissionDate();
+                    }
+                    if (dateToUse == null) return false;
+                    return isInRange(dateToUse.toLocalDate(), start, end);
                 })
                 .collect(Collectors.toList());
     }
@@ -267,7 +270,7 @@ public class DashboardServiceImpl implements DashboardService {
     // Patients in this model do not expose a createdAt field, so date filtering
     // falls back to including records when no creation timestamp is available.
     private LocalDateTime getPatientCreatedAt(Patient p) {
-        return null;
+        return p.getCreatedAt();
     }
 
     private String timeAgo(LocalDateTime dt) {

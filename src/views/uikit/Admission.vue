@@ -48,7 +48,8 @@ const patientData = ref({
     attendingStaffID: null,
     hasPhilHealth: null,
     paymentComplete: false,
-    paymentMethod: 'Cash'
+    paymentMethod: 'Cash',
+    dischargeDate: null
 });
 
 // Itemized billing — now editable. Starts with sensible defaults, but staff
@@ -92,18 +93,19 @@ const steps = {
     postpartum: { title: 'Postpartum & Newborn Care', color: 'bg-rose-500' },
     billing: { title: 'Statement of Account', color: 'bg-teal-500' },
     payment: { title: 'Payment Processing', color: 'bg-emerald-500' },
-    discharge: { title: 'Patient Discharge', color: 'bg-green-600' }
+    discharge: { title: 'Patient Discharge', color: 'bg-green-600' },
+    discharged: { title: 'Discharged & Completed', color: 'bg-gray-700' }
 };
 
-const currentStepInfo = computed(() => steps[currentStep.value]);
+const currentStepInfo = computed(() => steps[currentStep.value] || { title: 'Admission Process', color: 'bg-blue-500' });
 
 const progressWidth = computed(() => {
     const progressMap = {
         arrival: '10%', assessment: '20%', notReady: '30%', admission: '35%',
         monitoring: '45%', referral: '50%', delivery: '60%', postpartum: '70%',
-        billing: '80%', payment: '90%', discharge: '100%'
+        billing: '80%', payment: '90%', discharge: '95%', discharged: '100%'
     };
-    return progressMap[currentStep.value];
+    return progressMap[currentStep.value] || '100%';
 });
 
 const amountDue = computed(() => {
@@ -202,8 +204,37 @@ async function loadExistingAdmission() {
         patientData.value.attendingStaffID = latest.attendingStaffID ?? null;
         patientData.value.hasPhilHealth = latest.hasPhilHealth ?? null;
         patientData.value.paymentComplete = !!latest.paymentComplete;
+        patientData.value.dischargeDate = latest.dischargeDate || null;
         if (latest.currentStep && steps[latest.currentStep]) {
             currentStep.value = latest.currentStep;
+        }
+
+        if (latest.soaID) {
+            try {
+                const soaRes = await axios.get(`${SOA_URL}/${latest.soaID}`);
+                const description = soaRes.data.description || '';
+                if (description.includes('Lying-In Admission Charges — ')) {
+                    const cleanDesc = description.replace('Lying-In Admission Charges — ', '');
+                    const parts = cleanDesc.split(', ');
+                    const parsedItems = [];
+                    for (const p of parts) {
+                        const colonIndex = p.lastIndexOf(':');
+                        if (colonIndex !== -1) {
+                            const name = p.substring(0, colonIndex).trim();
+                            const amtStr = p.substring(colonIndex + 1).replace(/[^\d]/g, '');
+                            const amount = Number(amtStr);
+                            if (name && !isNaN(amount)) {
+                                parsedItems.push({ name, amount });
+                            }
+                        }
+                    }
+                    if (parsedItems.length > 0) {
+                        billingItems.value = parsedItems;
+                    }
+                }
+            } catch (soaErr) {
+                console.error('Failed to load Statement of Account description', soaErr);
+            }
         }
     } catch (error) {
         console.error('Failed to load existing admission record (this is OK if none exists yet):', error);
@@ -391,6 +422,24 @@ async function confirmPayment() {
 
 function resetProcess() {
     router.back();
+}
+
+async function completeDischarge() {
+    saving.value = true;
+    saveError.value = '';
+    try {
+        currentStep.value = 'discharged';
+        await saveAdmission({
+            currentStep: 'discharged',
+            dischargeDate: new Date().toISOString()
+        });
+        router.back();
+    } catch (error) {
+        console.error('Failed to complete discharge', error);
+        saveError.value = 'Failed to complete discharge. Please try again.';
+    } finally {
+        saving.value = false;
+    }
 }
 
 onMounted(async () => {
@@ -795,9 +844,76 @@ onMounted(async () => {
                             <p class="text-sm text-gray-700">Call clinic hotline: (123) 456-7890</p>
                             <p class="text-sm text-gray-700">Available 24/7 for concerns</p>
                         </div>
-                        <button @click="resetProcess"
+                        <button @click="completeDischarge"
                             class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold">
                             Complete Discharge & Return
+                        </button>
+                    </div>
+
+                    <!-- Discharged Summary Step -->
+                    <div v-if="currentStep === 'discharged'" class="space-y-6">
+                        <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-4">
+                            <h3 class="text-xl font-bold text-gray-800 border-b pb-2">Patient Discharge Summary</h3>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-xs text-gray-500 uppercase font-semibold">Patient Name</p>
+                                    <p class="text-sm font-semibold text-gray-800">{{ patientData.firstName }} {{ patientData.lastName }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500 uppercase font-semibold">Age / Gestational Age</p>
+                                    <p class="text-sm font-semibold text-gray-800">{{ patientData.age }} years old / {{ patientData.gestationalAge }} weeks</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500 uppercase font-semibold">Assigned Ward</p>
+                                    <p class="text-sm font-semibold text-gray-800">{{ selectedWardName || 'Not assigned' }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500 uppercase font-semibold">Attending Staff</p>
+                                    <p class="text-sm font-semibold text-gray-800">{{ selectedStaffName || 'Not assigned' }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500 uppercase font-semibold">PhilHealth Status</p>
+                                    <p class="text-sm font-semibold text-gray-800">{{ patientData.hasPhilHealth ? 'Applied Coverage' : 'No PhilHealth' }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500 uppercase font-semibold">Payment Status</p>
+                                    <p class="text-sm font-semibold text-emerald-600">✓ Fully Paid</p>
+                                </div>
+                            </div>
+                            
+                            <div class="border-t pt-4">
+                                <p class="text-xs text-gray-500 uppercase font-semibold mb-2">Statement of Account (Paid)</p>
+                                <div class="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
+                                    <div v-for="(item, index) in billingItems" :key="index" class="flex justify-between text-gray-700">
+                                        <span>{{ item.name }}:</span>
+                                        <span>₱{{ item.amount.toLocaleString() }}</span>
+                                    </div>
+                                    <hr class="my-2 border-gray-200" />
+                                    <div class="flex justify-between font-bold text-gray-800">
+                                        <span>Total Amount:</span>
+                                        <span>₱{{ billingTotal.toLocaleString() }}</span>
+                                    </div>
+                                    <div v-if="patientData.hasPhilHealth" class="flex justify-between text-emerald-700 text-xs">
+                                        <span>PhilHealth Discount:</span>
+                                        <span>-₱{{ philHealthCoverage.toLocaleString() }}</span>
+                                    </div>
+                                    <div class="flex justify-between font-bold text-emerald-600 border-t pt-2">
+                                        <span>Total Paid:</span>
+                                        <span>₱{{ amountDue.toLocaleString() }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="patientData.dischargeDate" class="border-t pt-4">
+                                <p class="text-xs text-gray-500 uppercase font-semibold">Discharge Date & Time</p>
+                                <p class="text-sm font-medium text-gray-800">{{ new Date(patientData.dischargeDate).toLocaleString() }}</p>
+                            </div>
+                        </div>
+
+                        <button @click="resetProcess"
+                            class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                            Return to Admission List
                         </button>
                     </div>
                 </div>

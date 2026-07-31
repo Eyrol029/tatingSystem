@@ -59,6 +59,14 @@ public class Patient {
     @Column(name = "occupation", length = 100)
     private String occupation;
 
+    @Column(name = "createdAt", updatable = false)
+    private java.time.LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = java.time.LocalDateTime.now();
+    }
+
     // Getters and Setters
     public Integer getPatientID() { return patientID; }
     public void setPatientID(Integer patientID) { this.patientID = patientID; }
@@ -107,4 +115,7 @@ public class Patient {
 
     public String getOccupation() { return occupation; }
     public void setOccupation(String occupation) { this.occupation = occupation; }
+
+    public java.time.LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(java.time.LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

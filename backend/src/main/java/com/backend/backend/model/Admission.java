@@ -49,6 +49,7 @@ public class Admission {
     private String currentStep = "arrival";
 
     private LocalDateTime admissionDate;
+    private LocalDateTime dischargeDate;
 
     public Integer getAdmissionID() {
         return admissionID;
@@ -176,5 +177,13 @@ public class Admission {
 
     public void setAdmissionDate(LocalDateTime admissionDate) {
         this.admissionDate = admissionDate;
+    }
+
+    public LocalDateTime getDischargeDate() {
+        return dischargeDate;
+    }
+
+    public void setDischargeDate(LocalDateTime dischargeDate) {
+        this.dischargeDate = dischargeDate;
     }
 }
