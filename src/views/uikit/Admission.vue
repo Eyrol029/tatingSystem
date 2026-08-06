@@ -69,7 +69,9 @@ const patientData = ref({
     hasPhilHealth: null,
     paymentComplete: false,
     paymentMethod: 'Cash',
-    dischargeDate: null
+    dischargeDate: null,
+    monitoringNotes: '', // New field for monitoring notes
+    admissionNotes: '' // New field for admission step notes
 });
 
 // Itemized billing — now editable. Starts with sensible defaults, but staff
@@ -100,6 +102,51 @@ function addBillingItem() {
 
 function removeBillingItem(index) {
     billingItems.value.splice(index, 1);
+}
+
+// Delivery notes
+const deliveryNotes = ref('');
+
+// Postpartum - Mother's Care items (editable list)
+const motherCareItems = ref([
+    'Postpartum monitoring',
+    'Vital signs assessment',
+    'Bleeding and uterine contraction check',
+    'Breastfeeding initiation support',
+    'Pain management'
+]);
+const newMotherCareItem = ref('');
+
+function addMotherCareItem() {
+    const item = newMotherCareItem.value.trim();
+    if (!item) return;
+    motherCareItems.value.push(item);
+    newMotherCareItem.value = '';
+}
+
+function removeMotherCareItem(index) {
+    motherCareItems.value.splice(index, 1);
+}
+
+// Postpartum - Newborn Care items (editable list)
+const newbornCareItems = ref([
+    'APGAR score assessment',
+    'Newborn screening',
+    'Vitamin K administration',
+    'Eye prophylaxis',
+    'Initial breastfeeding'
+]);
+const newNewbornCareItem = ref('');
+
+function addNewbornCareItem() {
+    const item = newNewbornCareItem.value.trim();
+    if (!item) return;
+    newbornCareItems.value.push(item);
+    newNewbornCareItem.value = '';
+}
+
+function removeNewbornCareItem(index) {
+    newbornCareItems.value.splice(index, 1);
 }
 
 const steps = {
@@ -500,7 +547,7 @@ onMounted(async () => {
                     Loading admission record…
                 </div>
 
-                <template v-else>
+                <div v-else>
                 <!-- Save error banner -->
                 <div v-if="saveError" class="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm flex justify-between">
                     {{ saveError }}
@@ -627,7 +674,8 @@ onMounted(async () => {
                             </p>
 
                             <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
-                                <p class="text-green-800 font-medium">Patient Admitted Successfully</p>
+                                <p class="text-green-800 font-medium">Admission Notes</p>
+                                <textarea v-model="patientData.admissionNotes" placeholder="Enter any notes about admission..." class="w-full p-2 border border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" rows="3"></textarea>
                                 <p class="text-sm text-gray-600 mt-1">Ward: {{ selectedWardName || 'Not assigned' }}</p>
                                 <p class="text-sm text-gray-600">Staff: {{ selectedStaffName || 'Not assigned' }}</p>
                             </div>
@@ -643,13 +691,8 @@ onMounted(async () => {
                     <div v-if="currentStep === 'monitoring'" class="space-y-4">
                         <h3 class="text-xl font-semibold text-gray-800">Patient Monitoring</h3>
                         <div class="p-4 bg-pink-50 border border-pink-200 rounded-lg">
-                            <p class="text-pink-800 font-medium mb-2">Closely monitoring patient</p>
-                            <div class="space-y-1 text-sm text-gray-700">
-                                <p>• Vital signs monitoring</p>
-                                <p>• Contraction frequency and intensity</p>
-                                <p>• Fetal heart rate monitoring</p>
-                                <p>• Cervical dilation progress</p>
-                            </div>
+                            <p class="text-pink-800 font-medium mb-2">Monitoring Notes</p>
+                            <textarea v-model="patientData.monitoringNotes" placeholder="Enter observations, vitals, and notes here..." class="w-full p-2 border border-pink-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500" rows="4"></textarea>
                         </div>
                         <div class="space-y-3">
                             <p class="font-medium text-gray-700">Risk Assessment:</p>
@@ -691,14 +734,14 @@ onMounted(async () => {
                     <div v-if="currentStep === 'delivery'" class="space-y-4">
                         <h3 class="text-xl font-semibold text-gray-800">Delivery Process</h3>
                         <div class="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-                            <p class="text-indigo-800 font-medium mb-2">Midwife proceeding with delivery</p>
-                            <p class="text-sm text-gray-700 mb-2">Birth aide called for assistance</p>
-                            <div class="space-y-1 text-sm text-gray-700">
-                                <p>• Preparing delivery room</p>
-                                <p>• Monitoring maternal and fetal status</p>
-                                <p>• Assisting with delivery positions</p>
-                                <p>• Ready for newborn reception</p>
-                            </div>
+                            <p class="text-indigo-800 font-medium mb-2">Delivery Notes</p>
+                            <p class="text-xs text-gray-500 mb-2">Describe the delivery process, procedures done, and any observations.</p>
+                            <textarea
+                                v-model="deliveryNotes"
+                                placeholder="e.g. Normal spontaneous delivery, no complications, placenta delivered intact..."
+                                class="w-full p-3 border border-indigo-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                                rows="5"
+                            ></textarea>
                         </div>
                         <button @click="navigateToStep('postpartum')"
                             class="w-full bg-indigo-500 text-white py-3 rounded-lg hover:bg-indigo-600 transition-colors font-semibold">
@@ -710,26 +753,57 @@ onMounted(async () => {
                     <div v-if="currentStep === 'postpartum'" class="space-y-4">
                         <h3 class="text-xl font-semibold text-gray-800">Postpartum & Newborn Care</h3>
                         <div class="space-y-3">
+
+                            <!-- Mother's Care -->
                             <div class="p-4 bg-rose-50 border border-rose-200 rounded-lg">
-                                <p class="text-rose-800 font-medium mb-2">Mother's Care:</p>
-                                <div class="space-y-1 text-sm text-gray-700">
-                                    <p>✓ Postpartum monitoring</p>
-                                    <p>✓ Vital signs assessment</p>
-                                    <p>✓ Bleeding and uterine contraction check</p>
-                                    <p>✓ Breastfeeding initiation support</p>
-                                    <p>✓ Pain management</p>
+                                <p class="text-rose-800 font-medium mb-3">Mother's Care:</p>
+                                <div class="space-y-2 mb-3">
+                                    <div v-for="(item, index) in motherCareItems" :key="index"
+                                        class="flex items-center justify-between text-sm text-gray-700 bg-white border border-rose-100 rounded px-3 py-2">
+                                        <span>✓ {{ item }}</span>
+                                        <button @click="removeMotherCareItem(index)"
+                                            class="text-red-400 hover:text-red-600 text-xs font-bold ml-2">✕</button>
+                                    </div>
+                                    <p v-if="motherCareItems.length === 0" class="text-xs text-gray-400 italic">No items added yet.</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <input
+                                        v-model="newMotherCareItem"
+                                        type="text"
+                                        placeholder="Add mother's care item..."
+                                        class="flex-1 px-3 py-2 border border-rose-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-rose-400"
+                                        @keyup.enter="addMotherCareItem"
+                                    />
+                                    <button @click="addMotherCareItem"
+                                        class="px-4 py-2 bg-rose-500 text-white text-sm rounded-md hover:bg-rose-600 font-semibold">+ Add</button>
                                 </div>
                             </div>
+
+                            <!-- Newborn Care -->
                             <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                <p class="text-blue-800 font-medium mb-2">Newborn Care:</p>
-                                <div class="space-y-1 text-sm text-gray-700">
-                                    <p>✓ APGAR score assessment</p>
-                                    <p>✓ Newborn screening</p>
-                                    <p>✓ Vitamin K administration</p>
-                                    <p>✓ Eye prophylaxis</p>
-                                    <p>✓ Initial breastfeeding</p>
+                                <p class="text-blue-800 font-medium mb-3">Newborn Care:</p>
+                                <div class="space-y-2 mb-3">
+                                    <div v-for="(item, index) in newbornCareItems" :key="index"
+                                        class="flex items-center justify-between text-sm text-gray-700 bg-white border border-blue-100 rounded px-3 py-2">
+                                        <span>✓ {{ item }}</span>
+                                        <button @click="removeNewbornCareItem(index)"
+                                            class="text-red-400 hover:text-red-600 text-xs font-bold ml-2">✕</button>
+                                    </div>
+                                    <p v-if="newbornCareItems.length === 0" class="text-xs text-gray-400 italic">No items added yet.</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <input
+                                        v-model="newNewbornCareItem"
+                                        type="text"
+                                        placeholder="Add newborn care item..."
+                                        class="flex-1 px-3 py-2 border border-blue-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                        @keyup.enter="addNewbornCareItem"
+                                    />
+                                    <button @click="addNewbornCareItem"
+                                        class="px-4 py-2 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 font-semibold">+ Add</button>
                                 </div>
                             </div>
+
                             <button @click="proceedToBilling"
                                 class="w-full bg-rose-500 text-white py-3 rounded-lg hover:bg-rose-600 transition-colors font-semibold disabled:opacity-50">
                                 {{ saving ? 'Creating billing record…' : 'Proceed to Billing' }}
@@ -942,7 +1016,7 @@ onMounted(async () => {
                         </button>
                     </div>
                 </div>
-                </template>
+                </div>
 
                 <!-- Footer -->
                 <div class="mt-6 text-center text-sm text-gray-500">

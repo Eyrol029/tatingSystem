@@ -486,7 +486,7 @@ async function handleSubmit() {
                                     </button>
                                     <button @click="promptDeleteService(service)"
                                         class="bg-red-50 text-red-700 px-3 py-1.5 rounded text-sm hover:bg-red-100 font-semibold border border-red-200">
-                                        🗑 Delete
+                                        Delete
                                     </button>
                                 </div>
                             </td>
