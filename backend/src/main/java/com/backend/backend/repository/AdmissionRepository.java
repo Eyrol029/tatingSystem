@@ -9,4 +9,6 @@ import com.backend.backend.model.Admission;
 public interface AdmissionRepository extends CrudRepository<Admission, Integer> {
 
     List<Admission> findAll();
+    List<Admission> findByServiceID(Integer serviceID);
+    List<Admission> findByPatientID(Integer patientID);
 }

@@ -150,7 +150,7 @@ function getDedicatedRoute(serviceName) {
     if (normalized === 'prenatal') return 'PrenatalAdmission';
     if (normalized === 'familyplanning') return 'FamilyPlanningAdmission';
     if (normalized === 'ultrasound') return 'UltrasoundAdmission';
-    if (normalized.startsWith('admi')) return 'Admission';  // covers "Admission" and "Admision" (typo)
+    if (normalized.includes('admi') || normalized.includes('lyingin')) return 'Admission';
     return null;
 }
 

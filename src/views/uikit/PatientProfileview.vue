@@ -77,7 +77,7 @@ function printServices() {
 }
 
 function viewService(service) {
-    const name = service.service?.toLowerCase();
+    const name = service.service?.toLowerCase() || '';
     const patientId = userStore.user?.patientID;
     const serviceId = service.id;
 
@@ -87,6 +87,8 @@ function viewService(service) {
         router.push(`/uikit/FamilyPlanningAdmission/${patientId}/${serviceId}`);
     } else if (name === 'ultrasound') {
         router.push(`/uikit/UltrasoundAdmission/${patientId}/${serviceId}`);
+    } else if (name.includes('admis') || name.includes('lying-in') || name.includes('admission')) {
+        router.push(`/uikit/Admission/${patientId}/${serviceId}`);
     } else {
         alert(`No dedicated view page for "${service.service}" yet.`);
     }

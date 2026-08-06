@@ -20,6 +20,9 @@ public class Admission {
     @Column(name = "patientID")
     private Integer patientID;
 
+    @Column(name = "serviceID")
+    private Integer serviceID;
+
     // Cached for display without an extra lookup — not the source of truth
     private String patientName;
 
@@ -57,6 +60,14 @@ public class Admission {
 
     public void setAdmissionID(Integer admissionID) {
         this.admissionID = admissionID;
+    }
+
+    public Integer getServiceID() {
+        return serviceID;
+    }
+
+    public void setServiceID(Integer serviceID) {
+        this.serviceID = serviceID;
     }
 
     public Integer getPatientID() {

@@ -23,6 +23,26 @@ function goBack() {
     router.back();
 }
 
+const stepOrder = ['arrival', 'assessment', 'admission', 'monitoring', 'delivery', 'postpartum', 'billing', 'payment', 'discharge', 'discharged'];
+
+const currentStepIndex = computed(() => stepOrder.indexOf(currentStep.value));
+const canGoPrev = computed(() => currentStepIndex.value > 0);
+const canGoNext = computed(() => currentStepIndex.value >= 0 && currentStepIndex.value < stepOrder.length - 1);
+
+function goNextStep() {
+    if (canGoNext.value) {
+        const nextStep = stepOrder[currentStepIndex.value + 1];
+        navigateToStep(nextStep);
+    }
+}
+
+function goPrevStep() {
+    if (canGoPrev.value) {
+        const prevStep = stepOrder[currentStepIndex.value - 1];
+        navigateToStep(prevStep);
+    }
+}
+
 const currentStep = ref('arrival');
 const saving = ref(false);
 const loadingExisting = ref(true);
@@ -184,11 +204,17 @@ function pickLatestRecord(records) {
 // not exist on the backend yet, and silently failing there was the root
 // cause of duplicate Admission rows being created on every reload.
 async function loadExistingAdmission() {
-    if (!serviceId) { loadingExisting.value = false; return; }
+    if (!serviceId && !patientId.value) { loadingExisting.value = false; return; }
     try {
         const res = await axios.get(ADMISSIONS_URL);
         const all = Array.isArray(res.data) ? res.data : [];
-        const matches = all.filter(a => String(a.serviceID) === String(serviceId));
+        let matches = [];
+        if (serviceId) {
+            matches = all.filter(a => String(a.serviceID) === String(serviceId));
+        }
+        if (!matches.length && patientId.value) {
+            matches = all.filter(a => String(a.patientID) === String(patientId.value));
+        }
 
         if (!matches.length) { loadingExisting.value = false; return; }
 
