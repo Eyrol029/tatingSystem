@@ -107,14 +107,37 @@ async function fetchClinicalServices() {
 }
 
 // ── Delete a mistaken service record ─────────────────────────────────────────
-async function deleteService(serviceId) {
-    if (!confirm('Are you sure you want to delete this service record? This cannot be undone.')) return;
+const showDeleteConfirm = ref(false);
+const serviceToDelete = ref<{ id: number; service: string } | null>(null);
+const deleting = ref(false);
+const deleteError = ref('');
+
+function promptDeleteService(service) {
+    serviceToDelete.value = service;
+    deleteError.value = '';
+    showDeleteConfirm.value = true;
+}
+
+function cancelDelete() {
+    showDeleteConfirm.value = false;
+    serviceToDelete.value = null;
+    deleteError.value = '';
+}
+
+async function confirmDeleteService() {
+    if (!serviceToDelete.value) return;
+    deleting.value = true;
+    deleteError.value = '';
     try {
-        await axios.delete(`http://localhost:8080/api/patient-services/${serviceId}`);
+        await axios.delete(`http://localhost:8080/api/patient-services/${serviceToDelete.value.id}`);
+        showDeleteConfirm.value = false;
+        serviceToDelete.value = null;
         await fetchServices();
     } catch (e) {
         console.error('Failed to delete service record', e);
-        alert('Failed to delete this service record: ' + (e.response?.data || e.message));
+        deleteError.value = 'Failed to delete: ' + (e.response?.data || e.message);
+    } finally {
+        deleting.value = false;
     }
 }
 
@@ -158,6 +181,36 @@ async function selectType(type: string) {
     // Check if this service has a dedicated form → redirect there
     const routeName = getDedicatedRoute(type);
     if (routeName) {
+        // For Admission/Lying-In: guard against creating duplicate active admissions.
+        // If the patient already has a non-discharged admission, just resume it.
+        const isAdmission = routeName === 'Admission';
+        if (isAdmission) {
+            try {
+                // Check all existing admissions for this patient
+                const admissionsRes = await axios.get('http://localhost:8080/api/admissions');
+                const allAdmissions = Array.isArray(admissionsRes.data) ? admissionsRes.data : [];
+                const patientID = Number(route.params.id);
+                const activeAdmission = allAdmissions.find(
+                    a => a.patientID === patientID && a.currentStep !== 'discharged'
+                );
+                if (activeAdmission) {
+                    // Patient has an ongoing admission — find its linked PatientService
+                    // and navigate to the existing form instead of creating a new one.
+                    showModal.value = false;
+                    step.value = 'select';
+                    const linkedServiceId = activeAdmission.serviceID;
+                    if (linkedServiceId) {
+                        router.push(`/uikit/Admission/${patientID}/${linkedServiceId}`);
+                    } else {
+                        alert('This patient already has an active admission. Please complete or discharge them before starting a new one.');
+                    }
+                    return;
+                }
+            } catch (e) {
+                console.error('Failed to check for existing admissions', e);
+            }
+        }
+
         try {
             const res = await axios.post('http://localhost:8080/api/patient-services', {
                 patientID: Number(route.params.id),
@@ -431,9 +484,9 @@ async function handleSubmit() {
                                         class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700">
                                         View
                                     </button>
-                                    <button @click="deleteService(service.id)"
-                                        class="bg-red-50 text-red-700 px-3 py-1.5 rounded text-sm hover:bg-red-100 font-semibold">
-                                        Delete
+                                    <button @click="promptDeleteService(service)"
+                                        class="bg-red-50 text-red-700 px-3 py-1.5 rounded text-sm hover:bg-red-100 font-semibold border border-red-200">
+                                        🗑 Delete
                                     </button>
                                 </div>
                             </td>
@@ -443,6 +496,37 @@ async function handleSubmit() {
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div v-if="showDeleteConfirm" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="bg-red-100 p-2 rounded-full">
+                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900">Delete Service Record?</h3>
+                </div>
+                <p class="text-gray-600 mb-1">You are about to delete:</p>
+                <p class="font-semibold text-gray-800 mb-4 bg-gray-100 px-3 py-2 rounded-lg">
+                    {{ serviceToDelete?.service }}
+                </p>
+                <p class="text-sm text-gray-500 mb-4">This action cannot be undone. The service record and any linked admission data will be removed.</p>
+                <p v-if="deleteError" class="text-sm text-red-600 mb-3">{{ deleteError }}</p>
+                <div class="flex gap-3 justify-end">
+                    <button @click="cancelDelete" :disabled="deleting"
+                        class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition disabled:opacity-50">
+                        Cancel
+                    </button>
+                    <button @click="confirmDeleteService" :disabled="deleting"
+                        class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition font-semibold disabled:opacity-50">
+                        {{ deleting ? 'Deleting...' : 'Yes, Delete' }}
+                    </button>
+                </div>
             </div>
         </div>
 

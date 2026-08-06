@@ -198,23 +198,15 @@ function pickLatestRecord(records) {
 // If an Admission record already exists for THIS specific serviceId, resume
 // the workflow from wherever it left off instead of creating a duplicate.
 //
-// IMPORTANT: uses the plain "get all admissions" endpoint (GET /api/admissions)
-// and filters client-side by serviceID, rather than a dedicated
-// /api/admissions/service/{id} endpoint — since that dedicated endpoint may
-// not exist on the backend yet, and silently failing there was the root
-// cause of duplicate Admission rows being created on every reload.
+// STRICT match: only ever match by serviceID — never fall back to patientID.
+// The patientID fallback was removed because it caused the wrong admission
+// record to load when a patient had multiple Admission-type service entries.
 async function loadExistingAdmission() {
-    if (!serviceId && !patientId.value) { loadingExisting.value = false; return; }
+    if (!serviceId) { loadingExisting.value = false; return; }
     try {
         const res = await axios.get(ADMISSIONS_URL);
         const all = Array.isArray(res.data) ? res.data : [];
-        let matches = [];
-        if (serviceId) {
-            matches = all.filter(a => String(a.serviceID) === String(serviceId));
-        }
-        if (!matches.length && patientId.value) {
-            matches = all.filter(a => String(a.patientID) === String(patientId.value));
-        }
+        const matches = all.filter(a => String(a.serviceID) === String(serviceId));
 
         if (!matches.length) { loadingExisting.value = false; return; }
 
@@ -480,13 +472,20 @@ onMounted(async () => {
     <div class="min-h-screen bg-gradient-to-br from-blue-50 to-pink-50 p-6">
         <div class="max-w-4xl mx-auto">
             <!-- Toolbar -->
-            <div class="mb-4">
+            <div class="mb-4 flex justify-between">
                 <button @click="goBack"
-                    class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow transition">
+                    class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow transition"
+                >
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
                     </svg>
                     Back
+                </button>
+                <button @click="goNextStep"
+                    :disabled="!canGoNext"
+                    class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg shadow transition"
+                >
+                    Next
                 </button>
             </div>
 
