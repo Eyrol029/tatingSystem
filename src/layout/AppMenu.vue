@@ -33,6 +33,9 @@ const model = [
             { label: 'Clinic Services', icon: 'pi pi-fw pi-book', to: '/uikit/PatientService', roles: [UserRole.PATIENT] }, 
             { label: 'My Medical Records', icon: 'pi pi-fw pi-file', to: '/uikit/PatientProfileview', roles: [UserRole.PATIENT] },
             { label: 'My Statement of Account', icon: 'pi pi-fw pi-file', to: '/uikit/MySOA', roles: [UserRole.PATIENT] },
+            { label: 'Referal Forms', icon: 'pi pi-fw pi-file', to: '/uikit/ClinicalReferralform', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
+            { label: 'Postpartum Care Form', icon: 'pi pi-fw pi-file', to: '/uikit/PostpartumCareform', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
+            { label: 'Laboratory Slip', icon: 'pi pi-fw pi-file', to: '/uikit/Laboratoryform', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
       ]   
     }
 ];

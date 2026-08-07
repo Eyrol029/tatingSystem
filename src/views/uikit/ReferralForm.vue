@@ -1,6 +1,40 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
+import axios from 'axios'
+
+const REFERRAL_API_URL = 'http://localhost:8080/api/referrals'
+
+async function handleSaveReferral() {
+  if (!patient.value) return
+
+  const payload = {
+    patientId: patient.value.id,
+    patientName: patient.value.name,
+    age: patient.value.age,
+    contact: patient.value.contact,
+    gestationalWeek: patient.value.gestationalWeek,
+    systolicBp: patient.value.vitals?.systolic,
+    diastolicBp: patient.value.vitals?.diastolic,
+    glucose: patient.value.vitals?.glucose,
+    fetalHeartRate: patient.value.vitals?.fetalHeartRate,
+    fetalGrowthPercentile: patient.value.vitals?.fetalGrowthPercentile,
+    riskFactors: (patient.value.riskFactors || patient.value.medicalHistory || []).join(', '),
+    hospitalName: referralForm.value.hospitalName,
+    obGyneName: referralForm.value.obGyneName,
+    obGyneContact: referralForm.value.obGyneContact,
+    notes: referralForm.value.notes
+  }
+
+  try {
+    const response = await axios.post(REFERRAL_API_URL, payload)
+    showSuccessMessage.value = true
+    successMessage.value = 'Referral saved to patient record successfully!'
+    setTimeout(() => (showSuccessMessage.value = false), 3000)
+  } catch (error) {
+    console.error('Failed to save referral', error)
+  }
+}
 
 const patient = ref(null);
 
