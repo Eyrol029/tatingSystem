@@ -36,15 +36,11 @@ function parseNumber(value) {
   return Number(normalized) || 0
 }
 
-// Detects placeholder text like "No services" / "SOA Service" that the
-// backend uses as a fallback label — these are not real clinical services
-// and should never be saved as if they were an actual availed service.
 function isPlaceholderServiceName(name) {
   const normalized = (name || '').trim().toLowerCase()
   return !normalized || normalized === 'no services' || normalized === 'soa service'
 }
 
-// Tries every likely casing/field name the backend might be using for the SOA's ID.
 function resolveSoaId(soa) {
   if (!soa) return null
   return (
@@ -58,7 +54,7 @@ function resolveSoaId(soa) {
   )
 }
 
-// New Balance = Total Amount minus already paid minus amount being paid now (gross, no discount yet)
+// New Balance = Total Amount minus already paid minus amount being paid now
 const paymentBalance = computed(() => {
   const total = parseNumber(paymentForm.value.totalAmount)
   const alreadyPaid = selectedSOA.value ? parseNumber(selectedSOA.value.amountPaid) : 0
@@ -66,7 +62,7 @@ const paymentBalance = computed(() => {
   return Math.max(0, total - alreadyPaid - paidNow)
 })
 
-// Total New Balance After Discount = New Balance minus whatever discount was entered
+// Total New Balance After Discount
 const totalNewBalanceAfterDiscount = computed(() => {
   const discount = parseNumber(paymentForm.value.discountAmount)
   return Math.max(0, paymentBalance.value - discount)
@@ -144,8 +140,6 @@ function onAddSoaServiceChange() {
   }
 }
 
-// Adds the currently-selected service (or custom entry) to the Availed Services list
-// for this payment session, and recalculates the running Total Amount.
 function addAvailedService() {
   if (selectedServiceId.value === 'custom') {
     if (!paymentForm.value.serviceName || !paymentForm.value.totalAmount) return
@@ -160,14 +154,11 @@ function addAvailedService() {
     availedServices.value.push({ name: service.name, amount: service.price })
   }
 
-  // Reset the picker so another service can be added right away
   selectedServiceId.value = ''
   paymentForm.value.serviceName = ''
   paymentForm.value.totalAmount = String(availedServicesTotal.value)
 }
 
-// Commits the current Discount Name/Amount into the Availed Services breakdown
-// as a negative-signed line item, then folds it into the running Total Amount.
 function addDiscount() {
   const amount = parseNumber(paymentForm.value.discountAmount)
   const name = paymentForm.value.discountName.trim()
@@ -181,10 +172,7 @@ function addDiscount() {
     isDiscount: true
   })
 
-  // Total Amount now reflects services minus discounts already applied
   paymentForm.value.totalAmount = String(availedServicesTotal.value)
-
-  // Clear the discount inputs so the same box can be reused for another discount
   paymentForm.value.discountName = ''
   paymentForm.value.discountAmount = ''
 }
@@ -197,11 +185,6 @@ function removeAvailedService(index) {
 async function loadSoaList() {
   try {
     const response = await axios.get(DASHBOARD_URL)
-
-    // TEMP DEBUG — check your browser Console tab after refreshing.
-    // Remove this line once you've confirmed the real ID field name.
-    console.log('RAW SOA DATA:', response.data)
-
     soaList.value = response.data.map((soa) => {
       const resolvedId = resolveSoaId(soa)
       return {
@@ -228,8 +211,40 @@ async function loadSoaList() {
   }
 }
 
-function openView(soa) {
-  selectedSOA.value = soa
+// UPDATE: Gi-konek ang View function aron mag-load sa tanang detalye ug service breakdown
+async function openView(soa) {
+  selectedSOA.value = { ...soa }
+  
+  // E-set ang default services gikan sa SOA record
+  availedServices.value = (soa.serviceName && !isPlaceholderServiceName(soa.serviceName))
+    ? [{ name: soa.serviceName, amount: soa.totalAmount || 0, isDiscount: false }]
+    : []
+
+  const soaId = resolveSoaId(soa)
+  if (soaId) {
+    try {
+      const response = await axios.get(`${INSTALLMENTS_URL}/soa/${soaId}`, {
+        params: { _: Date.now() },
+        headers: { 'Cache-Control': 'no-cache' }
+      })
+      const installments = response.data || []
+      const latest = installments.length ? installments[installments.length - 1] : null
+
+      if (latest?.serviceBreakdown) {
+        try {
+          const parsedBreakdown = JSON.parse(latest.serviceBreakdown)
+          if (Array.isArray(parsedBreakdown) && parsedBreakdown.length) {
+            availedServices.value = parsedBreakdown
+          }
+        } catch (parseError) {
+          console.error('Failed to parse saved service breakdown', parseError)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load saved installment breakdown', error)
+    }
+  }
+
   showViewModal.value = true
 }
 
@@ -252,8 +267,6 @@ async function openAddPayment(soa) {
   paymentForm.value.discountName = ''
   paymentForm.value.discountAmount = ''
 
-  // Default seed from whatever this SOA has on record — but skip placeholder
-  // labels like "No services" so they never get saved as a fake line item.
   availedServices.value = (soa.serviceName && !isPlaceholderServiceName(soa.serviceName))
     ? [{ name: soa.serviceName, amount: soa.totalAmount || 0, isDiscount: false }]
     : []
@@ -272,13 +285,11 @@ async function openAddPayment(soa) {
   paymentMessage.value = ''
   showPaymentModal.value = true
 
-  // Pull the last saved installment for this SOA (if any) to rebuild the
-  // exact Availed Services breakdown, including any discount line items.
   const soaId = resolveSoaId(soa)
   if (soaId) {
     try {
       const response = await axios.get(`${INSTALLMENTS_URL}/soa/${soaId}`, {
-        params: { _: Date.now() }, // cache-buster: forces the browser to always fetch fresh data
+        params: { _: Date.now() },
         headers: { 'Cache-Control': 'no-cache' }
       })
       const installments = response.data || []
@@ -398,10 +409,6 @@ async function addPayment() {
     }
   }
 
-  // Build a readable list of every service availed in this payment session,
-  // and separately list any discounts that were added to the breakdown.
-  // Placeholder labels like "No services" are excluded — they're not real
-  // services and shouldn't be saved as if they were.
   const serviceNames = availedServices.value
     .filter(s => !s.isDiscount && !isPlaceholderServiceName(s.name))
     .map(s => s.name)
@@ -411,7 +418,6 @@ async function addPayment() {
     .filter(s => s.isDiscount)
     .map(s => `${s.name} (-${formatCurrency(Math.abs(s.amount))})`)
 
-  // Include the discount box too, in case it wasn't clicked into the list yet
   if (discountAmount > 0 && paymentForm.value.discountName.trim()) {
     committedDiscounts.push(`${paymentForm.value.discountName} (-${formatCurrency(discountAmount)})`)
   }
@@ -421,9 +427,6 @@ async function addPayment() {
     : ''
 
   try {
-    // Build the full breakdown to persist: everything already in the list
-    // (minus any leftover placeholder entries), plus the discount box in
-    // case it wasn't clicked into the list yet.
     const finalBreakdown = availedServices.value.filter(
       s => s.isDiscount || !isPlaceholderServiceName(s.name)
     )
@@ -441,7 +444,7 @@ async function addPayment() {
 
     const payload = {
       amount: paidAmount,
-      totalAmount, // gross bill total (discount applied on top for display/notes only)
+      totalAmount,
       paymentDate: paymentForm.value.paymentDate ? new Date(paymentForm.value.paymentDate).toISOString() : null,
       paymentMethod: 'Cash',
       notes: `${serviceNames} - ${paymentForm.value.diagnosis}${discountNote}`,
@@ -453,9 +456,6 @@ async function addPayment() {
     await axios.post(`${BASE_URL}/${soaId}/payments`, payload)
     paymentMessage.value = 'Payment recorded successfully.'
 
-    // Automatically record this payment as Revenue — using ONLY the amount
-    // paid in THIS transaction (paidAmount), not the running total, since a
-    // patient can pay multiple times across several visits.
     if (paidAmount > 0) {
       try {
         await axios.post(REVENUE_URL, {
@@ -466,7 +466,6 @@ async function addPayment() {
           revenueDate: paymentForm.value.paymentDate || todayLocalDateString()
         })
       } catch (revenueError) {
-        // Don't block the payment flow if revenue logging fails — just warn.
         console.error('Payment saved, but failed to auto-record revenue', revenueError)
       }
     }
@@ -515,12 +514,6 @@ async function saveSOA() {
   }
 }
 
-function totalAmount(services) {
-  return services.reduce((sum, s) => sum + s.amount, 0)
-}
-
-// Returns today's date as YYYY-MM-DD using LOCAL time, not UTC — avoids the
-// off-by-one-day bug that .toISOString() causes for PH (UTC+8) users.
 function todayLocalDateString() {
   const now = new Date()
   const yyyy = now.getFullYear()
@@ -534,7 +527,6 @@ function formatCurrency(value) {
 }
 
 function searchPatient() {
-  // Computed filteredSoaList updates automatically when searchQuery changes.
   if (!searchQuery.value.trim()) {
     searchQuery.value = ''
   }
@@ -558,12 +550,6 @@ onMounted(() => {
       <div>
         <h2 class="text-2xl font-bold">Statement of Account</h2>
       </div>
-      <button
-        @click="showAddModal = true"
-        class="bg-blue-600 text-white px-4 py-2 rounded"
-      >
-        + Add SOA
-      </button>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-[1.5fr_auto] gap-3 mb-6">
@@ -626,35 +612,129 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- VIEW SOA MODAL -->
-    <div v-if="showViewModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div class="bg-gray-200 p-6 rounded-lg w-full max-w-3xl">
-        <h2 class="text-xl font-bold mb-4">Statement of Account</h2>
+    <!-- VIEW SOA MODAL (UPDATE: Pareho na ang sulod ug function sa SOA Modal) -->
+    <div v-if="showViewModal && selectedSOA" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+      <div class="bg-white p-6 rounded-lg w-full max-w-md border-2 border-blue-600 shadow-xl">
+        <h2 class="text-xl font-bold mb-2">Statement Of Account</h2>
+        <p class="text-sm text-gray-600 mb-4">Patient Statement & Billing Summary</p>
 
-        <p><strong>Patient:</strong> {{ selectedSOA.patientName }}</p>
-        <p><strong>Patient ID:</strong> {{ selectedSOA.patientId }}</p>
-        <p><strong>Diagnosis:</strong> {{ selectedSOA.otherDiagnosis }}</p>
-
-        <div class="mt-4 border rounded">
-          <div class="bg-gray-300 px-4 py-2 font-semibold flex justify-between">
-            <span>Service</span><span>Amount</span>
+        <div class="space-y-3">
+          <div class="flex justify-between text-sm">
+            <span class="font-semibold">Patient Name:</span>
+            <span>{{ selectedSOA.patientName }}</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="font-semibold">Patient ID:</span>
+            <span>{{ selectedSOA.patientId }}</span>
           </div>
 
-          <div v-for="(s, i) in selectedSOA.services" :key="i" class="flex justify-between px-4 py-2 border-t">
-            <span>{{ s.name }}</span>
-            <span>{{ formatCurrency(s.amount) }}</span>
+          <div v-if="availedServices.length" class="border rounded my-2">
+            <div class="bg-gray-100 px-3 py-1 font-semibold text-xs border-b">Availed Services</div>
+            <div
+              v-for="(s, i) in availedServices"
+              :key="i"
+              class="flex justify-between px-3 py-1 text-sm border-t border-gray-100"
+              :class="{ 'text-red-600': s.isDiscount }"
+            >
+              <span>{{ s.name }}<span v-if="s.isDiscount" class="text-xs italic"> (Discount)</span></span>
+              <span>{{ s.isDiscount ? '- ' : '' }}{{ formatCurrency(Math.abs(s.amount)) }}</span>
+            </div>
+          </div>
+          <div v-else class="flex justify-between text-sm">
+            <span class="font-semibold">Service:</span>
+            <span>{{ selectedSOA.serviceName || 'N/A' }}</span>
           </div>
 
-          <div class="flex justify-between px-4 py-2 font-bold bg-gray-100">
-            <span>Total</span>
-            <span>{{ formatCurrency(totalAmount(selectedSOA.services)) }}</span>
+          <div class="flex justify-between text-sm">
+            <span class="font-semibold">Diagnosis:</span>
+            <span>{{ selectedSOA.otherDiagnosis || 'N/A' }}</span>
+          </div>
+
+          <hr class="my-2" />
+
+          <div class="flex justify-between text-sm">
+            <span class="font-semibold">Total Amount:</span>
+            <span class="font-bold">{{ formatCurrency(selectedSOA.totalAmount) }}</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="font-semibold">Amount Paid:</span>
+            <span class="text-green-600">{{ formatCurrency(selectedSOA.amountPaid) }}</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="font-semibold">Remaining Balance:</span>
+            <span class="text-red-600 font-bold">{{ formatCurrency(selectedSOA.balanceAmount) }}</span>
           </div>
         </div>
 
-        <div class="flex justify-end mt-4 gap-2">
-          <button @click="closeView" class="px-5 py-2 bg-gray-700 text-white rounded">
+        <div class="flex justify-end gap-3 mt-6">
+          <button @click="printReceipt" class="bg-purple-600 text-white px-4 py-2 rounded text-sm hover:bg-purple-700">
+            Print SOA
+          </button>
+          <button @click="closeView" class="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300">
             Close
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOA MODAL (from within payment) -->
+    <div v-if="showSOAModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+      <div class="bg-white p-6 rounded-lg w-full max-w-md border-2 border-blue-600">
+        <h2 class="text-xl font-bold mb-4">Statement Of Account</h2>
+        <p class="text-sm text-gray-600 mb-3">This is the statement of account for the current payment details.</p>
+
+        <div class="space-y-3">
+          <div class="flex justify-between text-sm">
+            <span class="font-semibold">Patient</span>
+            <span>{{ selectedSOA?.patientName }}</span>
+          </div>
+
+          <div v-if="availedServices.length" class="border rounded">
+            <div class="bg-gray-100 px-3 py-1 font-semibold text-xs">Availed Services</div>
+            <div
+              v-for="(s, i) in availedServices"
+              :key="i"
+              class="flex justify-between px-3 py-1 border-t text-sm"
+              :class="{ 'text-red-600': s.isDiscount }"
+            >
+              <span>{{ s.name }}<span v-if="s.isDiscount" class="text-xs italic"> (Discount)</span></span>
+              <span>{{ s.isDiscount ? '- ' : '' }}{{ formatCurrency(Math.abs(s.amount)) }}</span>
+            </div>
+          </div>
+          <div v-else class="flex justify-between text-sm">
+            <span class="font-semibold">Service</span>
+            <span>{{ paymentForm.serviceName || selectedSOA?.serviceName || 'N/A' }}</span>
+          </div>
+
+          <div class="flex justify-between text-sm">
+            <span class="font-semibold">Diagnosis</span>
+            <span>{{ paymentForm.diagnosis || selectedSOA?.otherDiagnosis || 'N/A' }}</span>
+          </div>
+          <div v-if="parseNumber(paymentForm.discountAmount) > 0" class="flex justify-between text-sm text-red-600">
+            <span class="font-semibold">Discount ({{ paymentForm.discountName || 'Discount' }})</span>
+            <span>- {{ formatCurrency(parseNumber(paymentForm.discountAmount)) }}</span>
+          </div>
+          <div v-if="parseNumber(paymentForm.discountAmount) > 0" class="flex justify-between text-sm">
+            <span class="font-semibold">Total New Balance After Discount</span>
+            <span>{{ formatCurrency(totalNewBalanceAfterDiscount) }}</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="font-semibold">Amount Paid Now</span>
+            <span>{{ formatCurrency(parseNumber(paymentForm.paidAmount)) }}</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="font-semibold">Remaining Balance</span>
+            <span>{{ formatCurrency(paymentBalance) }}</span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="font-semibold">Payment Date</span>
+            <span>{{ paymentForm.paymentDate || 'Not set' }}</span>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-6">
+          <button @click="printReceipt" class="bg-purple-600 text-white px-4 py-2 rounded">Print SOA</button>
+          <button @click="closeSOAModal" class="bg-gray-200 text-gray-700 px-4 py-2 rounded">Close</button>
         </div>
       </div>
     </div>
@@ -663,7 +743,7 @@ onMounted(() => {
     <div v-if="showPaymentModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
       <div class="bg-white p-6 rounded-lg w-full max-w-2xl">
         <h2 class="text-xl font-bold mb-4">Patient Receipt Payment</h2>
-        <p class="mb-4 text-sm text-gray-600">Patient: {{ selectedSOA.patientName }}</p>
+        <p class="mb-4 text-sm text-gray-600">Patient: {{ selectedSOA?.patientName }}</p>
 
         <div class="grid grid-cols-1 gap-4">
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -843,69 +923,6 @@ onMounted(() => {
         </div>
 
         <p v-if="paymentMessage" class="mt-4 text-sm text-gray-700">{{ paymentMessage }}</p>
-      </div>
-    </div>
-
-    <!-- SOA MODAL (from within payment) -->
-    <div v-if="showSOAModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div class="bg-white p-6 rounded-lg w-full max-w-md border-2 border-blue-600">
-        <h2 class="text-xl font-bold mb-4">Statement Of Account</h2>
-        <p class="text-sm text-gray-600 mb-3">This is the statement of account for the current payment details.</p>
-
-        <div class="space-y-3">
-          <div class="flex justify-between text-sm">
-            <span class="font-semibold">Patient</span>
-            <span>{{ selectedSOA.patientName }}</span>
-          </div>
-
-          <div v-if="availedServices.length" class="border rounded">
-            <div class="bg-gray-100 px-3 py-1 font-semibold text-xs">Availed Services</div>
-            <div
-              v-for="(s, i) in availedServices"
-              :key="i"
-              class="flex justify-between px-3 py-1 border-t text-sm"
-              :class="{ 'text-red-600': s.isDiscount }"
-            >
-              <span>{{ s.name }}<span v-if="s.isDiscount" class="text-xs italic"> (Discount)</span></span>
-              <span>{{ s.isDiscount ? '- ' : '' }}{{ formatCurrency(Math.abs(s.amount)) }}</span>
-            </div>
-          </div>
-          <div v-else class="flex justify-between text-sm">
-            <span class="font-semibold">Service</span>
-            <span>{{ paymentForm.serviceName || selectedSOA.serviceName || 'N/A' }}</span>
-          </div>
-
-          <div class="flex justify-between text-sm">
-            <span class="font-semibold">Diagnosis</span>
-            <span>{{ paymentForm.diagnosis || selectedSOA.otherDiagnosis || 'N/A' }}</span>
-          </div>
-          <div v-if="parseNumber(paymentForm.discountAmount) > 0" class="flex justify-between text-sm text-red-600">
-            <span class="font-semibold">Discount ({{ paymentForm.discountName || 'Discount' }})</span>
-            <span>- {{ formatCurrency(parseNumber(paymentForm.discountAmount)) }}</span>
-          </div>
-          <div v-if="parseNumber(paymentForm.discountAmount) > 0" class="flex justify-between text-sm">
-            <span class="font-semibold">Total New Balance After Discount</span>
-            <span>{{ formatCurrency(totalNewBalanceAfterDiscount) }}</span>
-          </div>
-          <div class="flex justify-between text-sm">
-            <span class="font-semibold">Amount Paid Now</span>
-            <span>{{ formatCurrency(parseNumber(paymentForm.paidAmount)) }}</span>
-          </div>
-          <div class="flex justify-between text-sm">
-            <span class="font-semibold">Remaining Balance</span>
-            <span>{{ formatCurrency(paymentBalance) }}</span>
-          </div>
-          <div class="flex justify-between text-sm">
-            <span class="font-semibold">Payment Date</span>
-            <span>{{ paymentForm.paymentDate || 'Not set' }}</span>
-          </div>
-        </div>
-
-        <div class="flex justify-end gap-3 mt-6">
-          <button @click="printReceipt" class="bg-purple-600 text-white px-4 py-2 rounded">Print SOA
-          </button>
-          <button @click="closeSOAModal" class="bg-gray-200 text-gray-700 px-4 py-2 rounded">Close</button>
-        </div>
       </div>
     </div>
 
