@@ -16,26 +16,21 @@ if (!userStore.user) {
 }
 const isReadOnly = computed(() => userStore.userRole === UserRole.PATIENT);
 
+// ── Endpoints ────────────────────────────────────────────────────────────────
 const BASE = 'http://localhost:8080/api/familyplanning';
+const ACK_BASE = 'http://localhost:8080/api/familyplanning/acknowledgements';
 const PATIENT_SERVICE_BASE = 'http://localhost:8080/api/patient-services';
 const CALENDAR_BASE = 'http://localhost:8080/api/calendar';
 const PATIENTS_BASE = 'http://localhost:8080/api/patients';
 
-// ✅ Get both patientID and serviceId from route
+// Route Params
 const patientID = route.params.patientID;
-const serviceId = route.params.serviceId;  // specific service record
+const serviceId = route.params.serviceId;
 
 function goBack() {
     router.back();
 }
 
-// ── Date normalization ────────────────────────────────────────────────────
-// <input type="date"> only accepts an exact "YYYY-MM-DD" string. If the
-// backend returns a datetime string, a different date format, or anything
-// else, the input just silently renders blank — which is why dates like
-// LMP / date of last delivery / date of visit appeared empty even though
-// the rest of the record loaded fine. This normalizes any reasonable
-// incoming date value to the format <input type="date"> requires.
 function parseLocalDate(value) {
     if (!value) return null;
     const dateString = String(value).trim();
@@ -79,15 +74,7 @@ const submitStatus = ref({
     success: ''
 });
 
-// Tracks which sub-sections failed to save during the last submit, so
-// failures aren't silently swallowed behind a blanket "success" message.
 const failedSections = ref([]);
-
-// ── Calendar sync for Follow-up Date ─────────────────────────────────────────
-// The Calendar module has no foreign key back to a Family Planning record,
-// so we can't "update" a previously-created event — only avoid creating a
-// duplicate one. We do that by remembering what the follow-up date was when
-// the form loaded, and only pushing a new calendar event when it changes.
 const patientName = ref('');
 const originalFollowUpDate = ref('');
 
@@ -109,7 +96,7 @@ const formData = ref({
     age: '',
     occupation: '',
     civilStatus: '',
-    serviceID: serviceId ? Number(serviceId) : 1,  // ✅ use serviceId from route
+    serviceID: serviceId ? Number(serviceId) : 1,
     nhtsYes: false,
     nhtsNo: false,
     _4psMember: false,
@@ -221,15 +208,21 @@ const formData = ref({
                 reliableContraceptive: null
             }
         }
+    },
+    acknowledgement: {
+        acknowledgementId: null,
+        chosenMethod: '',
+        clientSignature: '',
+        clientSignatureDate: new Date().toISOString().split('T')[0],
+        wraConsentName: '',
+        parentSignature: '',
+        parentSignatureDate: ''
     }
 });
 
-// ── Service Provider — real Employees dropdown ───────────────────────────────
 const employeesList = ref([]);
 const selectedServiceProviderId = ref('');
 
-// Defensive: normalizes a few common response shapes (raw array, {data:[...]},
-// {employees:[...]}) so an empty dropdown is easy to diagnose.
 async function fetchEmployees() {
     try {
         const res = await axios.get('http://localhost:8080/api/employees');
@@ -238,10 +231,6 @@ async function fetchEmployees() {
             ? raw
             : (Array.isArray(raw?.data) ? raw.data
                 : (Array.isArray(raw?.employees) ? raw.employees : []));
-
-        if (!employeesList.value.length) {
-            console.warn('Employees list loaded but is empty. Raw response:', raw);
-        }
     } catch (e) {
         console.error('Failed to fetch employees list', e);
     }
@@ -260,8 +249,6 @@ function onServiceProviderChange() {
         : '';
 }
 
-// Tries to match a previously-saved provider name back to an employee in the
-// list, so the dropdown pre-selects correctly when viewing/editing a record.
 function matchServiceProviderToEmployee(name) {
     if (!name) return;
     const found = employeesList.value.find(
@@ -270,11 +257,6 @@ function matchServiceProviderToEmployee(name) {
     selectedServiceProviderId.value = found ? Number(found.employeeID) : 'custom';
 }
 
-// ── Sync the assigned service provider name back onto PatientService so it
-// displays correctly in the "Services Availed" tables (patient profile +
-// patient's own "My Services" view). PUT /api/patient-services has no /{id}
-// path — it requires the FULL PatientService object in the body — so we
-// fetch the current record first, merge in the new employeeName, then PUT it back.
 async function syncEmployeeNameToPatientService() {
     const providerName = formData.value.physical.sideB.serviceProvider;
     if (!providerName || !serviceId) return;
@@ -337,8 +319,8 @@ async function submitForm() {
             }
         } catch (e) { console.error('Spouse save error:', e); failedSections.value.push('Spouse info'); }
 
-        // 3. Save FamilyPlanningRecord — use serviceId from route
-        const savedRecord = await createFamilyPlanningRecord({
+        // 3. Save FamilyPlanningRecord
+        await createFamilyPlanningRecord({
             serviceID: serviceId ? Number(serviceId) : (formData.value.serviceID || 1),
             clientID,
             philHealthNumber: formData.value.philhealthNo || null,
@@ -418,12 +400,11 @@ async function submitForm() {
                 { id: 11, value: formData.value.medicalHistory.phenobarbital },
                 { id: 12, value: formData.value.medicalHistory.smoker },
             ];
-            // Delete existing detail records first, then re-insert every
-            // answered question (Yes AND No) so "No" isn't indistinguishable
-            // from "never answered" on reload.
+
             try {
                 await axios.delete(`${BASE}/medicalhistory/detail/medicalHistory/${medicalHistoryID}`);
-            } catch (e) { /* may 404 if none exist */ }
+            } catch (e) {}
+
             let medicalDetailFailed = false;
             for (const cond of medicalConditions) {
                 if (cond.value === true || cond.value === false) {
@@ -501,7 +482,6 @@ async function submitForm() {
             const existingPE = await axios.get(`${BASE}/physical-exam/client/${clientID}`);
             if (existingPE.data && existingPE.data.length > 0) {
                 pExamID = existingPE.data[existingPE.data.length - 1].pExamID;
-                // UPDATE existing physical exam record
                 await axios.put(`${BASE}/physical-exam`, {
                     pExamID,
                     clientID,
@@ -525,8 +505,7 @@ async function submitForm() {
                 pExamID = peRes.data.pExamID;
             }
 
-            // Delete existing sub-detail records first, then re-insert
-            try { await axios.delete(`${BASE}/skin/exam/${pExamID}`); } catch (e) { /* may 404 */ }
+            try { await axios.delete(`${BASE}/skin/exam/${pExamID}`); } catch (e) {}
             const skinConditions = [
                 { condition: 'normal', value: formData.value.physical.skin.normal },
                 { condition: 'pale', value: formData.value.physical.skin.pale },
@@ -540,7 +519,7 @@ async function submitForm() {
                 }
             }
 
-            try { await axios.delete(`${BASE}/conjunctiva/exam/${pExamID}`); } catch (e) { /* may 404 */ }
+            try { await axios.delete(`${BASE}/conjunctiva/exam/${pExamID}`); } catch (e) {}
             const conjunctivaConditions = [
                 { condition: 'normal', value: formData.value.physical.conjunctiva.normal },
                 { condition: 'pale', value: formData.value.physical.conjunctiva.pale },
@@ -553,7 +532,7 @@ async function submitForm() {
                 }
             }
 
-            try { await axios.delete(`${BASE}/neck/pExam/${pExamID}`); } catch (e) { /* may 404 */ }
+            try { await axios.delete(`${BASE}/neck/pExam/${pExamID}`); } catch (e) {}
             const neckConditions = [
                 { condition: 'normal', value: formData.value.physical.neck.normal },
                 { condition: 'neck mass', value: formData.value.physical.neck.neckMass },
@@ -566,7 +545,7 @@ async function submitForm() {
                 }
             }
 
-            try { await axios.delete(`${BASE}/breast/pExam/${pExamID}`); } catch (e) { /* may 404 */ }
+            try { await axios.delete(`${BASE}/breast/pExam/${pExamID}`); } catch (e) {}
             const breastConditions = [
                 { condition: 'normal', value: formData.value.physical.breast.normal },
                 { condition: 'mass', value: formData.value.physical.breast.mass },
@@ -579,7 +558,7 @@ async function submitForm() {
                 }
             }
 
-            try { await axios.delete(`${BASE}/abdomen/pExam/${pExamID}`); } catch (e) { /* may 404 */ }
+            try { await axios.delete(`${BASE}/abdomen/pExam/${pExamID}`); } catch (e) {}
             const abdomenConditions = [
                 { condition: 'normal', value: formData.value.physical.abdomen.normal },
                 { condition: 'abdominal mass', value: formData.value.physical.abdomen.abdominalMass },
@@ -592,7 +571,7 @@ async function submitForm() {
                 }
             }
 
-            try { await axios.delete(`${BASE}/extremities/pExam/${pExamID}`); } catch (e) { /* may 404 */ }
+            try { await axios.delete(`${BASE}/extremities/pExam/${pExamID}`); } catch (e) {}
             const extremitiesConditions = [
                 { condition: 'normal', value: formData.value.physical.extremities.normal },
                 { condition: 'edema', value: formData.value.physical.extremities.edema },
@@ -640,11 +619,7 @@ async function submitForm() {
             });
         } catch (e) { console.error('FpAssessmentRecord save error:', e); failedSections.value.push('FP assessment record'); }
 
-        // 10b. Sync Follow-up Date to the Calendar module. The Calendar
-        // module has no link back to this specific record, so we only
-        // create a new event when the follow-up date is set AND different
-        // from what was loaded — this avoids stacking up a duplicate event
-        // every time the form is re-saved with the same date.
+        // 10b. Calendar Sync
         const followUpDateFormatted = formatLocalDate(formData.value.physical.sideB.followUpDate);
         if (followUpDateFormatted && followUpDateFormatted !== originalFollowUpDate.value) {
             try {
@@ -657,8 +632,6 @@ async function submitForm() {
                         ? `Follow-up visit — method accepted: ${formData.value.physical.sideB.methodAccepted}`
                         : 'Family Planning follow-up visit'
                 });
-                // Update our tracked value so re-saving without further
-                // changes won't create another duplicate event.
                 originalFollowUpDate.value = followUpDateFormatted;
             } catch (e) {
                 console.error('Calendar sync error:', e);
@@ -680,8 +653,29 @@ async function submitForm() {
             });
         } catch (e) { console.error('PregnancyChecklist save error:', e); failedSections.value.push('Pregnancy checklist'); }
 
-        // 12. Sync assigned service provider name onto PatientService so it
-        // shows correctly in the "Services Availed" tables.
+        // 12. Save ACKNOWLEDGEMENT (FIXED ReferenceError HERE)
+        try {
+            const ackPayload = {
+                acknowledgementId: formData.value.acknowledgement.acknowledgementId || null,
+                clientID: Number(formData.value.clientId || patientID), // Fixed variable access
+                serviceID: serviceId ? Number(serviceId) : null,
+                chosenMethod: formData.value.acknowledgement.chosenMethod || null,
+                clientSignature: formData.value.acknowledgement.clientSignature || null,
+                clientSignatureDate: formatLocalDate(formData.value.acknowledgement.clientSignatureDate),
+                wraConsentName: formData.value.acknowledgement.wraConsentName || null,
+                parentSignature: formData.value.acknowledgement.parentSignature || null,
+                parentSignatureDate: formatLocalDate(formData.value.acknowledgement.parentSignatureDate)
+            };
+            const ackRes = await axios.post(ACK_BASE, ackPayload);
+            if (ackRes.data && ackRes.data.acknowledgementId) {
+                formData.value.acknowledgement.acknowledgementId = ackRes.data.acknowledgementId;
+            }
+        } catch (e) {
+            console.error('Acknowledgement save error:', e);
+            failedSections.value.push('Acknowledgement section');
+        }
+
+        // 13. Sync employee name to PatientService
         await syncEmployeeNameToPatientService();
 
         if (failedSections.value.length) {
@@ -712,40 +706,21 @@ function printForm() {
 onMounted(async () => {
     await fetchEmployees();
 
-    // ✅ Set clientId from route
     if (patientID) formData.value.clientId = String(patientID);
 
     const clientId = formData.value.clientId;
     if (!clientId) return;
 
     isViewMode.value = true;
-
     fetchPatientName(clientId);
 
-    // Tracks whether THIS specific service (serviceId) already has its own
-    // FamilyPlanningRecord saved. Most of the sections below (TypeOfClient,
-    // MedicalHistory, ObstetricalHistory, PhysicalExamination, etc.) are only
-    // ever queryable by clientID — the backend has no serviceID column on
-    // them. So if we always loaded them unconditionally, adding a brand NEW
-    // Family Planning service for a client who already has an OLDER visit on
-    // file would incorrectly pre-fill the new form with that old visit's
-    // data. Only run the "pull in existing data" steps when this exact
-    // service already has a record of its own.
     let hasRecordForThisService = false;
 
-    // ✅ Load FP Record — filter by serviceId so only THIS record loads
     try {
         const res = await axios.get(`${BASE}/records/client/${clientId}`);
         if (res.data && res.data.length > 0) {
-            // Find the record matching this specific serviceId
             let record = null;
             if (serviceId) {
-                // Multiple FamilyPlanningRecord rows can exist for the same
-                // service (every save creates a NEW row, never an update).
-                // .find() would grab the FIRST match in the array — usually
-                // the oldest, often-blank submission — instead of the most
-                // recent one. Pick the highest fpRecordID among matches so
-                // the newest data always wins.
                 const matches = res.data.filter(r => String(r.serviceID) === String(serviceId));
                 if (matches.length) {
                     record = matches.reduce((latest, current) =>
@@ -753,11 +728,6 @@ onMounted(async () => {
                     hasRecordForThisService = true;
                 }
             }
-            // Fallback to latest if not found by serviceId — this is only
-            // used to satisfy the "record" variable below for display
-            // purposes when nothing matches this service; it deliberately
-            // does NOT set hasRecordForThisService, so the rest of the form
-            // stays blank for a genuinely new service.
             if (!record) {
                 record = res.data[res.data.length - 1];
             }
@@ -776,308 +746,294 @@ onMounted(async () => {
         }
     } catch (e) { console.error('Failed to load FP record', e); }
 
-    // Everything below pulls in data that's only scoped by clientID (not by
-    // this specific service visit). Skip all of it for a brand-new service
-    // so the form starts blank instead of showing an older visit's answers.
     if (hasRecordForThisService) {
-    try {
-        const res = await axios.get(`${BASE}/typeofclient/client/${clientId}`);
-        if (res.data && res.data.length > 0) {
-            const t = res.data[res.data.length - 1];
-            formData.value.clientType.newAcceptor = t.isNewAcceptor || false;
-            formData.value.clientType.currentUser = t.isCurrentUser || false;
-            formData.value.clientType.changingMethod = t.isChangingMethod || false;
-            formData.value.clientType.changingClinic = t.isChangingClinic || false;
-            formData.value.clientType.dropoutRestart = t.isDropOutRestart || false;
-            formData.value.reasonSpacing = t.reasonForFp === 'Spacing';
-            formData.value.reasonLimiting = t.reasonForFp === 'Limiting';
-            formData.value.reasonOthers = t.reasonOtherDetails || '';
-            formData.value.medicalCondition = t.medicalCondition || false;
-            formData.value.sideEffects = t.changeReason || '';
+        try {
+            const res = await axios.get(`${BASE}/typeofclient/client/${clientId}`);
+            if (res.data && res.data.length > 0) {
+                const t = res.data[res.data.length - 1];
+                formData.value.clientType.newAcceptor = t.isNewAcceptor || false;
+                formData.value.clientType.currentUser = t.isCurrentUser || false;
+                formData.value.clientType.changingMethod = t.isChangingMethod || false;
+                formData.value.clientType.changingClinic = t.isChangingClinic || false;
+                formData.value.clientType.dropoutRestart = t.isDropOutRestart || false;
+                formData.value.reasonSpacing = t.reasonForFp === 'Spacing';
+                formData.value.reasonLimiting = t.reasonForFp === 'Limiting';
+                formData.value.reasonOthers = t.reasonOtherDetails || '';
+                formData.value.medicalCondition = t.medicalCondition || false;
+                formData.value.sideEffects = t.changeReason || '';
 
-            try {
-                const mRes = await axios.get(`${BASE}/methods/type/${t.typeID}`);
-                if (mRes.data) {
-                    const m = Array.isArray(mRes.data) ? mRes.data[0] : mRes.data;
-                    if (m) {
-                        formData.value.currentMethod.coc = m.coc || false;
-                        formData.value.currentMethod.iud = m.iud || false;
-                        formData.value.currentMethod.pop = m.pop || false;
-                        formData.value.currentMethod.injectable = m.injectable || false;
-                        formData.value.currentMethod.implant = m.implant || false;
-                        formData.value.currentMethod.interval = m.iudInterval || false;
-                        formData.value.currentMethod.postPartum = m.iudPostpartum || false;
-                        formData.value.currentMethod.condom = m.condom || false;
-                        formData.value.currentMethod.bom_ccm = m.bomCmm || false;
-                        formData.value.currentMethod.bbt = m.bbt || false;
-                        formData.value.currentMethod.stm = m.stm || false;
-                        formData.value.currentMethod.sdm = m.sdm || false;
-                        formData.value.currentMethod.lam = m.lam || false;
-                        formData.value.currentMethod.others = m.otherMethod || '';
-                    }
-                }
-            } catch (e) { console.error('Failed to load Method', e); }
-        }
-    } catch (e) { console.error('Failed to load TypeOfClient', e); }
-
-    // 3. Load MedicalHistory
-    try {
-        const res = await axios.get(`${BASE}/medicalhistory/client/${clientId}`);
-        if (res.data && res.data.length > 0) {
-            const m = res.data[res.data.length - 1];
-            formData.value.medicalHistory.disability = m.hasDisability || false;
-            formData.value.medicalHistory.disabilitySpecify = m.disabilityDescription || '';
-            try {
-                const detailRes = await axios.get(`${BASE}/medicalhistory/detail/medicalHistory/${m.medicalHistoryid}`);
-                if (detailRes.data) {
-                    // Map conditionID -> hasCondition (true/false). A row now
-                    // always represents an explicit answer (Yes or No); no
-                    // row at all means the question was never answered.
-                    const conditionAnswers = new Map(
-                        detailRes.data.map(d => [d.medicalConditionID, d.hasCondition])
-                    );
-                    const conditionMap = {
-                        1: 'severeHeadache', 2: 'strokeHistory', 3: 'hematoma',
-                        4: 'breastCancer', 5: 'chestPain', 6: 'cough',
-                        7: 'jaundice', 8: 'vaginalBleeding', 9: 'abnormalVaginalDischarge',
-                        10: 'abnormalPenileDischarge', 11: 'phenobarbital', 12: 'smoker'
-                    };
-                    for (const [id, key] of Object.entries(conditionMap)) {
-                        if (conditionAnswers.has(Number(id))) {
-                            const answer = conditionAnswers.get(Number(id));
-                            // Older rows saved before the hasCondition column
-                            // existed have no value here — treat those as
-                            // Yes, since only "Yes" rows used to be inserted.
-                            formData.value.medicalHistory[key] =
-                                answer === false ? false : true;
+                try {
+                    const mRes = await axios.get(`${BASE}/methods/type/${t.typeID}`);
+                    if (mRes.data) {
+                        const m = Array.isArray(mRes.data) ? mRes.data[0] : mRes.data;
+                        if (m) {
+                            formData.value.currentMethod.coc = m.coc || false;
+                            formData.value.currentMethod.iud = m.iud || false;
+                            formData.value.currentMethod.pop = m.pop || false;
+                            formData.value.currentMethod.injectable = m.injectable || false;
+                            formData.value.currentMethod.implant = m.implant || false;
+                            formData.value.currentMethod.interval = m.iudInterval || false;
+                            formData.value.currentMethod.postPartum = m.iudPostpartum || false;
+                            formData.value.currentMethod.condom = m.condom || false;
+                            formData.value.currentMethod.bom_ccm = m.bomCmm || false;
+                            formData.value.currentMethod.bbt = m.bbt || false;
+                            formData.value.currentMethod.stm = m.stm || false;
+                            formData.value.currentMethod.sdm = m.sdm || false;
+                            formData.value.currentMethod.lam = m.lam || false;
+                            formData.value.currentMethod.others = m.otherMethod || '';
                         }
-                        // else leave null (unanswered)
                     }
-                }
-            } catch (e) { console.error('Failed to load MedicalHistoryDetails', e); }
-        }
-    } catch (e) { console.error('Failed to load MedicalHistory', e); }
-
-    // 4. Load ObstetricalHistory
-    try {
-        const res = await axios.get(`${BASE}/obstetrical-history/client/${clientId}`);
-        if (res.data && res.data.length > 0) {
-            const o = res.data[res.data.length - 1];
-            formData.value.obstetric.numPregnancies = o.gravida || '';
-            formData.value.obstetric.para = o.para || '';
-            formData.value.obstetric.fullTerm = o.fullTerm || '';
-            formData.value.obstetric.premature = o.premature || '';
-            formData.value.obstetric.abortion = o.abortion || '';
-            formData.value.obstetric.livingChildren = o.livingChildren || '';
-            formData.value.obstetric.lastDeliveryDate = parseDateForForm(o.dateOfLastDelivery);
-            formData.value.obstetric.deliveryType = o.typeOfLastDelivery || '';
-            formData.value.obstetric.lastMenstrualStart = parseDateForForm(o.lastMenstrualPeriod);
-            formData.value.obstetric.previousMenstrualPeriod = parseDateForForm(o.previousMenstrualPeriod);
-            formData.value.obstetric.menstrualFlow = o.menstrualFlowType || '';
-
-            // Load obstetrical condition details (dysmenorrhea, hydatidiform mole, ectopic pregnancy)
-            try {
-                const ocdRes = await axios.get(`${BASE}/obstetrical-condition-detail/history/${o.obstetricalHistoryID}`);
-                if (ocdRes.data) {
-                    ocdRes.data.forEach(d => {
-                        if (d.obstetricConditionID === 1) formData.value.obstetric.dysmenorrhea = true;
-                        if (d.obstetricConditionID === 2) formData.value.obstetric.hydatidiformMole = true;
-                        if (d.obstetricConditionID === 3) formData.value.obstetric.ectopicPregnancy = true;
-                    });
-                }
-            } catch (e) { console.error('Failed to load ObstetricalConditionDetails', e); }
-        }
-    } catch (e) { console.error('Failed to load ObstetricalHistory', e); }
-
-    // 5. Load RiskForVAW
-    try {
-        const res = await axios.get(`${BASE}/risk-vaw/client/${clientId}`);
-        if (res.data && res.data.length > 0) {
-            const v = res.data[res.data.length - 1];
-            // Only set true/false if the field was explicitly saved; leave null if not
-            if (v.hasUnpleasantSituation === true) formData.value.vaw.unpleasantRelationship = true;
-            else if (v.hasUnpleasantSituation === false) formData.value.vaw.unpleasantRelationship = false;
-            if (v.partnerDisapproveVisit === true) formData.value.vaw.partnerDisapproval = true;
-            else if (v.partnerDisapproveVisit === false) formData.value.vaw.partnerDisapproval = false;
-            if (v.historyOfDomesticViolence === true) formData.value.vaw.domesticViolence = true;
-            else if (v.historyOfDomesticViolence === false) formData.value.vaw.domesticViolence = false;
-            const agencies = v.referredToAgency || '';
-            formData.value.vaw.referredTo.dswd = agencies.includes('DSWD');
-            formData.value.vaw.referredTo.wcpu = agencies.includes('WCPU');
-            formData.value.vaw.referredTo.ngos = agencies.includes("NGO's");
-        }
-    } catch (e) { console.error('Failed to load RiskForVAW', e); }
-
-    // 6. Load Spouse
-    try {
-        const res = await axios.get(`${BASE}/spouses/client/${clientId}`);
-        if (res.data && res.data.length > 0) {
-            const s = res.data[res.data.length - 1];
-            formData.value.spouseName = `${s.fName || ''} ${s.midInitial || ''} ${s.lName || ''}`.trim();
-            formData.value.birthDate = parseDateForForm(s.dateOfBirth);
-            formData.value.age = s.age || '';
-            formData.value.occupation = s.occupation || '';
-        }
-    } catch (e) { console.error('Failed to load Spouse', e); }
-
-    // 6b. Load Client (NHTS, 4PS Member)
-    try {
-        const res = await axios.get(`${BASE}/clients/${clientId}`);
-        if (res.data) {
-            formData.value.nhtsYes = res.data.nhts === 'Y';
-            formData.value.nhtsNo = res.data.nhts === 'N';
-            formData.value._4psMember = res.data.is4PSMember === 'Y';
-        }
-    } catch (e) { console.error('Failed to load Client', e); }
-
-    // 7. Load PhysicalExamination
-    try {
-        const res = await axios.get(`${BASE}/physical-exam/client/${clientId}`);
-        if (res.data && res.data.length > 0) {
-            const p = res.data[res.data.length - 1];
-            formData.value.physical.weight = p.weight || '';
-            formData.value.physical.height = p.height || '';
-            formData.value.physical.bloodPressure = p.bloodPressure || '';
-            formData.value.physical.pulseRate = p.pulseRate || '';
-            // Load service provider name from examinerName
-            if (p.examinerName) {
-                formData.value.physical.sideB.serviceProvider = p.examinerName;
+                } catch (e) { console.error('Failed to load Method', e); }
             }
+        } catch (e) { console.error('Failed to load TypeOfClient', e); }
 
-            try {
-                const skinRes = await axios.get(`${BASE}/skin/exam/${p.pExamID}`);
-                if (skinRes.data) {
-                    skinRes.data.forEach(s => {
-                        if (s.condition === 'normal') formData.value.physical.skin.normal = true;
-                        if (s.condition === 'pale') formData.value.physical.skin.pale = true;
-                        if (s.condition === 'yellowish') formData.value.physical.skin.yellowish = true;
-                        if (s.condition === 'hematoma') formData.value.physical.skin.hematoma = true;
-                    });
+        try {
+            const res = await axios.get(`${BASE}/medicalhistory/client/${clientId}`);
+            if (res.data && res.data.length > 0) {
+                const m = res.data[res.data.length - 1];
+                formData.value.medicalHistory.disability = m.hasDisability || false;
+                formData.value.medicalHistory.disabilitySpecify = m.disabilityDescription || '';
+                try {
+                    const detailRes = await axios.get(`${BASE}/medicalhistory/detail/medicalHistory/${m.medicalHistoryid}`);
+                    if (detailRes.data) {
+                        const conditionAnswers = new Map(
+                            detailRes.data.map(d => [d.medicalConditionID, d.hasCondition])
+                        );
+                        const conditionMap = {
+                            1: 'severeHeadache', 2: 'strokeHistory', 3: 'hematoma',
+                            4: 'breastCancer', 5: 'chestPain', 6: 'cough',
+                            7: 'jaundice', 8: 'vaginalBleeding', 9: 'abnormalVaginalDischarge',
+                            10: 'abnormalPenileDischarge', 11: 'phenobarbital', 12: 'smoker'
+                        };
+                        for (const [id, key] of Object.entries(conditionMap)) {
+                            if (conditionAnswers.has(Number(id))) {
+                                const answer = conditionAnswers.get(Number(id));
+                                formData.value.medicalHistory[key] = answer === false ? false : true;
+                            }
+                        }
+                    }
+                } catch (e) { console.error('Failed to load MedicalHistoryDetails', e); }
+            }
+        } catch (e) { console.error('Failed to load MedicalHistory', e); }
+
+        try {
+            const res = await axios.get(`${BASE}/obstetrical-history/client/${clientId}`);
+            if (res.data && res.data.length > 0) {
+                const o = res.data[res.data.length - 1];
+                formData.value.obstetric.numPregnancies = o.gravida || '';
+                formData.value.obstetric.para = o.para || '';
+                formData.value.obstetric.fullTerm = o.fullTerm || '';
+                formData.value.obstetric.premature = o.premature || '';
+                formData.value.obstetric.abortion = o.abortion || '';
+                formData.value.obstetric.livingChildren = o.livingChildren || '';
+                formData.value.obstetric.lastDeliveryDate = parseDateForForm(o.dateOfLastDelivery);
+                formData.value.obstetric.deliveryType = o.typeOfLastDelivery || '';
+                formData.value.obstetric.lastMenstrualStart = parseDateForForm(o.lastMenstrualPeriod);
+                formData.value.obstetric.previousMenstrualPeriod = parseDateForForm(o.previousMenstrualPeriod);
+                formData.value.obstetric.menstrualFlow = o.menstrualFlowType || '';
+
+                try {
+                    const ocdRes = await axios.get(`${BASE}/obstetrical-condition-detail/history/${o.obstetricalHistoryID}`);
+                    if (ocdRes.data) {
+                        ocdRes.data.forEach(d => {
+                            if (d.obstetricConditionID === 1) formData.value.obstetric.dysmenorrhea = true;
+                            if (d.obstetricConditionID === 2) formData.value.obstetric.hydatidiformMole = true;
+                            if (d.obstetricConditionID === 3) formData.value.obstetric.ectopicPregnancy = true;
+                        });
+                    }
+                } catch (e) { console.error('Failed to load ObstetricalConditionDetails', e); }
+            }
+        } catch (e) { console.error('Failed to load ObstetricalHistory', e); }
+
+        try {
+            const res = await axios.get(`${BASE}/risk-vaw/client/${clientId}`);
+            if (res.data && res.data.length > 0) {
+                const v = res.data[res.data.length - 1];
+                if (v.hasUnpleasantSituation === true) formData.value.vaw.unpleasantRelationship = true;
+                else if (v.hasUnpleasantSituation === false) formData.value.vaw.unpleasantRelationship = false;
+                if (v.partnerDisapproveVisit === true) formData.value.vaw.partnerDisapproval = true;
+                else if (v.partnerDisapproveVisit === false) formData.value.vaw.partnerDisapproval = false;
+                if (v.historyOfDomesticViolence === true) formData.value.vaw.domesticViolence = true;
+                else if (v.historyOfDomesticViolence === false) formData.value.vaw.domesticViolence = false;
+                const agencies = v.referredToAgency || '';
+                formData.value.vaw.referredTo.dswd = agencies.includes('DSWD');
+                formData.value.vaw.referredTo.wcpu = agencies.includes('WCPU');
+                formData.value.vaw.referredTo.ngos = agencies.includes("NGO's");
+            }
+        } catch (e) { console.error('Failed to load RiskForVAW', e); }
+
+        try {
+            const res = await axios.get(`${BASE}/spouses/client/${clientId}`);
+            if (res.data && res.data.length > 0) {
+                const s = res.data[res.data.length - 1];
+                formData.value.spouseName = `${s.fName || ''} ${s.midInitial || ''} ${s.lName || ''}`.trim();
+                formData.value.birthDate = parseDateForForm(s.dateOfBirth);
+                formData.value.age = s.age || '';
+                formData.value.occupation = s.occupation || '';
+            }
+        } catch (e) { console.error('Failed to load Spouse', e); }
+
+        try {
+            const res = await axios.get(`${BASE}/clients/${clientId}`);
+            if (res.data) {
+                formData.value.nhtsYes = res.data.nhts === 'Y';
+                formData.value.nhtsNo = res.data.nhts === 'N';
+                formData.value._4psMember = res.data.is4PSMember === 'Y';
+            }
+        } catch (e) { console.error('Failed to load Client', e); }
+
+        try {
+            const res = await axios.get(`${BASE}/physical-exam/client/${clientId}`);
+            if (res.data && res.data.length > 0) {
+                const p = res.data[res.data.length - 1];
+                formData.value.physical.weight = p.weight || '';
+                formData.value.physical.height = p.height || '';
+                formData.value.physical.bloodPressure = p.bloodPressure || '';
+                formData.value.physical.pulseRate = p.pulseRate || '';
+                if (p.examinerName) {
+                    formData.value.physical.sideB.serviceProvider = p.examinerName;
                 }
-            } catch (e) { console.error('Failed to load Skin', e); }
 
-            try {
-                const conjRes = await axios.get(`${BASE}/conjunctiva/exam/${p.pExamID}`);
-                if (conjRes.data) {
-                    conjRes.data.forEach(c => {
-                        if (c.condition === 'normal') formData.value.physical.conjunctiva.normal = true;
-                        if (c.condition === 'pale') formData.value.physical.conjunctiva.pale = true;
-                        if (c.condition === 'yellowish') formData.value.physical.conjunctiva.yellowish = true;
-                    });
-                }
-            } catch (e) { console.error('Failed to load Conjunctiva', e); }
+                try {
+                    const skinRes = await axios.get(`${BASE}/skin/exam/${p.pExamID}`);
+                    if (skinRes.data) {
+                        skinRes.data.forEach(s => {
+                            if (s.condition === 'normal') formData.value.physical.skin.normal = true;
+                            if (s.condition === 'pale') formData.value.physical.skin.pale = true;
+                            if (s.condition === 'yellowish') formData.value.physical.skin.yellowish = true;
+                            if (s.condition === 'hematoma') formData.value.physical.skin.hematoma = true;
+                        });
+                    }
+                } catch (e) { console.error('Failed to load Skin', e); }
 
-            try {
-                const neckRes = await axios.get(`${BASE}/neck/pExam/${p.pExamID}`);
-                if (neckRes.data) {
-                    neckRes.data.forEach(n => {
-                        if (n.condition === 'normal') formData.value.physical.neck.normal = true;
-                        if (n.condition === 'neck mass') formData.value.physical.neck.neckMass = true;
-                        if (n.condition === 'enlarged lymph nodes') formData.value.physical.neck.enlargedLymphNodes = true;
-                    });
-                }
-            } catch (e) { console.error('Failed to load Neck', e); }
+                try {
+                    const conjRes = await axios.get(`${BASE}/conjunctiva/exam/${p.pExamID}`);
+                    if (conjRes.data) {
+                        conjRes.data.forEach(c => {
+                            if (c.condition === 'normal') formData.value.physical.conjunctiva.normal = true;
+                            if (c.condition === 'pale') formData.value.physical.conjunctiva.pale = true;
+                            if (c.condition === 'yellowish') formData.value.physical.conjunctiva.yellowish = true;
+                        });
+                    }
+                } catch (e) { console.error('Failed to load Conjunctiva', e); }
 
-            try {
-                const breastRes = await axios.get(`${BASE}/breast/pExam/${p.pExamID}`);
-                if (breastRes.data) {
-                    breastRes.data.forEach(b => {
-                        if (b.condition === 'normal') formData.value.physical.breast.normal = true;
-                        if (b.condition === 'mass') formData.value.physical.breast.mass = true;
-                        if (b.condition === 'nipple discharge') formData.value.physical.breast.nippleDischarge = true;
-                    });
-                }
-            } catch (e) { console.error('Failed to load Breast', e); }
+                try {
+                    const neckRes = await axios.get(`${BASE}/neck/pExam/${p.pExamID}`);
+                    if (neckRes.data) {
+                        neckRes.data.forEach(n => {
+                            if (n.condition === 'normal') formData.value.physical.neck.normal = true;
+                            if (n.condition === 'neck mass') formData.value.physical.neck.neckMass = true;
+                            if (n.condition === 'enlarged lymph nodes') formData.value.physical.neck.enlargedLymphNodes = true;
+                        });
+                    }
+                } catch (e) { console.error('Failed to load Neck', e); }
 
-            try {
-                const abdRes = await axios.get(`${BASE}/abdomen/pExam/${p.pExamID}`);
-                if (abdRes.data) {
-                    abdRes.data.forEach(a => {
-                        if (a.condition === 'normal') formData.value.physical.abdomen.normal = true;
-                        if (a.condition === 'abdominal mass') formData.value.physical.abdomen.abdominalMass = true;
-                        if (a.condition === 'varicosities') formData.value.physical.abdomen.varicosities = true;
-                    });
-                }
-            } catch (e) { console.error('Failed to load Abdomen', e); }
+                try {
+                    const breastRes = await axios.get(`${BASE}/breast/pExam/${p.pExamID}`);
+                    if (breastRes.data) {
+                        breastRes.data.forEach(b => {
+                            if (b.condition === 'normal') formData.value.physical.breast.normal = true;
+                            if (b.condition === 'mass') formData.value.physical.breast.mass = true;
+                            if (b.condition === 'nipple discharge') formData.value.physical.breast.nippleDischarge = true;
+                        });
+                    }
+                } catch (e) { console.error('Failed to load Breast', e); }
 
-            try {
-                const extRes = await axios.get(`${BASE}/extremities/pExam/${p.pExamID}`);
-                if (extRes.data) {
-                    extRes.data.forEach(e => {
-                        if (e.condition === 'normal') formData.value.physical.extremities.normal = true;
-                        if (e.condition === 'edema') formData.value.physical.extremities.edema = true;
-                        if (e.condition === 'varicosities') formData.value.physical.extremities.varicosities = true;
-                    });
-                }
-            } catch (e) { console.error('Failed to load Extremities', e); }
+                try {
+                    const abdRes = await axios.get(`${BASE}/abdomen/pExam/${p.pExamID}`);
+                    if (abdRes.data) {
+                        abdRes.data.forEach(a => {
+                            if (a.condition === 'normal') formData.value.physical.abdomen.normal = true;
+                            if (a.condition === 'abdominal mass') formData.value.physical.abdomen.abdominalMass = true;
+                            if (a.condition === 'varicosities') formData.value.physical.abdomen.varicosities = true;
+                        });
+                    }
+                } catch (e) { console.error('Failed to load Abdomen', e); }
 
-            try {
-                const pelvicRes = await axios.get(`${BASE}/pelvic-examination/pExam/${p.pExamID}`);
-                // Backend returns a List<PelvicExamination>. Every submit
-                // creates a NEW row (POST, never update), so multiple rows
-                // can exist for the same pExamID — take the LAST one
-                // (most recently created), not the first, so the newest
-                // saved data wins instead of an old/blank submission.
-                const records = Array.isArray(pelvicRes.data) ? pelvicRes.data : [];
-                const pv = records.length ? records[records.length - 1] : null;
-                if (pv) {
-                    formData.value.physical.pelvicExam.cervicalConsistency = pv.cervicalConsistency || null;
-                    formData.value.physical.pelvicExam.cervicalTenderness = pv.cervicalTenderness || false;
-                    formData.value.physical.pelvicExam.adnexalMass = pv.adnexalMassTenderness || false;
-                    formData.value.physical.pelvicExam.uterinePosition = pv.uterinePosition || null;
-                    formData.value.physical.pelvicExam.uterineDepth = pv.uterineDepth || '';
-                    const conditions = pv.condition ? pv.condition.split(', ') : [];
-                    conditions.forEach(c => {
-                        if (c === 'normal') formData.value.physical.pelvicExam.normal = true;
-                        if (c === 'mass') formData.value.physical.pelvicExam.mass = true;
-                        if (c === 'abnormal discharge') formData.value.physical.pelvicExam.abnormalDischarge = true;
-                        if (c === 'warts') formData.value.physical.pelvicExam.warts = true;
-                        if (c === 'polyp or cyst') formData.value.physical.pelvicExam.polypCyst = true;
-                        if (c === 'inflammation or erosion') formData.value.physical.pelvicExam.inflammationErosion = true;
-                        if (c === 'bloody discharge') formData.value.physical.pelvicExam.bloodyDischarge = true;
-                    });
-                }
-            } catch (e) { console.error('Failed to load PelvicExamination', e); }
-        }
-    } catch (e) { console.error('Failed to load PhysicalExamination', e); }
+                try {
+                    const extRes = await axios.get(`${BASE}/extremities/pExam/${p.pExamID}`);
+                    if (extRes.data) {
+                        extRes.data.forEach(e => {
+                            if (e.condition === 'normal') formData.value.physical.extremities.normal = true;
+                            if (e.condition === 'edema') formData.value.physical.extremities.edema = true;
+                            if (e.condition === 'varicosities') formData.value.physical.extremities.varicosities = true;
+                        });
+                    }
+                } catch (e) { console.error('Failed to load Extremities', e); }
 
-    // 8. Load FpAssessmentRecord
-    try {
-        const res = await axios.get(`${BASE}/fpassessment/client/${clientId}`);
-        if (res.data && res.data.length > 0) {
-            const a = res.data[res.data.length - 1];
-            formData.value.physical.sideB.dateOfVisit = parseDateForForm(a.dateOfVisit) || new Date().toISOString().split('T')[0];
-            formData.value.physical.sideB.medicalFindings = a.medicalFindings || '';
-            formData.value.physical.sideB.methodAccepted = a.methodAccepted || '';
-            formData.value.physical.sideB.followUpDate = parseDateForForm(a.dateOfFollowUpVisit);
-            originalFollowUpDate.value = formData.value.physical.sideB.followUpDate;
-        }
-    } catch (e) { console.error('Failed to load FpAssessmentRecord', e); }
+                try {
+                    const pelvicRes = await axios.get(`${BASE}/pelvic-examination/pExam/${p.pExamID}`);
+                    const records = Array.isArray(pelvicRes.data) ? pelvicRes.data : [];
+                    const pv = records.length ? records[records.length - 1] : null;
+                    if (pv) {
+                        formData.value.physical.pelvicExam.cervicalConsistency = pv.cervicalConsistency || null;
+                        formData.value.physical.pelvicExam.cervicalTenderness = pv.cervicalTenderness || false;
+                        formData.value.physical.pelvicExam.adnexalMass = pv.adnexalMassTenderness || false;
+                        formData.value.physical.pelvicExam.uterinePosition = pv.uterinePosition || null;
+                        formData.value.physical.pelvicExam.uterineDepth = pv.uterineDepth || '';
+                        const conditions = pv.condition ? pv.condition.split(', ') : [];
+                        conditions.forEach(c => {
+                            if (c === 'normal') formData.value.physical.pelvicExam.normal = true;
+                            if (c === 'mass') formData.value.physical.pelvicExam.mass = true;
+                            if (c === 'abnormal discharge') formData.value.physical.pelvicExam.abnormalDischarge = true;
+                            if (c === 'warts') formData.value.physical.pelvicExam.warts = true;
+                            if (c === 'polyp or cyst') formData.value.physical.pelvicExam.polypCyst = true;
+                            if (c === 'inflammation or erosion') formData.value.physical.pelvicExam.inflammationErosion = true;
+                            if (c === 'bloody discharge') formData.value.physical.pelvicExam.bloodyDischarge = true;
+                        });
+                    }
+                } catch (e) { console.error('Failed to load PelvicExamination', e); }
+            }
+        } catch (e) { console.error('Failed to load PhysicalExamination', e); }
 
-    // 9. Load PregnancyChecklist
-    try {
-        const res = await axios.get(`${BASE}/pregnancychecklist/client/${clientId}`);
-        if (res.data && res.data.length > 0) {
-            const p = res.data[res.data.length - 1];
-            // Only set true/false if the field was explicitly saved; leave null if not
-            if (p.question1 === true) formData.value.physical.sideB.pregnancyCheck.isFullyBreastfeeding = true;
-            else if (p.question1 === false) formData.value.physical.sideB.pregnancyCheck.isFullyBreastfeeding = false;
-            if (p.question2 === true) formData.value.physical.sideB.pregnancyCheck.abstinence = true;
-            else if (p.question2 === false) formData.value.physical.sideB.pregnancyCheck.abstinence = false;
-            if (p.question3 === true) formData.value.physical.sideB.pregnancyCheck.babyInLast4Weeks = true;
-            else if (p.question3 === false) formData.value.physical.sideB.pregnancyCheck.babyInLast4Weeks = false;
-            if (p.question4 === true) formData.value.physical.sideB.pregnancyCheck.mensesInPast7Days = true;
-            else if (p.question4 === false) formData.value.physical.sideB.pregnancyCheck.mensesInPast7Days = false;
-            if (p.question5 === true) formData.value.physical.sideB.pregnancyCheck.miscarriageInPast7Days = true;
-            else if (p.question5 === false) formData.value.physical.sideB.pregnancyCheck.miscarriageInPast7Days = false;
-            if (p.question6 === true) formData.value.physical.sideB.pregnancyCheck.reliableContraceptive = true;
-            else if (p.question6 === false) formData.value.physical.sideB.pregnancyCheck.reliableContraceptive = false;
-        }
-    } catch (e) { console.error('Failed to load PregnancyChecklist', e); }
-    } // end if (hasRecordForThisService)
+        try {
+            const res = await axios.get(`${BASE}/fpassessment/client/${clientId}`);
+            if (res.data && res.data.length > 0) {
+                const a = res.data[res.data.length - 1];
+                formData.value.physical.sideB.dateOfVisit = parseDateForForm(a.dateOfVisit) || new Date().toISOString().split('T')[0];
+                formData.value.physical.sideB.medicalFindings = a.medicalFindings || '';
+                formData.value.physical.sideB.methodAccepted = a.methodAccepted || '';
+                formData.value.physical.sideB.followUpDate = parseDateForForm(a.dateOfFollowUpVisit);
+                originalFollowUpDate.value = formData.value.physical.sideB.followUpDate;
+            }
+        } catch (e) { console.error('Failed to load FpAssessmentRecord', e); }
 
-    // Now that both employees and the saved provider name are loaded,
-    // try to pre-select the matching employee in the dropdown.
+        try {
+            const res = await axios.get(`${BASE}/pregnancychecklist/client/${clientId}`);
+            if (res.data && res.data.length > 0) {
+                const p = res.data[res.data.length - 1];
+                if (p.question1 === true) formData.value.physical.sideB.pregnancyCheck.isFullyBreastfeeding = true;
+                else if (p.question1 === false) formData.value.physical.sideB.pregnancyCheck.isFullyBreastfeeding = false;
+                if (p.question2 === true) formData.value.physical.sideB.pregnancyCheck.abstinence = true;
+                else if (p.question2 === false) formData.value.physical.sideB.pregnancyCheck.abstinence = false;
+                if (p.question3 === true) formData.value.physical.sideB.pregnancyCheck.babyInLast4Weeks = true;
+                else if (p.question3 === false) formData.value.physical.sideB.pregnancyCheck.babyInLast4Weeks = false;
+                if (p.question4 === true) formData.value.physical.sideB.pregnancyCheck.mensesInPast7Days = true;
+                else if (p.question4 === false) formData.value.physical.sideB.pregnancyCheck.mensesInPast7Days = false;
+                if (p.question5 === true) formData.value.physical.sideB.pregnancyCheck.miscarriageInPast7Days = true;
+                else if (p.question5 === false) formData.value.physical.sideB.pregnancyCheck.miscarriageInPast7Days = false;
+                if (p.question6 === true) formData.value.physical.sideB.pregnancyCheck.reliableContraceptive = true;
+                else if (p.question6 === false) formData.value.physical.sideB.pregnancyCheck.reliableContraceptive = false;
+            }
+        } catch (e) { console.error('Failed to load PregnancyChecklist', e); }
+
+        // LOAD SAVED ACKNOWLEDGEMENT
+        try {
+            const url = serviceId ? `${ACK_BASE}/service/${serviceId}` : `${ACK_BASE}/client/${clientId}`;
+            const ackRes = await axios.get(url);
+            const ack = Array.isArray(ackRes.data) ? ackRes.data[ackRes.data.length - 1] : ackRes.data;
+            if (ack) {
+                formData.value.acknowledgement.acknowledgementId = ack.acknowledgementId || ack.acknowledgementID || null;
+                formData.value.acknowledgement.chosenMethod = ack.chosenMethod || '';
+                formData.value.acknowledgement.clientSignature = ack.clientSignature || '';
+                formData.value.acknowledgement.clientSignatureDate = parseDateForForm(ack.clientSignatureDate);
+                formData.value.acknowledgement.wraConsentName = ack.wraConsentName || '';
+                formData.value.acknowledgement.parentSignature = ack.parentSignature || '';
+                formData.value.acknowledgement.parentSignatureDate = parseDateForForm(ack.parentSignatureDate);
+            }
+        } catch (e) { console.error('Failed to load Acknowledgement', e); }
+    }
+
     matchServiceProviderToEmployee(formData.value.physical.sideB.serviceProvider);
 });
 </script>
@@ -1456,6 +1412,81 @@ onMounted(async () => {
                     </div>
                 </div>
                 </fieldset>
+                
+                        <!-- ACKNOWLEDGEMENT SECTION -->
+                        <div class="border-2 border-gray-800 p-6 mt-8 rounded bg-gray-50">
+                            <h3 class="font-bold text-base uppercase mb-3 border-b border-gray-300 pb-1 tracking-wider text-gray-900">
+                                ACKNOWLEDGEMENT:
+                            </h3>
+                            
+                            <p class="text-sm leading-relaxed text-gray-800 mb-6">
+                                This is to certify that the Physician/Nurse/Midwife of the clinic has fully explained to me the different methods available in family planning and I freely choose the
+                                <input 
+                                    v-model="formData.acknowledgement.chosenMethod" 
+                                    type="text" 
+                                    placeholder="e.g. COC / Injectable" 
+                                    class="inline-input font-semibold px-2 text-center border-b border-gray-800 focus:outline-none" 
+                                    style="min-width: 180px;"
+                                />
+                                method.
+                            </p>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                                <div class="text-center">
+                                    <input 
+                                        v-model="formData.acknowledgement.clientSignature" 
+                                        type="text" 
+                                        placeholder="Enter Client Name/Signature" 
+                                        class="w-full text-center border-b border-gray-800 pb-1 mb-1 focus:outline-none bg-transparent"
+                                    />
+                                    <p class="text-xs font-semibold text-gray-600 uppercase">Client Signature</p>
+                                </div>
+                                <div class="text-center">
+                                    <input 
+                                        v-model="formData.acknowledgement.clientSignatureDate" 
+                                        type="date" 
+                                        class="w-full text-center border-b border-gray-800 pb-1 mb-1 focus:outline-none bg-transparent"
+                                    />
+                                    <p class="text-xs font-semibold text-gray-600 uppercase">Date</p>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-gray-300 pt-4">
+                                <p class="text-xs font-bold text-gray-700 uppercase mb-3">For WRA below 18 yrs. Old:</p>
+                                
+                                <p class="text-sm leading-relaxed text-gray-800 mb-6">
+                                    I hereby consent 
+                                    <input 
+                                        v-model="formData.acknowledgement.wraConsentName" 
+                                        type="text" 
+                                        placeholder="Name of Client" 
+                                        class="inline-input font-semibold px-2 text-center border-b border-gray-800 focus:outline-none" 
+                                        style="min-width: 220px;"
+                                    />
+                                    to accept the Family Planning method.
+                                </p>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div class="text-center">
+                                        <input 
+                                            v-model="formData.acknowledgement.parentSignature" 
+                                            type="text" 
+                                            placeholder="Parent/Guardian Signature" 
+                                            class="w-full text-center border-b border-gray-800 pb-1 mb-1 focus:outline-none bg-transparent"
+                                        />
+                                        <p class="text-xs font-semibold text-gray-600 uppercase">Parent/Guardian Signature</p>
+                                    </div>
+                                    <div class="text-center">
+                                        <input 
+                                            v-model="formData.acknowledgement.parentSignatureDate" 
+                                            type="date" 
+                                            class="w-full text-center border-b border-gray-800 pb-1 mb-1 focus:outline-none bg-transparent"
+                                        />
+                                        <p class="text-xs font-semibold text-gray-600 uppercase">Date</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                 <!-- Side B -->
                 <div class="border-t-4 border-blue-600 pt-8 mt-12">
@@ -1502,22 +1533,6 @@ onMounted(async () => {
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label class="block text-sm font-semibold mb-1">Method Accepted</label>
-                                <select v-model="formData.physical.sideB.methodAccepted" class="w-full p-2 border rounded-md">
-                                    <option value="">-- Select method accepted --</option>
-                                    <option>COC</option>
-                                    <option>IUD</option>
-                                    <option>BOM/CCM</option>
-                                    <option>POP</option>
-                                    <option>Injectable</option>
-                                    <option>Implant</option>
-                                    <option>Condom</option>
-                                    <option>BBT</option>
-                                    <option>STM</option>
-                                    <option>SDM</option>
-                                    <option>LAM</option>
-                                    <option>Others</option>
-                                </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold mb-1">
@@ -1575,6 +1590,7 @@ onMounted(async () => {
                             </div>
                         </div>
                         </fieldset>
+                        <!-- Action Buttons -->
                         <div class="flex gap-4 mt-8 no-print">
                             <button v-if="!isReadOnly" type="submit" :disabled="submitStatus.loading" class="bg-blue-600 text-white px-8 py-3 rounded font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
                                 {{ submitStatus.loading ? 'Saving...' : 'SUBMIT RECORD' }}
@@ -1592,6 +1608,11 @@ onMounted(async () => {
 </template>
 
 <style>
+.inline-input {
+    background: transparent;
+    border-radius: 0;
+}
+
 @media print {
     .no-print, nav, aside, header, .sidebar, #sidebar { display: none !important; }
     body, html { margin: 0 !important; padding: 0 !important; background: white !important; }
@@ -1599,5 +1620,6 @@ onMounted(async () => {
     .max-w-screen { max-width: 100% !important; box-shadow: none !important; padding: 10px !important; }
     * { color: black !important; background: white !important; }
     input[type="checkbox"], input[type="radio"] { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    input[type="text"], input[type="date"] { border-bottom: 1px solid black !important; }
 }
 </style>

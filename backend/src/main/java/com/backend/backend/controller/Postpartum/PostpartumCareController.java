@@ -1,17 +1,27 @@
 package com.backend.backend.controller.Postpartum;
 
-import com.backend.backend.model.PostpartumCareRecord;
-import com.backend.backend.service.PostpartumCareService;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import com.backend.backend.model.Postpartum.PostpartumCareRecord;
+import com.backend.backend.service.Postpartum.PostpartumCareService;
 
 @RestController
 @RequestMapping("/api/postpartum")
-@CrossOrigin(origins = "http://localhost:5173") // Matches Vue dev server port
+@CrossOrigin(origins = "*") // Matches Vue dev server port
 public class PostpartumCareController {
 
     private final PostpartumCareService service;
@@ -20,7 +30,7 @@ public class PostpartumCareController {
     public PostpartumCareController(PostpartumCareService service) {
         this.service = service;
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping
     public ResponseEntity<List<PostpartumCareRecord>> getAllRecords(
             @RequestParam(required = false) Long serviceID) {
@@ -29,7 +39,7 @@ public class PostpartumCareController {
         }
         return ResponseEntity.ok(service.getAllRecords());
     }
-
+@CrossOrigin(origins = "*")
     @GetMapping("/{id}")
     public ResponseEntity<PostpartumCareRecord> getRecordById(@PathVariable Long id) {
         try {
@@ -38,7 +48,7 @@ public class PostpartumCareController {
             return ResponseEntity.notFound().build();
         }
     }
-
+@CrossOrigin(origins = "*")
     @PostMapping
     public ResponseEntity<?> createRecord(@RequestBody PostpartumCareRecord record) {
         try {
@@ -48,7 +58,7 @@ public class PostpartumCareController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
-
+@CrossOrigin(origins = "*")
     @PutMapping
     public ResponseEntity<?> updateRecordWithoutIdInPath(@RequestBody PostpartumCareRecord record) {
         if (record.getPostpartumRecordID() == null) {
@@ -61,7 +71,7 @@ public class PostpartumCareController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
-
+@CrossOrigin(origins = "*")
     @PutMapping("/{id}")
     public ResponseEntity<?> updateRecord(@PathVariable Long id, @RequestBody PostpartumCareRecord record) {
         try {
@@ -71,7 +81,7 @@ public class PostpartumCareController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
-
+@CrossOrigin(origins = "*")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRecord(@PathVariable Long id) {
         try {
