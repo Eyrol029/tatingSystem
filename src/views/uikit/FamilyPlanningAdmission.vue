@@ -31,6 +31,44 @@ function goBack() {
     router.back();
 }
 
+function handleReferPatient() {
+    const patientPayload = {
+        id: route.params.patientID || formData.value.clientId || null,
+        name: patientName.value || `Client ${route.params.patientID || formData.value.clientId || 'Unknown'}`,
+        age: formData.value.age ? Number(formData.value.age) : null,
+        contact: '',
+        gestationalWeek: '',
+        riskFactors: []
+    };
+
+    try {
+        localStorage.setItem('referral_patient', JSON.stringify(patientPayload));
+    } catch (e) {
+        console.warn('Could not persist referral patient context', e);
+    }
+
+    router.push({
+        path: '/uikit/ClinicalReferralform',
+        query: {
+            patientId: patientPayload.id || '',
+            patient: JSON.stringify(patientPayload)
+        }
+    });
+}
+
+function handleProceedToPayment() {
+    const patientId = Number(route.params.patientID || formData.value.clientId || route.query.patientId || 0);
+    if (!patientId) {
+        submitStatus.value.error = 'Patient ID is missing. Please reopen this form from the patient record.';
+        return;
+    }
+
+    router.push({
+        path: '/uikit/viewListOfSOA',
+        query: { patientId }
+    });
+}
+
 function parseLocalDate(value) {
     if (!value) return null;
     const dateString = String(value).trim();
@@ -1598,6 +1636,12 @@ onMounted(async () => {
                             <button v-if="!isReadOnly" @click="resetForm" type="button" class="bg-gray-200 px-8 py-3 rounded font-bold">RESET</button>
                             <button @click="printForm" type="button" class="bg-green-600 text-white px-8 py-3 rounded font-bold hover:bg-green-700 flex items-center gap-2">
                                 🖨️ PRINT / SAVE PDF
+                            </button>
+                            <button @click="handleReferPatient" type="button" class="bg-red-600 text-white px-8 py-3 rounded font-bold hover:bg-red-700 flex items-center gap-2">
+                                ↗ REFER PATIENT
+                            </button>
+                            <button v-if="!isReadOnly" @click="handleProceedToPayment" type="button" class="bg-amber-600 text-white px-8 py-3 rounded font-bold hover:bg-amber-700 flex items-center gap-2">
+                                → PROCEED TO PAYMENT
                             </button>
                         </div>
                     </div>

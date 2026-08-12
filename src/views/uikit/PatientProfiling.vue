@@ -173,6 +173,7 @@ function getDedicatedRoute(serviceName) {
     if (normalized === 'prenatal') return 'PrenatalAdmission';
     if (normalized === 'familyplanning') return 'FamilyPlanningAdmission';
     if (normalized === 'ultrasound') return 'UltrasoundAdmission';
+    if (normalized.includes('laboratory')) return 'Laboratoryform';
     if (normalized.includes('admi') || normalized.includes('lyingin')) return 'Admission';
     return null;
 }

@@ -295,7 +295,18 @@ const filteredPatients = computed(() => {
 })
 
 // ── Actions ───────────────────────────────────────────────────────────────────
-function handleViewPatientDetails(patient) { selectedPatient.value = patient }
+function handleViewPatientDetails(patient) {
+  if (patient?.riskStatus === 'high-risk') {
+    try { localStorage.setItem('referral_patient', JSON.stringify(patient)) } catch {}
+    router.push({
+      path: '/uikit/ClinicalReferralform',
+      query: { patientId: String(patient.patientID ?? patient.id), patient: JSON.stringify(patient), from: 'profile' }
+    })
+    return
+  }
+
+  selectedPatient.value = patient
+}
 function handleGenerateReferralClick(patient) { alertPatient.value = patient }
 function handleCloseAlert() { alertPatient.value = null }
 function handleViewDetails(id) {
@@ -307,7 +318,10 @@ function handleGenerateReferral(patientId) {
   const p = patients.value.find(p => p.id === patientId)
   if (p) {
     try { localStorage.setItem('referral_patient', JSON.stringify(p)) } catch {}
-    router.push({ path: '/uikit/ReferralForm', query: { patient: JSON.stringify(p) } })
+    router.push({
+      path: '/uikit/ClinicalReferralform',
+      query: { patientId: String(p.patientID ?? p.id), patient: JSON.stringify(p) }
+    })
   }
   alertPatient.value  = null
   selectedPatient.value = null
@@ -472,7 +486,7 @@ onMounted(loadPatients)
                       View
                     </button>
                     <button v-if="patient.riskStatus === 'high-risk'"
-                      @click="handleGenerateReferralClick(patient)"
+                      @click="handleGenerateReferral(patient.id)"
                       class="text-red-600 hover:text-red-800 font-medium text-sm hover:underline">
                       Refer
                     </button>

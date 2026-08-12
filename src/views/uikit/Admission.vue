@@ -12,6 +12,7 @@ const WARDS_URL       = 'http://localhost:8080/api/wards';
 const EMPLOYEES_URL   = 'http://localhost:8080/api/employees';
 const ADMISSIONS_URL  = 'http://localhost:8080/api/admissions';
 const SOA_URL         = 'http://localhost:8080/api/billing/soa';
+const CALENDAR_URL    = 'http://localhost:8080/api/calendar';
 const PATIENT_SERVICE_BASE = 'http://localhost:8080/api/patient-services';
 
 // ── Route params — tries multiple common param names since different routes
@@ -47,6 +48,7 @@ const currentStep = ref('arrival');
 const saving = ref(false);
 const loadingExisting = ref(true);
 const saveError = ref('');
+const followUpDate = ref(todayLocalDateString());
 
 // Backend-linked record IDs — populated as the workflow progresses
 const admissionId = ref(null);
@@ -374,6 +376,87 @@ function navigateToStep(step) {
     saveAdmission({ currentStep: step });
 }
 
+function todayLocalDateString() {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+async function scheduleFollowUp() {
+    const patientName = `${patientData.value.firstName || ''} ${patientData.value.lastName || ''}`.trim();
+    const chosenDate = followUpDate.value || todayLocalDateString();
+
+    if (!chosenDate) {
+        saveError.value = 'Please select a follow-up date.';
+        return;
+    }
+
+    saving.value = true;
+    saveError.value = '';
+
+    try {
+        await axios.post(`${CALENDAR_URL}/manual`, {
+            title: 'Follow-up Visit',
+            eventDate: chosenDate,
+            eventType: 'follow-up-visit',
+            patientId: patientId.value || patientID || null,
+            patientName: patientName || 'Patient',
+            description: `Follow-up consultation for ${patientName || 'patient'} after not ready for delivery.`
+        });
+
+        currentStep.value = 'discharged';
+        await saveAdmission({
+            currentStep: 'discharged',
+            dischargeDate: new Date().toISOString(),
+            followUpDate: chosenDate
+        });
+    } catch (error) {
+        console.error('Failed to save follow-up date to calendar', error);
+        saveError.value = 'Failed to save the follow-up date to the calendar.';
+    } finally {
+        saving.value = false;
+    }
+}
+
+function handleHighRiskReferral() {
+    const patientName = `${patientData.value.firstName || ''} ${patientData.value.lastName || ''}`.trim();
+    const referralPayload = {
+        id: patientId.value || patientID || null,
+        name: patientName || 'Patient',
+        age: patientData.value.age || null,
+        contact: '',
+        gestationalWeek: patientData.value.gestationalAge || '',
+        riskFactors: ['High risk identified']
+    };
+
+    try {
+        localStorage.setItem('referral_patient', JSON.stringify(referralPayload));
+    } catch (e) {
+        console.warn('Could not persist referral patient context', e);
+    }
+
+    router.push({
+        path: '/uikit/ClinicalReferralform',
+        query: {
+            patientId: referralPayload.id || '',
+            patient: JSON.stringify(referralPayload)
+        }
+    });
+}
+
+function handleProceedToPostpartum() {
+    router.push({
+        path: '/uikit/PostpartumCareform',
+        query: {
+            patientId: patientId.value || patientID || '',
+            serviceId: serviceId || '',
+            patientName: `${patientData.value.firstName || ''} ${patientData.value.lastName || ''}`.trim()
+        }
+    });
+}
+
 // ── Step 1: Arrival — uses the EXISTING patient from the route; no longer
 // creates a duplicate Patient record. Just confirms the name/age shown and
 // moves on, saving the Admission tied to this serviceId.
@@ -641,10 +724,24 @@ onMounted(async () => {
                                 <p>✓ Seek immediate care if bleeding or severe pain occurs</p>
                             </div>
                         </div>
-                        <button @click="resetProcess"
-                            class="w-full bg-gray-500 text-white py-3 rounded-lg hover:bg-gray-600 transition-colors font-semibold">
-                            Complete & Return
-                        </button>
+                        <div class="space-y-3">
+                            <label class="block text-sm font-medium text-gray-700">
+                                Follow-up Date
+                                <input v-model="followUpDate" type="date"
+                                    class="mt-1 w-full px-4 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent" />
+                            </label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <button @click="scheduleFollowUp"
+                                    :disabled="saving"
+                                    class="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {{ saving ? 'Saving…' : 'Schedule Follow-up' }}
+                                </button>
+                                <button @click="resetProcess"
+                                    class="w-full bg-gray-500 text-white py-3 rounded-lg hover:bg-gray-600 transition-colors font-semibold">
+                                    Complete & Return
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Admission Step -->
@@ -697,7 +794,7 @@ onMounted(async () => {
                         <div class="space-y-3">
                             <p class="font-medium text-gray-700">Risk Assessment:</p>
                             <div class="grid grid-cols-2 gap-3">
-                                <button @click="handleInputChange('isHighRisk', true); navigateToStep('referral')"
+                                <button @click="handleInputChange('isHighRisk', true); handleHighRiskReferral()"
                                     class="bg-red-500 text-white py-3 rounded-lg hover:bg-red-600 transition-colors font-semibold">
                                     High Risk Identified
                                 </button>
@@ -743,7 +840,7 @@ onMounted(async () => {
                                 rows="5"
                             ></textarea>
                         </div>
-                        <button @click="navigateToStep('postpartum')"
+                        <button @click="handleProceedToPostpartum()"
                             class="w-full bg-indigo-500 text-white py-3 rounded-lg hover:bg-indigo-600 transition-colors font-semibold">
                             Delivery Complete - Proceed to Postpartum Care
                         </button>

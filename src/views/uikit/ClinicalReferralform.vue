@@ -1,8 +1,112 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
+const route = useRoute()
 const router = useRouter()
+
+function getPatientId() {
+  const direct = route.params.patientId || route.params.id || route.query.patientId || route.query.id
+  if (direct) return String(direct)
+
+  try {
+    const stored = localStorage.getItem('referral_patient')
+    if (!stored) return 'anonymous'
+    const parsed = JSON.parse(stored)
+    return String(parsed?.id || parsed?.patientID || 'anonymous')
+  } catch {
+    return 'anonymous'
+  }
+}
+
+function getStorageKey() {
+  return `clinical_referral_${getPatientId()}`
+}
+
+function parsePatientPayload(value) {
+  if (!value) return null
+  if (typeof value === 'object') return value
+  if (typeof value === 'string') {
+    const raw = value.trim()
+    if (!raw) return null
+    try {
+      return JSON.parse(raw)
+    } catch {
+      try {
+        return JSON.parse(decodeURIComponent(raw))
+      } catch {
+        return null
+      }
+    }
+  }
+  return null
+}
+
+function applyPatientContext() {
+  const patientPayload = parsePatientPayload(route.query.patient)
+  if (!patientPayload) return
+
+  const fullName = patientPayload.name || [patientPayload.fName, patientPayload.middleI, patientPayload.lName].filter(Boolean).join(' ')
+  const names = fullName ? fullName.trim().split(/\s+/) : []
+
+  if (names.length >= 3) {
+    form.value.patient.surname = names[0]
+    form.value.patient.firstName = names[1]
+    form.value.patient.middleName = names.slice(2).join(' ')
+  } else if (names.length === 2) {
+    form.value.patient.surname = names[0]
+    form.value.patient.firstName = names[1]
+  } else if (names.length === 1) {
+    form.value.patient.firstName = names[0]
+  }
+
+  if (patientPayload.address) {
+    form.value.patient.address = patientPayload.address
+  }
+
+  if (patientPayload.age != null && patientPayload.age !== '') {
+    form.value.age = String(patientPayload.age)
+  }
+}
+
+function loadSavedReferral() {
+  try {
+    const saved = localStorage.getItem(getStorageKey())
+    if (!saved) return
+
+    const parsed = JSON.parse(saved)
+    if (!parsed) return
+
+    Object.assign(form.value, parsed)
+    if (parsed.patient) {
+      form.value.patient = { ...form.value.patient }
+    }
+  } catch (error) {
+    console.warn('No saved referral found for this patient.', error)
+  }
+}
+
+function saveAndReturn() {
+  try {
+    localStorage.setItem(getStorageKey(), JSON.stringify(form.value))
+  } catch (error) {
+    console.warn('Unable to save referral draft.', error)
+  }
+
+  const patientId = route.params.patientId || route.params.id || route.query.patientId || route.query.id
+
+  if (window.history.length > 1) {
+    router.back()
+    return
+  }
+
+  if (patientId) {
+    router.push(`/uikit/PatientProfiling/${patientId}`)
+    return
+  }
+
+  router.push('/uikit/Patient')
+}
 
 function goBack() { router.back() }
 function printForm() { window.print() }
@@ -72,17 +176,28 @@ const form = ref({
     ackDateTime: ''
   }
 })
+onMounted(() => {
+  applyPatientContext()
+  loadSavedReferral()
+})
 </script>
 
 <template>
   <!-- Toolbar -->
-  <div class="no-print max-w-screen mx-auto px-6 pt-6 flex items-center gap-3">
+  <div class="no-print max-w-screen mx-auto px-6 pt-6 flex items-center gap-3 flex-wrap">
     <button @click="goBack"
       class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow transition">
       <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
       </svg>
       Back
+    </button>
+    <button @click="saveAndReturn"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow transition">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 3" />
+      </svg>
+      Save &amp; Return
     </button>
     <button @click="printForm"
       class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow transition">

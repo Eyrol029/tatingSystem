@@ -28,6 +28,49 @@ const serviceId = route.params.serviceId  // ← specific service record
 
 
 function goBack() { router.back() }
+function handleReferPatient() {
+  const patientPayload = {
+    id: clientId ? Number(clientId) : null,
+    name: patientName.value || `Client ${clientId || 'Unknown'}`,
+    age: null,
+    contact: '',
+    gestationalWeek: form.value.gpal || '',
+    riskFactors: [
+      ...(obstetricHighRisk.value ? ['Obstetric risk factors'] : []),
+      ...(medicalHighRisk.value ? ['Medical risk factors'] : []),
+      ...(labHighRisk.value ? ['Abnormal lab results'] : []),
+      ...(referralHighRisk.value ? ['Referral hospital marked'] : []),
+      ...(visitHighRisk.value ? ['Abnormal follow-up visit findings'] : [])
+    ]
+  }
+
+  try {
+    localStorage.setItem('referral_patient', JSON.stringify(patientPayload))
+  } catch (e) {
+    console.warn('Could not persist referral patient context', e)
+  }
+
+  router.push({
+    path: '/uikit/ClinicalReferralform',
+    query: {
+      patientId: patientPayload.id || '',
+      patient: JSON.stringify(patientPayload)
+    }
+  })
+}
+
+function handleProceedToPayment() {
+  const patientId = Number(clientId || route.query.patientId || 0)
+  if (!patientId) {
+    submitStatus.value.error = 'Patient ID is missing. Please reopen this form from the patient record.'
+    return
+  }
+
+  router.push({
+    path: '/uikit/viewListOfSOA',
+    query: { patientId }
+  })
+}
 function handleBeforePrint() { document.body.classList.add('printing-prenatal') }
 function handleAfterPrint()  { document.body.classList.remove('printing-prenatal') }
 
@@ -41,6 +84,7 @@ const submitStatus = ref({ loading: false, error: '', success: '' })
 const riskResult   = ref(null)
 const riskLoading  = ref(false)
 const employeesList = ref([])
+const patientName = ref('')
 
 
 const onAttendingStaffChange = () => {
@@ -205,6 +249,19 @@ async function fetchEmployees() {
   }
 }
 
+async function fetchPatientName() {
+  if (!clientId) return
+
+  try {
+    const res = await axios.get(`http://localhost:8080/api/patients/${clientId}`)
+    const patient = res.data || {}
+    patientName.value = `${patient.fName || ''} ${patient.lName || ''}`.trim() || `Client ${clientId}`
+  } catch (error) {
+    console.error('Failed to load patient name for referral:', error)
+    patientName.value = `Client ${clientId}`
+  }
+}
+
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 onMounted(async () => {
@@ -213,6 +270,7 @@ onMounted(async () => {
 
 
   await fetchEmployees()
+  await fetchPatientName()
 
 
   if (serviceId) {
@@ -789,6 +847,13 @@ async function submitForm() {
       </svg>
       Print / Save as PDF
     </button>
+    <button @click="handleReferPatient"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg shadow transition">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h10v10H7zM7 12h10M12 7v10" />
+      </svg>
+      Refer Patient
+    </button>
 
 
     <!-- View-only banner for Patient accounts -->
@@ -1283,6 +1348,10 @@ async function submitForm() {
       <button @click="submitForm" :disabled="submitStatus.loading"
         class="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition shadow disabled:opacity-50 disabled:cursor-not-allowed">
         {{ submitStatus.loading ? 'Saving...' : 'SAVE COMPLETE PRENATAL RECORD' }}
+      </button>
+      <button @click="handleProceedToPayment" type="button"
+        class="w-full bg-amber-600 text-white py-3 rounded-lg font-bold hover:bg-amber-700 transition shadow">
+        PROCEED TO PAYMENT
       </button>
     </div>
   </div>

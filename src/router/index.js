@@ -48,6 +48,7 @@ const routes = [
             { path: 'uikit/MySOA/:patientID/', component: () => import('@/views/uikit/MySOA.vue') },
             { path: 'uikit/ClinicalReferralform', component: () => import('@/views/uikit/ClinicalReferralform.vue') },
             { path: 'uikit/PostpartumCareform', component: () => import('@/views/uikit/PostpartumCareform.vue') },
+            { path: 'uikit/Laboratoryform/:patientID/:serviceId', component: () => import('@/views/uikit/Laboratoryform.vue') },
             { path: 'uikit/Laboratoryform', component: () => import('@/views/uikit/Laboratoryform.vue') },
         ]
     },

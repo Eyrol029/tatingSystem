@@ -254,7 +254,7 @@ function closeView() {
 
 function goToPaymentDashboard(soa) {
   if (!soa.patientId) return
-  router.push({ path: '/uikit/PaymentDashboard', query: { patientId: soa.patientId } })
+  router.push({ path: '/uikit/viewListOfSOA', query: { patientId: soa.patientId } })
 }
 
 async function openAddPayment(soa) {
@@ -472,6 +472,7 @@ async function addPayment() {
 
     await loadSoaList()
     showPaymentModal.value = false
+    router.push({ path: '/uikit/viewListOfSOA', query: { patientId: selectedSOA.value?.patientId || undefined } })
   } catch (error) {
     console.error('Failed to record payment', error)
     paymentMessage.value = error.response?.data || error.message || 'Unable to record payment.'

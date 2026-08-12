@@ -1,10 +1,15 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+
+const route = useRoute()
+const router = useRouter()
 
 // API Endpoint for Laboratory Requests
 const LAB_REQUEST_URL = 'http://localhost:8080/api/laboratory-requests'
 const PATIENT_SERVICE_BASE = 'http://localhost:8080/api/patient-services'
+const PATIENTS_URL = 'http://localhost:8080/api/patients'
 
 // Header / Clinic Information
 const clinicInfo = ref({
@@ -58,36 +63,9 @@ function handlePrint() {
   window.print()
 }
 
-function resetForm() {
-  formData.value = {
-    date: todayLocalDateString(),
-    patientName: '',
-    address: '',
-    age: '',
-    sex: '',
-    birthDate: '',
-    diagnosis: '',
-    selectedTests: []
-  }
-  statusMessage.value = ''
-  isError.value = false
-}
+async function saveAndReturnToProfile() {
+  const patientId = route.params.patientID || route.params.id
 
-// Auto-compute Age when Birth Date changes
-function onBirthDateChange() {
-  if (!formData.value.birthDate) return
-  const birth = new Date(formData.value.birthDate)
-  const today = new Date()
-  let age = today.getFullYear() - birth.getFullYear()
-  const monthDiff = today.getMonth() - birth.getMonth()
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-    age--
-  }
-  formData.value.age = age >= 0 ? String(age) : ''
-}
-
-// BACKEND INTEGRATION: Save Laboratory Request to Spring Boot API
-async function saveLaboratoryRequest() {
   if (!formData.value.patientName.trim()) {
     statusMessage.value = 'Please enter the patient name.'
     isError.value = true
@@ -116,10 +94,15 @@ async function saveLaboratoryRequest() {
   }
 
   try {
-    const response = await axios.post(LAB_REQUEST_URL, payload)
-    console.log('Saved Laboratory Request:', response.data)
+    await axios.post(LAB_REQUEST_URL, payload)
     statusMessage.value = 'Laboratory Request saved successfully!'
     isError.value = false
+
+    if (patientId) {
+      router.push(`/uikit/PatientProfiling/${patientId}`)
+    } else {
+      router.push('/uikit/PatientsMain')
+    }
   } catch (error) {
     console.error('Failed to save laboratory request:', error)
     statusMessage.value = error.response?.data || 'Unable to save laboratory request to database.'
@@ -127,6 +110,135 @@ async function saveLaboratoryRequest() {
   } finally {
     isSubmitting.value = false
   }
+}
+
+function handleProceedToPayment() {
+  const patientId = Number(route.params.patientID || route.params.id || 0)
+  if (!patientId) {
+    statusMessage.value = 'Patient ID is missing. Please reopen this form from the patient record.'
+    isError.value = true
+    return
+  }
+
+  router.push({
+    path: '/uikit/viewListOfSOA',
+    query: { patientId }
+  })
+}
+
+function resetForm() {
+  const patientName = formData.value.patientName || ''
+  const address = formData.value.address || ''
+  const age = formData.value.age || ''
+  const sex = formData.value.sex || ''
+  const birthDate = formData.value.birthDate || ''
+
+  formData.value = {
+    date: todayLocalDateString(),
+    patientName,
+    address,
+    age,
+    sex,
+    birthDate,
+    diagnosis: '',
+    selectedTests: []
+  }
+  statusMessage.value = ''
+  isError.value = false
+}
+
+async function loadPatientFromRoute() {
+  const patientId = route.params.patientID || route.params.id;
+  if (!patientId) return;
+
+  try {
+    const response = await axios.get(`${PATIENTS_URL}/${patientId}`);
+    const patient = response.data || {};
+
+    const fullName = [patient.fName, patient.middleI, patient.lName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+    const addressParts = [patient.houseNo, patient.street, patient.barangay, patient.municipality, patient.province]
+      .filter(value => value !== null && value !== undefined && value !== '')
+      .map(value => String(value).trim());
+
+    if (fullName) {
+      formData.value.patientName = fullName;
+    }
+
+    if (addressParts.length) {
+      formData.value.address = addressParts.join(', ');
+    }
+
+    if (patient.age !== undefined && patient.age !== null && patient.age !== '') {
+      formData.value.age = String(patient.age);
+    }
+
+    if (patient.bDate) {
+      formData.value.birthDate = patient.bDate;
+    }
+
+    await loadExistingLaboratoryRequest(fullName);
+  } catch (error) {
+    console.error('Failed to load patient details for laboratory form:', error);
+  }
+}
+
+async function loadExistingLaboratoryRequest(patientName) {
+  const name = (patientName || formData.value.patientName || '').trim();
+  if (!name) return;
+
+  try {
+    const response = await axios.get(LAB_REQUEST_URL, {
+      params: { patientName: name }
+    });
+
+    const requests = Array.isArray(response.data) ? response.data : [];
+    if (!requests.length) return;
+
+    const latest = [...requests].sort((a, b) => {
+      const aTime = a.id || a.requestDate ? new Date(a.requestDate || 0).getTime() : 0;
+      const bTime = b.id || b.requestDate ? new Date(b.requestDate || 0).getTime() : 0;
+      return bTime - aTime;
+    })[0];
+
+    if (!latest) return;
+
+    formData.value.date = latest.requestDate || formData.value.date;
+    formData.value.patientName = latest.patientName || formData.value.patientName;
+    formData.value.address = latest.address || formData.value.address;
+    formData.value.age = latest.age !== null && latest.age !== undefined ? String(latest.age) : formData.value.age;
+    formData.value.sex = latest.sex || formData.value.sex;
+    formData.value.birthDate = latest.birthDate || formData.value.birthDate;
+    formData.value.diagnosis = latest.diagnosis || formData.value.diagnosis;
+    formData.value.selectedTests = Array.isArray(latest.selectedTests) ? [...latest.selectedTests] : [];
+  } catch (error) {
+    console.error('Failed to load previous laboratory request for this patient:', error);
+  }
+}
+
+onMounted(() => {
+  loadPatientFromRoute();
+});
+
+// Auto-compute Age when Birth Date changes
+function onBirthDateChange() {
+  if (!formData.value.birthDate) return
+  const birth = new Date(formData.value.birthDate)
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const monthDiff = today.getMonth() - birth.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--
+  }
+  formData.value.age = age >= 0 ? String(age) : ''
+}
+
+// BACKEND INTEGRATION: Save Laboratory Request to Spring Boot API
+async function saveLaboratoryRequest() {
+  await saveAndReturnToProfile()
 }
 </script>
 
@@ -280,7 +392,15 @@ async function saveLaboratoryRequest() {
           type="button"
           class="px-5 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 font-medium shadow transition flex items-center gap-2 disabled:opacity-50"
         >
-          {{ isSubmitting ? 'Saving...' : 'Save Request' }}
+          {{ isSubmitting ? 'Saving...' : 'Save & Return' }}
+        </button>
+
+        <button
+          @click="handleProceedToPayment"
+          type="button"
+          class="px-5 py-2 bg-amber-600 text-white rounded text-sm hover:bg-amber-700 font-medium shadow transition flex items-center gap-2"
+        >
+          → PROCEED TO PAYMENT
         </button>
 
         <button

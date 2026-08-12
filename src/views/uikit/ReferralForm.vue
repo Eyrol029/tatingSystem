@@ -4,6 +4,51 @@ import { useRoute } from 'vue-router';
 import axios from 'axios'
 
 const REFERRAL_API_URL = 'http://localhost:8080/api/referrals'
+const PATIENT_API_URL = 'http://localhost:8080/api/patients'
+
+function parsePatientPayload(value) {
+  if (!value) return null
+
+  if (typeof value === 'object') return value
+
+  if (typeof value === 'string') {
+    const raw = value.trim()
+    if (!raw) return null
+
+    try {
+      return JSON.parse(raw)
+    } catch {
+      try {
+        return JSON.parse(decodeURIComponent(raw))
+      } catch {
+        return null
+      }
+    }
+  }
+
+  return null
+}
+
+async function fetchPatientById(id) {
+  if (!id) return
+
+  try {
+    const res = await axios.get(`${PATIENT_API_URL}/${id}`)
+    const patientData = res.data || null
+    if (patientData) {
+      setPatient({
+        id: patientData.patientID || patientData.id || id,
+        name: `${patientData.fName || ''} ${patientData.lName || ''}`.trim() || `Patient ${id}`,
+        age: patientData.age || null,
+        contact: patientData.contact || patientData.phone || '',
+        gestationalWeek: patientData.gestationalWeek || '',
+        riskFactors: Array.isArray(patientData.riskFactors) ? patientData.riskFactors : []
+      })
+    }
+  } catch (error) {
+    console.error('Failed to fetch referral patient by ID', error)
+  }
+}
 
 async function handleSaveReferral() {
   if (!patient.value) return
@@ -66,45 +111,44 @@ function handleSendNotification() {
     setTimeout(() => (showSuccessMessage.value = false), 3000);
 }
 
-function handleSaveReferral() {
-    // Simulate saving the referral
-    showSuccessMessage.value = true;
-    successMessage.value = 'Referral saved to the patient record.';
-    setTimeout(() => (showSuccessMessage.value = false), 3000);
-}
-
 onMounted(() => {
     const route = useRoute();
 
-    // 1) Prefer JSON-encoded patient in query (added by Patient.vue)
-    if (route && route.query && route.query.patient) {
-        try {
-            setPatient(JSON.parse(route.query.patient));
-            return;
-        } catch (e) {
-            // ignore parse error
-        }
+    const queryPatient = parsePatientPayload(route?.query?.patient)
+    if (queryPatient) {
+        setPatient(queryPatient)
+        return
     }
 
-    // 2) Fallback: check browser history state (router.push({ state }))
+    const patientIdFromQuery = route?.query?.patientId
+    if (patientIdFromQuery) {
+        fetchPatientById(Number(patientIdFromQuery))
+        return
+    }
+
     if (typeof window !== 'undefined' && window.history && window.history.state && window.history.state.patient) {
-        setPatient(window.history.state.patient);
-        return;
+        setPatient(window.history.state.patient)
+        return
     }
 
-    // 3) Finally check route params
     if (route && route.params && route.params.patient) {
-        setPatient(route.params.patient);
-        return;
+        setPatient(route.params.patient)
+        return
     }
 
-    // 4) localStorage fallback
     try {
-        const stored = localStorage.getItem('referral_patient');
+        const stored = localStorage.getItem('referral_patient')
         if (stored) {
-            setPatient(JSON.parse(stored));
-            localStorage.removeItem('referral_patient');
-            return;
+            const parsed = parsePatientPayload(stored)
+            if (parsed) {
+                setPatient(parsed)
+                localStorage.removeItem('referral_patient')
+                return
+            }
+            const patientId = Number(stored)
+            if (!Number.isNaN(patientId)) {
+                fetchPatientById(patientId)
+            }
         }
     } catch (e) {
         // ignore

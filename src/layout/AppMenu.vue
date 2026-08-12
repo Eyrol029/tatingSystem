@@ -23,7 +23,7 @@ const model = [
             { label: 'Expense', icon: 'pi pi-fw pi-wallet', to: '/uikit/Expense', roles: [UserRole.ADMIN] },
             {label: 'Revenue', icon: 'pi pi-fw pi-wallet', to: '/uikit/Revenue', roles: [UserRole.ADMIN] },
             {label: 'List of Payments', icon: 'pi pi-fw pi-file', to: '/uikit/PaymentDashboard', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
-            {label: 'List of SOA', icon: 'pi pi-fw pi-file', to: '/uikit/ViewListofSOA', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
+            {label: 'List of SOA', icon: 'pi pi-fw pi-file', to: '/uikit/viewListOfSOA', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
             { label: 'List of Patients', icon: 'pi pi-fw pi-chart-line', to: '/uikit/PatientsMain', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
             { label: 'User Account', icon: 'pi pi-fw pi-users', to: '/uikit/UserAccount', roles: [UserRole.ADMIN] },
             { label: 'Logs', icon: 'pi pi-fw pi-home', to: '/uikit/Logs', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
