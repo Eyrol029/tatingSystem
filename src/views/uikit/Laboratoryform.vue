@@ -1,12 +1,28 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
+import { useUserDataStore, UserRole } from '@/stores/userData'
 
 const route = useRoute()
 const router = useRouter()
 
-// API Endpoint for Laboratory Requests
+// Read-only mode for Patient accounts
+const userStore = useUserDataStore()
+if (!userStore.user) {
+  userStore.init()
+}
+const isReadOnly = computed(() => userStore.userRole === UserRole.PATIENT)
+
+function goBack() {
+  router.back()
+}
+
+function printForm() {
+  window.print()
+}
+
+// API Endpoints
 const LAB_REQUEST_URL = 'http://localhost:8080/api/laboratory-requests'
 const PATIENT_SERVICE_BASE = 'http://localhost:8080/api/patient-services'
 const PATIENTS_URL = 'http://localhost:8080/api/patients'
@@ -59,11 +75,9 @@ function todayLocalDateString() {
   return `${yyyy}-${mm}-${dd}`
 }
 
-function handlePrint() {
-  window.print()
-}
-
 async function saveAndReturnToProfile() {
+  if (isReadOnly.value) return
+
   const patientId = route.params.patientID || route.params.id
 
   if (!formData.value.patientName.trim()) {
@@ -95,7 +109,7 @@ async function saveAndReturnToProfile() {
 
   try {
     await axios.post(LAB_REQUEST_URL, payload)
-    statusMessage.value = 'Laboratory Request saved successfully!'
+    statusMessage.value = '✅ Laboratory Request saved successfully!'
     isError.value = false
 
     if (patientId) {
@@ -105,7 +119,7 @@ async function saveAndReturnToProfile() {
     }
   } catch (error) {
     console.error('Failed to save laboratory request:', error)
-    statusMessage.value = error.response?.data || 'Unable to save laboratory request to database.'
+    statusMessage.value = '❌ ' + (error.response?.data || 'Unable to save laboratory request to database.')
     isError.value = true
   } finally {
     isSubmitting.value = false
@@ -127,6 +141,7 @@ function handleProceedToPayment() {
 }
 
 function resetForm() {
+  if (isReadOnly.value) return
   const patientName = formData.value.patientName || ''
   const address = formData.value.address || ''
   const age = formData.value.age || ''
@@ -236,208 +251,216 @@ function onBirthDateChange() {
   formData.value.age = age >= 0 ? String(age) : ''
 }
 
-// BACKEND INTEGRATION: Save Laboratory Request to Spring Boot API
 async function saveLaboratoryRequest() {
   await saveAndReturnToProfile()
 }
 </script>
 
 <template>
-  <div class="p-6 bg-gray-100 min-h-screen flex justify-center items-start">
-    
-    <!-- CARD CONTAINER -->
-    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-2xl print-container">
-      
-      <!-- HEADER / CLINIC DETAILS -->
-      <div class="text-center mb-6 pb-4 border-b border-gray-300">
-        <h1 class="text-xl font-bold tracking-wide text-gray-800 uppercase">{{ clinicInfo.name }}</h1>
-        <p class="text-xs text-gray-600 mt-1">{{ clinicInfo.address }}</p>
-        <p class="text-xs text-gray-600">CONTACT NO.: {{ clinicInfo.contact }}</p>
-        <h2 class="text-sm font-semibold text-gray-700 mt-3 tracking-wider uppercase">Laboratory Request Form</h2>
+  <!-- Toolbar -->
+  <div class="no-print max-w-screen mx-auto px-6 pt-6 flex items-center gap-3">
+    <button @click="goBack"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow transition">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+      </svg>
+      Back
+    </button>
+    <button @click="printForm"
+      class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow transition">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+      </svg>
+      Print / Save as PDF
+    </button>
+
+    <span v-if="isReadOnly" class="ml-2 text-xs font-semibold text-indigo-700 bg-indigo-100 px-3 py-1.5 rounded-full">
+      👁️ View Only
+    </span>
+  </div>
+
+  <!-- Printable Landscape Form Card -->
+  <div id="printable-area"
+    class="max-w-screen mx-auto p-6 bg-white shadow-lg rounded-lg my-4 border border-gray-100">
+
+    <!-- Header -->
+    <div class="text-center border-b-2 border-gray-800 pb-4 mb-5">
+      <div class="flex items-center justify-center gap-3 mb-2">
+        <img src="/static/TATING (2).png" alt="Tating Logo"
+          style="height: 3.5rem; width: auto; object-fit: contain;" />
+        <div class="text-left">
+          <p class="text-xs text-gray-500 uppercase tracking-widest leading-tight">{{ clinicInfo.name }}</p>
+          <h1 class="text-xl font-bold tracking-wide uppercase leading-tight">LABORATORY REQUEST FORM</h1>
+          <p class="text-xs text-gray-400 leading-tight">{{ clinicInfo.address }} | CONTACT NO.: {{ clinicInfo.contact }}</p>
+        </div>
       </div>
+    </div>
 
-      <!-- PATIENT DETAILS FORM -->
-      <div class="space-y-4">
-        
-        <!-- Date & Name -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div class="sm:col-span-1">
-            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Date</label>
-            <input
-              v-model="formData.date"
-              type="date"
-              class="w-full border rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-          </div>
-          <div class="sm:col-span-2">
-            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">
-              Name <span class="text-red-500">*</span>
-            </label>
-            <input
-              v-model="formData.patientName"
-              type="text"
-              placeholder="Full Patient Name"
-              class="w-full border rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-          </div>
-        </div>
+    <!-- Status feedback messages -->
+    <div v-if="statusMessage" class="no-print mb-4">
+      <div :class="isError ? 'text-red-700 bg-red-100 border-red-200' : 'text-green-700 bg-green-100 border-green-200'"
+        class="text-sm border rounded p-3 text-center font-medium">
+        {{ statusMessage }}
+      </div>
+    </div>
 
-        <!-- Address -->
-        <div>
-          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Address</label>
-          <input
-            v-model="formData.address"
-            type="text"
-            placeholder="Complete Address"
-            class="w-full border rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-          />
-        </div>
+    <!-- READ-ONLY WRAPPER -->
+    <fieldset :disabled="isReadOnly" style="border:none;padding:0;margin:0;min-width:0;">
 
-        <!-- B-Date, Age, Sex -->
-        <div class="grid grid-cols-3 gap-4">
-          <div>
-            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">B-Date</label>
-            <input
-              v-model="formData.birthDate"
-              @change="onBirthDateChange"
-              type="date"
-              class="w-full border rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            />
+      <!-- Patient Information Section -->
+      <div class="border border-gray-200 rounded-lg p-4 mb-6">
+        <h3 class="section-title mb-3">PATIENT INFORMATION</h3>
+        <div class="grid grid-cols-12 gap-4">
+          
+          <!-- Date -->
+          <div class="col-span-12 sm:col-span-3 md:col-span-2">
+            <label class="field-label">Date</label>
+            <input type="date" v-model="formData.date" class="input" />
           </div>
-          <div>
-            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Age</label>
-            <input
-              v-model="formData.age"
-              type="number"
-              placeholder="Age"
-              class="w-full border rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            />
+
+          <!-- Name -->
+          <div class="col-span-12 sm:col-span-9 md:col-span-5">
+            <label class="field-label">Name <span class="text-red-500">*</span></label>
+            <input type="text" v-model="formData.patientName" placeholder="Full Patient Name" class="input" />
           </div>
-          <div>
-            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Sex</label>
-            <select
-              v-model="formData.sex"
-              class="w-full border rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-            >
+
+          <!-- B-Date -->
+          <div class="col-span-12 sm:col-span-4 md:col-span-2">
+            <label class="field-label">B-Date</label>
+            <input type="date" v-model="formData.birthDate" @change="onBirthDateChange" class="input" />
+          </div>
+
+          <!-- Age -->
+          <div class="col-span-6 sm:col-span-4 md:col-span-1">
+            <label class="field-label">Age</label>
+            <input type="number" v-model="formData.age" placeholder="Age" class="input text-center" />
+          </div>
+
+          <!-- Sex -->
+          <div class="col-span-6 sm:col-span-4 md:col-span-2">
+            <label class="field-label">Sex</label>
+            <select v-model="formData.sex" class="input bg-white">
               <option value="" disabled>Select</option>
               <option value="Female">Female</option>
               <option value="Male">Male</option>
             </select>
           </div>
-        </div>
 
-        <!-- Diagnosis -->
-        <div>
-          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Diagnosis</label>
-          <input
-            v-model="formData.diagnosis"
-            type="text"
-            placeholder="Clinical Diagnosis / Notes"
-            class="w-full border rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-          />
-        </div>
+          <!-- Address -->
+          <div class="col-span-12 md:col-span-6">
+            <label class="field-label">Address</label>
+            <input type="text" v-model="formData.address" placeholder="Complete Address" class="input" />
+          </div>
 
+          <!-- Diagnosis -->
+          <div class="col-span-12 md:col-span-6">
+            <label class="field-label">Diagnosis</label>
+            <input type="text" v-model="formData.diagnosis" placeholder="Clinical Diagnosis / Notes" class="input" />
+          </div>
+
+        </div>
       </div>
 
-      <!-- LABORATORY TESTS CHECKBOX LIST -->
-      <div class="mt-6 border-t pt-4">
-        <h3 class="text-xs font-bold text-gray-700 uppercase mb-3">
-          Requested Examinations <span class="text-red-500">*</span>:
+      <!-- Requested Examinations Section (Grid format for landscape) -->
+      <div class="border border-gray-200 rounded-lg p-5 mb-6">
+        <h3 class="text-center font-bold text-sm tracking-widest mb-4 uppercase">
+          REQUESTED EXAMINATIONS <span class="text-red-500">*</span>
         </h3>
         
-        <div class="grid grid-cols-1 gap-2.5">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           <label
             v-for="(test, index) in labTests"
             :key="index"
-            class="flex items-center gap-3 p-2 rounded hover:bg-gray-50 cursor-pointer border border-transparent hover:border-gray-200 transition-colors"
+            class="flex items-center gap-3 p-3 rounded-lg border transition cursor-pointer"
+            :class="formData.selectedTests.includes(test)
+              ? 'border-indigo-500 bg-indigo-50/50 shadow-sm'
+              : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-gray-50'"
           >
             <input
               type="checkbox"
               :value="test"
               v-model="formData.selectedTests"
-              class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              :disabled="isReadOnly"
+              class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
             />
-            <span class="text-sm font-medium text-gray-800">{{ test }}</span>
+            <span class="text-xs font-semibold text-gray-800">{{ test }}</span>
           </label>
         </div>
       </div>
 
-      <!-- FOOTER / PHYSICIAN SIGNATURE -->
-      <div class="mt-10 border-t pt-4 text-center">
-        <p class="font-bold text-sm text-gray-900 uppercase">{{ clinicInfo.physician }}</p>
-        <p class="text-xs text-gray-600">{{ clinicInfo.specialization }}</p>
-        <p class="text-xs text-gray-500 mt-0.5">License no.: {{ clinicInfo.licenseNo }}</p>
+      <!-- Signatures / Physician Information -->
+      <div class="grid grid-cols-2 gap-16 mt-8">
+        <div class="text-center flex flex-col justify-end min-h-[4.5rem]">
+          <div class="border-t border-gray-800 pt-1">
+            <p class="text-xs font-semibold uppercase">Patient's Signature / Date</p>
+          </div>
+        </div>
+        <div class="text-center flex flex-col justify-end min-h-[4.5rem]">
+          <p class="font-bold text-sm text-gray-900 uppercase">{{ clinicInfo.physician }}</p>
+          <p class="text-xs text-gray-600">{{ clinicInfo.specialization }}</p>
+          <p class="text-xs text-gray-500 mb-1">License no.: {{ clinicInfo.licenseNo }}</p>
+          <div class="border-t border-gray-800 pt-1">
+            <p class="text-xs font-semibold uppercase">Attending Physician / Obstetrician-Gynecologist</p>
+          </div>
+        </div>
       </div>
 
-      <!-- STATUS MESSAGE (Hidden during Print) -->
-      <div v-if="statusMessage" class="mt-4 no-print">
-        <p :class="isError ? 'text-red-600 bg-red-50 border-red-200' : 'text-green-600 bg-green-50 border-green-200'" class="text-xs p-3 rounded border text-center font-medium">
-          {{ statusMessage }}
-        </p>
-      </div>
+    </fieldset>
+    <!-- END Read-only wrapper -->
 
-      <!-- ACTION BUTTONS (Hidden during Print) -->
-      <div class="mt-6 flex flex-wrap justify-end gap-3 no-print">
-        <button
-          @click="resetForm"
-          type="button"
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 font-medium transition"
-        >
-          Clear
-        </button>
+    <!-- Action Buttons Footer -->
+    <div v-if="!isReadOnly" class="no-print mt-8 flex flex-wrap justify-end items-center gap-3">
+      <button
+        @click="resetForm"
+        type="button"
+        class="px-5 py-2.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg text-sm font-semibold transition"
+      >
+        Clear
+      </button>
 
-        <button
-          @click="saveLaboratoryRequest"
-          :disabled="isSubmitting"
-          type="button"
-          class="px-5 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 font-medium shadow transition flex items-center gap-2 disabled:opacity-50"
-        >
-          {{ isSubmitting ? 'Saving...' : 'Save & Return' }}
-        </button>
+      <button
+        @click="saveLaboratoryRequest"
+        :disabled="isSubmitting"
+        type="button"
+        class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition shadow disabled:opacity-50 flex items-center gap-2"
+      >
+        {{ isSubmitting ? 'Saving...' : 'SAVE & RETURN' }}
+      </button>
 
-        <button
-          @click="handleProceedToPayment"
-          type="button"
-          class="px-5 py-2 bg-amber-600 text-white rounded text-sm hover:bg-amber-700 font-medium shadow transition flex items-center gap-2"
-        >
-          → PROCEED TO PAYMENT
-        </button>
-
-        <button
-          @click="handlePrint"
-          type="button"
-          class="px-5 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 font-medium shadow transition flex items-center gap-2"
-        >
-          🖨️ Print Request Slip
-        </button>
-      </div>
-
+      <button
+        @click="handleProceedToPayment"
+        type="button"
+        class="px-6 py-2.5 bg-amber-600 text-white rounded-lg text-sm font-bold hover:bg-amber-700 transition shadow flex items-center gap-2"
+      >
+        PROCEED TO PAYMENT →
+      </button>
     </div>
 
   </div>
 </template>
 
 <style scoped>
-/* Print stylesheet overrides */
+.input { width:100%; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; outline:none; font-size:13px; }
+.input-line { display:block; width:100%; border:none; border-bottom:1px solid #94a3b8; outline:none; padding:2px; background:transparent; font-size:13px; }
+.field-label { display:block; font-size:11px; font-weight:600; color:#6b7280; margin-bottom:2px; }
+.section-title { font-weight:700; font-size:0.95rem; color:#1e293b; margin-bottom:8px; }
+
+fieldset:disabled input,
+fieldset:disabled select,
+fieldset:disabled textarea {
+  opacity: 1;
+  color: inherit;
+  cursor: default;
+}
+</style>
+
+<style>
+@page { size: landscape; margin: 12mm 12mm; }
 @media print {
-  .no-print {
-    display: none !important;
-  }
-  body {
-    background-color: white !important;
-  }
-  .print-container {
-    box-shadow: none !important;
-    border: none !important;
-    padding: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-  input, select {
-    border: none !important;
-    border-bottom: 1px solid #000 !important;
-    border-radius: 0 !important;
-    padding-left: 0 !important;
-  }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .no-print { display: none !important; }
+  input[type="text"], input[type="date"], input[type="number"] { border:none !important; border-bottom:1px solid #000 !important; border-radius:0 !important; background:transparent !important; }
+  select { border:none !important; border-bottom:1px solid #000 !important; border-radius:0 !important; background:transparent !important; -webkit-appearance:none; appearance:none; }
 }
 </style>

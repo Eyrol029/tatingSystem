@@ -14,7 +14,34 @@ const EMPLOYEES_BASE = 'http://localhost:8080/api/employees'
 
 // ── Route Params ─────────────────────────────────────────────────────────────
 const patientID = route.params.patientID || route.params.clientId || route.params.id
-const serviceId = route.params.serviceId
+  || route.query.patientId || route.query.patientID
+const serviceId = route.params.serviceId || route.query.serviceId
+const routePatientName = (route.query.patientName || '').toString().trim()
+
+function applyPatientNameToForm(patientName) {
+  const name = (patientName || '').trim()
+  if (!name) return false
+
+  const parts = name.split(/\s+/)
+  form.value.firstName = parts[0] || ''
+  form.value.middleName = parts.length > 2 ? parts.slice(1, -1).join(' ') : ''
+  form.value.lastName = parts.length > 1 ? parts[parts.length - 1] : ''
+  form.value.patientConformeName = name
+  return true
+}
+
+// If this form was opened from the Admission delivery step, we hold a reference
+// to the admission's patientID + serviceId so we can navigate back to billing.
+const admissionPatientId = route.query.admissionPatientId || null
+const admissionServiceId = route.query.admissionServiceId || null
+const returnToBilling = route.query.returnToBilling === 'true'
+
+// ── Check if 3rd & 4th visits are completed ─────────────────────────────────
+const isVisitsCompleted = computed(() => {
+  const v3 = form.value.visits[2]
+  const v4 = form.value.visits[3]
+  return Boolean(v3?.dateOfVisit && v4?.dateOfVisit)
+})
 
 // ── Read-Only State for Patients ──────────────────────────────────────────────
 const userStore = useUserDataStore()
@@ -189,20 +216,29 @@ async function loadExistingRecord() {
 }
 
 async function fetchPatientServiceDetails() {
-  if (!serviceId) return
+  if (!serviceId) {
+    if (routePatientName) {
+      applyPatientNameToForm(routePatientName)
+    }
+    return
+  }
+
   try {
     const res = await axios.get(`${PATIENT_SERVICE_BASE}/${serviceId}`)
     const ps = res.data
-    if (ps) {
-      if (ps.patientName) {
-        const parts = ps.patientName.split(' ')
-        form.value.firstName = parts[0] || ''
-        form.value.lastName = parts.length > 1 ? parts[parts.length - 1] : ''
-        form.value.patientConformeName = ps.patientName
-      }
+    if (ps?.patientName) {
+      applyPatientNameToForm(ps.patientName)
+      return
+    }
+
+    if (routePatientName) {
+      applyPatientNameToForm(routePatientName)
     }
   } catch (err) {
     console.error('Failed to fetch patient service info for prefill', err)
+    if (routePatientName) {
+      applyPatientNameToForm(routePatientName)
+    }
   }
 }
 
@@ -291,6 +327,23 @@ async function submitForm() {
 
     await syncEmployeeNameToPatientService()
 
+    // If this form was opened from the Admission delivery flow, redirect back
+    // to the Admission page if 3rd and 4th visits are completed.
+    if (returnToBilling && admissionServiceId) {
+      if (isVisitsCompleted.value) {
+        submitStatus.value.success = '✅ Postpartum Care record saved! 3rd & 4th visits completed — proceeding to Billing...'
+        setTimeout(() => {
+          router.push({
+            path: `/uikit/Admission/${admissionPatientId}/${admissionServiceId}`,
+            query: { fromPostpartum: 'true' }
+          })
+        }, 800)
+        return
+      } else {
+        submitStatus.value.success = '✅ Postpartum Care record saved successfully! (Note: 3rd and 4th visits must be completed before proceeding to Billing/Payment).'
+      }
+    }
+
   } catch (error) {
     const msg = error?.response?.data?.message || error?.response?.data || error?.message || 'Unknown error'
     submitStatus.value.error = '❌ Save failed: ' + msg
@@ -301,6 +354,9 @@ async function submitForm() {
 }
 
 onMounted(async () => {
+  if (routePatientName) {
+    applyPatientNameToForm(routePatientName)
+  }
   await fetchEmployees()
   await loadExistingRecord()
 })

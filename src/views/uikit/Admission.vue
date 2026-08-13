@@ -14,6 +14,7 @@ const ADMISSIONS_URL  = 'http://localhost:8080/api/admissions';
 const SOA_URL         = 'http://localhost:8080/api/billing/soa';
 const CALENDAR_URL    = 'http://localhost:8080/api/calendar';
 const PATIENT_SERVICE_BASE = 'http://localhost:8080/api/patient-services';
+const POSTPARTUM_URL  = 'http://localhost:8080/api/postpartum';
 
 // ── Route params — tries multiple common param names since different routes
 // in this project use different conventions (patientID, id, clientId).
@@ -64,6 +65,10 @@ const patientData = ref({
     lastName: '',
     age: '',
     gestationalAge: '',
+    symptomsComplaints: '',
+    feelsLaborPain: null,
+    cervicalDilation: '',
+    preLaborNotes: '',
     readyForDelivery: null,
     isHighRisk: null,
     wardID: null,
@@ -73,7 +78,11 @@ const patientData = ref({
     paymentMethod: 'Cash',
     dischargeDate: null,
     monitoringNotes: '', // New field for monitoring notes
-    admissionNotes: '' // New field for admission step notes
+    admissionNotes: '', // New field for admission step notes
+    isMotherBabyStable: null,
+    hasComplications: null,
+    healthEducationGiven: true,
+    breastfeedingSupportGiven: true
 });
 
 // Itemized billing — now editable. Starts with sensible defaults, but staff
@@ -214,6 +223,30 @@ async function fetchEmployees() {
     }
 }
 
+// ── Postpartum record validation ──────────────────────────────────────────────
+const postpartumRecord = ref(null);
+
+async function fetchPostpartumRecord() {
+    if (!serviceId) return;
+    try {
+        const res = await axios.get(POSTPARTUM_URL, { params: { serviceID: serviceId } });
+        const records = Array.isArray(res.data) ? res.data : [];
+        if (records.length > 0) {
+            postpartumRecord.value = records[records.length - 1];
+        }
+    } catch (error) {
+        console.error('Failed to load postpartum record', error);
+    }
+}
+
+const isPostpartumVisitsComplete = computed(() => {
+    if (!postpartumRecord.value) return false;
+    const visits = postpartumRecord.value.visits || [];
+    const v3 = visits.find(v => v.visitNumber === 3) || visits[2];
+    const v4 = visits.find(v => v.visitNumber === 4) || visits[3];
+    return Boolean(v3?.dateOfVisit && v4?.dateOfVisit);
+});
+
 // Loads the existing Patient record for this route's patientID, so the
 // form shows the real name instead of asking staff to re-type it.
 async function fetchExistingPatient() {
@@ -265,6 +298,10 @@ async function loadExistingAdmission() {
         soaId.value = latest.soaID || null;
         patientData.value.age = latest.age ?? patientData.value.age;
         patientData.value.gestationalAge = latest.gestationalAge || '';
+        patientData.value.symptomsComplaints = latest.symptomsComplaints || '';
+        patientData.value.feelsLaborPain = latest.feelsLaborPain ?? null;
+        patientData.value.cervicalDilation = latest.cervicalDilation ?? '';
+        patientData.value.preLaborNotes = latest.preLaborNotes || '';
         patientData.value.readyForDelivery = latest.readyForDelivery ?? null;
         patientData.value.isHighRisk = latest.isHighRisk ?? null;
         patientData.value.wardID = latest.wardID ?? null;
@@ -272,6 +309,8 @@ async function loadExistingAdmission() {
         patientData.value.hasPhilHealth = latest.hasPhilHealth ?? null;
         patientData.value.paymentComplete = !!latest.paymentComplete;
         patientData.value.dischargeDate = latest.dischargeDate || null;
+        patientData.value.isMotherBabyStable = latest.isMotherBabyStable ?? null;
+        patientData.value.hasComplications = latest.hasComplications ?? null;
         if (latest.currentStep && steps[latest.currentStep]) {
             currentStep.value = latest.currentStep;
         }
@@ -325,6 +364,10 @@ async function saveAdmission(extraFields = {}) {
             patientName: `${patientData.value.firstName} ${patientData.value.lastName}`.trim(),
             age: patientData.value.age ? Number(patientData.value.age) : null,
             gestationalAge: patientData.value.gestationalAge,
+            symptomsComplaints: patientData.value.symptomsComplaints,
+            feelsLaborPain: patientData.value.feelsLaborPain,
+            cervicalDilation: patientData.value.cervicalDilation,
+            preLaborNotes: patientData.value.preLaborNotes,
             readyForDelivery: patientData.value.readyForDelivery,
             isHighRisk: patientData.value.isHighRisk,
             wardID: patientData.value.wardID,
@@ -333,6 +376,8 @@ async function saveAdmission(extraFields = {}) {
             attendingStaffName: selectedStaffName.value,
             hasPhilHealth: patientData.value.hasPhilHealth,
             paymentComplete: patientData.value.paymentComplete,
+            isMotherBabyStable: patientData.value.isMotherBabyStable,
+            hasComplications: patientData.value.hasComplications,
             soaID: soaId.value,
             currentStep: currentStep.value,
             ...extraFields
@@ -447,12 +492,30 @@ function handleHighRiskReferral() {
 }
 
 function handleProceedToPostpartum() {
+    // Update step to postpartum before leaving so the record is saved
+    navigateToStep('postpartum');
     router.push({
         path: '/uikit/PostpartumCareform',
         query: {
             patientId: patientId.value || patientID || '',
             serviceId: serviceId || '',
-            patientName: `${patientData.value.firstName || ''} ${patientData.value.lastName || ''}`.trim()
+            patientName: `${patientData.value.firstName || ''} ${patientData.value.lastName || ''}`.trim(),
+            admissionPatientId: patientId.value || patientID || '',
+            admissionServiceId: serviceId || '',
+            returnToBilling: 'true'
+        }
+    });
+}
+
+function viewPostpartumForm() {
+    router.push({
+        path: '/uikit/PostpartumCareform',
+        query: {
+            patientId: patientId.value || patientID || '',
+            serviceId: serviceId || '',
+            patientName: `${patientData.value.firstName || ''} ${patientData.value.lastName || ''}`.trim(),
+            admissionPatientId: patientId.value || patientID || '',
+            admissionServiceId: serviceId || ''
         }
     });
 }
@@ -488,6 +551,10 @@ async function proceedFromArrival() {
 
 // ── Billing step — creates the real Statement of Account ────────────────────
 function proceedToBilling() {
+    if (!isPostpartumVisitsComplete.value) {
+        saveError.value = 'Cannot proceed to Billing: 3rd and 4th Postpartum Care visits must be completed first in the Postpartum Care Form.';
+        return;
+    }
     navigateToStep('billing');
 }
 
@@ -569,7 +636,12 @@ async function confirmPayment() {
 }
 
 function resetProcess() {
-    router.back();
+    const idToUse = patientId.value || patientID;
+    if (idToUse) {
+        router.push(`/uikit/PatientProfiling/${idToUse}`);
+    } else {
+        router.push('/uikit/PatientsMain');
+    }
 }
 
 async function completeDischarge() {
@@ -581,7 +653,12 @@ async function completeDischarge() {
             currentStep: 'discharged',
             dischargeDate: new Date().toISOString()
         });
-        router.back();
+        const idToUse = patientId.value || patientID;
+        if (idToUse) {
+            router.push(`/uikit/PatientProfiling/${idToUse}`);
+        } else {
+            router.push('/uikit/PatientsMain');
+        }
     } catch (error) {
         console.error('Failed to complete discharge', error);
         saveError.value = 'Failed to complete discharge. Please try again.';
@@ -595,6 +672,14 @@ onMounted(async () => {
     await fetchEmployees();
     await fetchExistingPatient();
     await loadExistingAdmission();
+    await fetchPostpartumRecord();
+
+    // If navigated back from the PostpartumCareform after saving, auto-advance to billing ONLY if 3rd and 4th visits are done.
+    if (route.query.fromPostpartum === 'true' && currentStep.value === 'postpartum') {
+        if (isPostpartumVisitsComplete.value) {
+            navigateToStep('billing');
+        }
+    }
 });
 </script>
 
@@ -689,24 +774,105 @@ onMounted(async () => {
                         </div>
                     </div>
 
-                    <!-- Assessment Step -->
+                    <!-- Assessment Step (Lying-In Admission Process Diagram) -->
                     <div v-if="currentStep === 'assessment'" class="space-y-4">
-                        <h3 class="text-xl font-semibold text-gray-800">Initial Assessment</h3>
-                        <p class="text-gray-600">Evaluate if patient is ready for childbirth</p>
-                        <div class="space-y-3">
-                            <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                <p class="font-medium text-gray-700 mb-2">Patient: {{ patientData.firstName }} {{ patientData.lastName }}</p>
-                                <p class="text-gray-600">Age: {{ patientData.age }} | GA: {{ patientData.gestationalAge }} weeks</p>
+                        <h3 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                            <span>🩺</span> Initial Assessment & Examination
+                        </h3>
+                        <p class="text-xs text-gray-500">Follow the Lying-In Admission clinical decision workflow</p>
+                        
+                        <div class="p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm space-y-1">
+                            <p class="font-semibold text-gray-800">Patient: {{ patientData.firstName }} {{ patientData.lastName }}</p>
+                            <p class="text-gray-600">Age: {{ patientData.age }} | Gestational Age: {{ patientData.gestationalAge }} weeks</p>
+                        </div>
+
+                        <!-- Step 1: Symptoms / Complaints -->
+                        <div class="p-4 bg-white border border-purple-200 rounded-lg shadow-sm space-y-3">
+                            <div>
+                                <label class="block font-medium text-purple-900 text-sm mb-1">
+                                    1. Patient Symptoms / Complaints:
+                                </label>
+                                <textarea
+                                    v-model="patientData.symptomsComplaints"
+                                    placeholder="Describe symptoms (e.g. hypogastric pain, labor pains, bloody show, fluid leakage...)"
+                                    class="w-full p-2.5 border border-purple-200 rounded-md text-sm focus:ring-2 focus:ring-purple-400 outline-none"
+                                    rows="2"
+                                ></textarea>
                             </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <button @click="handleInputChange('readyForDelivery', false); navigateToStep('notReady')"
-                                    class="bg-yellow-500 text-white py-3 rounded-lg hover:bg-yellow-600 transition-colors font-semibold">
-                                    Not Ready for Delivery
-                                </button>
-                                <button @click="handleInputChange('readyForDelivery', true); navigateToStep('admission')"
-                                    class="bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition-colors font-semibold">
-                                    Ready for Delivery
-                                </button>
+
+                            <!-- Decision 1: Labor Pain? -->
+                            <div class="pt-2 border-t border-purple-100">
+                                <label class="block font-medium text-gray-800 text-sm mb-2">
+                                    2. Midwife Assessment: Does patient feel labor pain?
+                                </label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button 
+                                        @click="patientData.feelsLaborPain = false; handleInputChange('readyForDelivery', false); navigateToStep('notReady')"
+                                        class="py-2.5 px-4 rounded-lg font-semibold text-sm border transition flex flex-col items-center justify-center gap-0.5"
+                                        :class="patientData.feelsLaborPain === false ? 'bg-amber-600 text-white border-amber-600' : 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100'"
+                                    >
+                                        <span>❌ No Labor Pain</span>
+                                        <span class="text-[11px] opacity-90">(Advise to go home)</span>
+                                    </button>
+                                    <button 
+                                        @click="patientData.feelsLaborPain = true"
+                                        class="py-2.5 px-4 rounded-lg font-semibold text-sm border transition flex flex-col items-center justify-center gap-0.5"
+                                        :class="patientData.feelsLaborPain === true ? 'bg-purple-600 text-white border-purple-600 ring-2 ring-purple-400' : 'border-purple-300 bg-purple-50 text-purple-900 hover:bg-purple-100'"
+                                    >
+                                        <span>✅ Yes, Feels Labor Pain</span>
+                                        <span class="text-[11px] opacity-90">(Proceed to Pre-Labor Assessment)</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: Pre-Labor Assessment & Internal Examination (shown if Labor Pain = Yes) -->
+                            <div v-if="patientData.feelsLaborPain === true" class="pt-3 border-t border-purple-100 space-y-3">
+                                <div class="p-3.5 bg-purple-50 border border-purple-200 rounded-md">
+                                    <p class="font-bold text-purple-900 text-xs uppercase tracking-wider mb-2">Pre-Labor Assessment & Internal Examination</p>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-gray-700 mb-1">Cervical Dilation (cm):</label>
+                                            <input 
+                                                v-model="patientData.cervicalDilation"
+                                                type="number" step="0.5" min="0" max="10"
+                                                placeholder="e.g. 4"
+                                                class="w-full p-2 border border-purple-300 rounded text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-gray-700 mb-1">Exam Notes:</label>
+                                            <input 
+                                                v-model="patientData.preLaborNotes"
+                                                type="text"
+                                                placeholder="Effacement %, station, membranes status"
+                                                class="w-full p-2 border border-purple-300 rounded text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Decision 2: Cervical Dilation >= 4 cm? -->
+                                <div v-if="patientData.cervicalDilation !== ''" class="pt-1">
+                                    <p class="font-semibold text-xs text-gray-800 mb-2">
+                                        Clinical Decision: Cervical Dilation is {{ Number(patientData.cervicalDilation) >= 4 ? '≥ 4 cm (Active Labor Phase)' : '< 4 cm (Early Labor Phase)' }}
+                                    </p>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <button 
+                                            @click="handleInputChange('readyForDelivery', false); navigateToStep('notReady')"
+                                            class="py-3 px-4 rounded-lg font-bold text-sm bg-amber-500 text-white hover:bg-amber-600 transition flex items-center justify-center gap-1.5 shadow"
+                                        >
+                                            <span>🏠 Dilation &lt; 4 cm</span>
+                                            <span class="text-xs font-normal">(Advised to Go Home)</span>
+                                        </button>
+                                        <button 
+                                            @click="handleInputChange('readyForDelivery', true); navigateToStep('admission')"
+                                            class="py-3 px-4 rounded-lg font-bold text-sm bg-green-600 text-white hover:bg-green-700 transition flex items-center justify-center gap-1.5 shadow"
+                                        >
+                                            <span>🏥 Dilation ≥ 4 cm</span>
+                                            <span class="text-xs font-normal">(Assign Ward & Admit)</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -742,6 +908,22 @@ onMounted(async () => {
                                 </button>
                             </div>
                         </div>
+
+                            <!-- Ready for Delivery — patient has returned and is now ready -->
+                            <div class="mt-2 p-4 bg-green-50 border-2 border-green-400 rounded-xl">
+                                <p class="text-green-800 font-semibold mb-1">🤱 Patient has returned and is now ready for delivery?</p>
+                                <p class="text-sm text-green-700 mb-3">Click below to skip the scheduling and proceed directly to the full admission &amp; delivery workflow.</p>
+                                <button
+                                    @click="handleInputChange('readyForDelivery', true); navigateToStep('admission')"
+                                    :disabled="saving"
+                                    class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 active:bg-green-800 transition-colors font-bold text-base shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Patient is Now Ready for Delivery — Proceed to Admission
+                                </button>
+                            </div>
                     </div>
 
                     <!-- Admission Step -->
@@ -849,62 +1031,90 @@ onMounted(async () => {
                     <!-- Postpartum Step -->
                     <div v-if="currentStep === 'postpartum'" class="space-y-4">
                         <h3 class="text-xl font-semibold text-gray-800">Postpartum & Newborn Care</h3>
-                        <div class="space-y-3">
-
-                            <!-- Mother's Care -->
-                            <div class="p-4 bg-rose-50 border border-rose-200 rounded-lg">
-                                <p class="text-rose-800 font-medium mb-3">Mother's Care:</p>
-                                <div class="space-y-2 mb-3">
-                                    <div v-for="(item, index) in motherCareItems" :key="index"
-                                        class="flex items-center justify-between text-sm text-gray-700 bg-white border border-rose-100 rounded px-3 py-2">
-                                        <span>✓ {{ item }}</span>
-                                        <button @click="removeMotherCareItem(index)"
-                                            class="text-red-400 hover:text-red-600 text-xs font-bold ml-2">✕</button>
-                                    </div>
-                                    <p v-if="motherCareItems.length === 0" class="text-xs text-gray-400 italic">No items added yet.</p>
-                                </div>
-                                <div class="flex gap-2">
-                                    <input
-                                        v-model="newMotherCareItem"
-                                        type="text"
-                                        placeholder="Add mother's care item..."
-                                        class="flex-1 px-3 py-2 border border-rose-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-rose-400"
-                                        @keyup.enter="addMotherCareItem"
-                                    />
-                                    <button @click="addMotherCareItem"
-                                        class="px-4 py-2 bg-rose-500 text-white text-sm rounded-md hover:bg-rose-600 font-semibold">+ Add</button>
-                                </div>
+                        
+                        <!-- Postpartum Visits Requirement Card -->
+                        <div class="p-4 rounded-lg border text-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
+                            :class="isPostpartumVisitsComplete ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-50 border-amber-200 text-amber-900'">
+                            <div>
+                                <p class="font-bold flex items-center gap-1.5">
+                                    <span>{{ isPostpartumVisitsComplete ? '✅' : '⚠️' }}</span>
+                                    <span>{{ isPostpartumVisitsComplete ? '3rd & 4th Postpartum Visits Completed' : '3rd & 4th Postpartum Visits Pending' }}</span>
+                                </p>
+                                <p class="text-xs opacity-90 mt-0.5">
+                                    {{ isPostpartumVisitsComplete 
+                                        ? 'All required postpartum visits are recorded. You may proceed to Billing & Payment.' 
+                                        : 'Payment and Billing cannot be accessed until the 3rd and 4th postpartum visits are recorded in the Postpartum Care Form.' }}
+                                </p>
                             </div>
+                            <button @click="handleProceedToPostpartum()"
+                                class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 font-semibold text-xs transition shadow-sm whitespace-nowrap">
+                                📋 {{ postpartumRecord ? 'Update' : 'Open' }} Postpartum Form (Visits)
+                            </button>
+                        </div>
 
-                            <!-- Newborn Care -->
-                            <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                <p class="text-blue-800 font-medium mb-3">Newborn Care:</p>
-                                <div class="space-y-2 mb-3">
-                                    <div v-for="(item, index) in newbornCareItems" :key="index"
-                                        class="flex items-center justify-between text-sm text-gray-700 bg-white border border-blue-100 rounded px-3 py-2">
-                                        <span>✓ {{ item }}</span>
-                                        <button @click="removeNewbornCareItem(index)"
-                                            class="text-red-400 hover:text-red-600 text-xs font-bold ml-2">✕</button>
-                                    </div>
-                                    <p v-if="newbornCareItems.length === 0" class="text-xs text-gray-400 italic">No items added yet.</p>
+                            <!-- Postnatal Health Education & Observations (Diagram 2) -->
+                            <div class="p-4 bg-teal-50 border border-teal-200 rounded-lg space-y-3">
+                                <p class="text-teal-900 font-semibold text-sm">Postnatal Observation & Health Education (Midwife)</p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                                    <label class="flex items-center gap-2 cursor-pointer bg-white p-2 border border-teal-200 rounded">
+                                        <input type="checkbox" v-model="patientData.healthEducationGiven" class="rounded text-teal-600 focus:ring-teal-500" />
+                                        <span>Gives Health Education</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer bg-white p-2 border border-teal-200 rounded">
+                                        <input type="checkbox" v-model="patientData.breastfeedingSupportGiven" class="rounded text-teal-600 focus:ring-teal-500" />
+                                        <span>Breastfeeding Support</span>
+                                    </label>
                                 </div>
-                                <div class="flex gap-2">
-                                    <input
-                                        v-model="newNewbornCareItem"
-                                        type="text"
-                                        placeholder="Add newborn care item..."
-                                        class="flex-1 px-3 py-2 border border-blue-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                        @keyup.enter="addNewbornCareItem"
-                                    />
-                                    <button @click="addNewbornCareItem"
-                                        class="px-4 py-2 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 font-semibold">+ Add</button>
+
+                                <!-- Decision: Is Mother & Newborn in stable condition? -->
+                                <div class="pt-2 border-t border-teal-200">
+                                    <p class="font-medium text-xs text-teal-900 mb-2">Midwife Assessment: Are both mother and newborn in stable condition?</p>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <button 
+                                            @click="patientData.isMotherBabyStable = true"
+                                            class="py-2 px-3 rounded text-xs font-semibold border transition"
+                                            :class="patientData.isMotherBabyStable === true ? 'bg-emerald-600 text-white border-emerald-600 shadow' : 'bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-100'"
+                                        >
+                                            ✅ Yes, Stable Condition
+                                        </button>
+                                        <button 
+                                            @click="patientData.isMotherBabyStable = false"
+                                            class="py-2 px-3 rounded text-xs font-semibold border transition"
+                                            :class="patientData.isMotherBabyStable === false ? 'bg-red-600 text-white border-red-600 shadow' : 'bg-white text-red-800 border-red-300 hover:bg-red-100'"
+                                        >
+                                            ⚠️ No, Unstable / Complications
+                                        </button>
+                                    </div>
+
+                                    <!-- If Unstable: Check for Heavy Complications -->
+                                    <div v-if="patientData.isMotherBabyStable === false" class="mt-3 p-3 bg-red-50 border border-red-200 rounded-md space-y-2">
+                                        <p class="text-xs font-bold text-red-900">Does the mother or baby experience heavy complications?</p>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <button 
+                                                @click="patientData.hasComplications = false"
+                                                class="py-2 px-3 rounded text-xs font-semibold border bg-white text-red-800 border-red-300 hover:bg-red-100"
+                                            >
+                                                Continue Observation
+                                            </button>
+                                            <button 
+                                                @click="patientData.hasComplications = true; handleHighRiskReferral()"
+                                                class="py-2 px-3 rounded text-xs font-bold border bg-red-600 text-white border-red-600 hover:bg-red-700 shadow"
+                                            >
+                                                🚨 Refer to Hospital
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <button @click="proceedToBilling"
-                                class="w-full bg-rose-500 text-white py-3 rounded-lg hover:bg-rose-600 transition-colors font-semibold disabled:opacity-50">
+                                :disabled="saving || !isPostpartumVisitsComplete"
+                                class="w-full bg-rose-500 text-white py-3 rounded-lg hover:bg-rose-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
                                 {{ saving ? 'Creating billing record…' : 'Proceed to Billing' }}
                             </button>
+                            <p v-if="!isPostpartumVisitsComplete" class="text-xs text-amber-700 text-center font-medium">
+                                🔒 Complete 3rd and 4th visits in Postpartum Care Form to unlock Proceed to Billing
+                            </p>
                         </div>
                     </div>
 
@@ -1105,14 +1315,24 @@ onMounted(async () => {
                                 <p class="text-xs text-gray-500 uppercase font-semibold">Discharge Date & Time</p>
                                 <p class="text-sm font-medium text-gray-800">{{ new Date(patientData.dischargeDate).toLocaleString() }}</p>
                             </div>
+
+                            <div class="border-t pt-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-indigo-50/60 p-4 rounded-xl border border-indigo-100">
+                                <div>
+                                    <p class="text-xs text-indigo-900 uppercase font-bold tracking-wider">Postpartum Clinical Care Record</p>
+                                    <p class="text-xs text-gray-600 mt-0.5">View recorded 1st to 4th visit dates, examination results, and care notes</p>
+                                </div>
+                                <button @click="viewPostpartumForm"
+                                    class="px-4 py-2.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 active:bg-indigo-800 transition shadow flex items-center gap-1.5 whitespace-nowrap">
+                                    📋 View Postpartum Care Form
+                                </button>
+                            </div>
                         </div>
 
                         <button @click="resetProcess"
                             class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
-                            Return to Admission List
+                            Return to Patient Profile
                         </button>
                     </div>
-                </div>
                 </div>
 
                 <!-- Footer -->
