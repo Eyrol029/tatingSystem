@@ -360,12 +360,6 @@ function goToList() {
           <p class="text-gray-500 text-sm mt-1">Manage employee records and information</p>
         </div>
         <div class="flex items-center gap-3">
-          <button @click="fetchEmployees"
-            class="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 text-sm flex items-center gap-1"
-            :disabled="loading">
-            <span :class="loading ? 'animate-spin' : ''">↻</span>
-            Refresh
-          </button>
           <button @click="() => { resetForm(); errorMsg = ''; successMsg = ''; view = 'add' }"
             class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-2">
             <span class="text-xl leading-none">+</span>
