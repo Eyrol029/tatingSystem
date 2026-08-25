@@ -88,6 +88,7 @@ async function fetchServices() {
             employee: item.employeeName ?? '---',
             ward: item.wardName ?? '---',
             dateAvailed: item.dateAvailed,
+            caseNumber: item.caseNumber ?? '---',
             remarks: item.remarks ?? '---'
         }));
     } catch (e) {
@@ -150,13 +151,14 @@ onMounted(() => {
 const showModal = ref(false);
 const selectedType = ref('');
 const loadingSubmit = ref(false);
-const clinicalServices = ref<Array<{ id: number; name: string; category: string }>>([]);
+const clinicalServices = ref<Array<{ id: number; name: string; category: string; caseNumber?: string }>>([]);
 const step = ref<'select' | 'form'>('select');
 
 const form = reactive({
     dateAvailed: new Date().toISOString().split('T')[0],
     ward: '',
     employee: '',
+    caseNumber: '',
     remarks: ''
 });
 
@@ -178,9 +180,12 @@ function getDedicatedRoute(serviceName) {
     return null;
 }
 
-async function selectType(type: string) {
+async function selectType(svc: any) {
+    const serviceName = typeof svc === 'string' ? svc : svc.name;
+    const svcCaseNumber = typeof svc === 'object' ? (svc.caseNumber || '') : (clinicalServices.value.find(c => c.name === serviceName)?.caseNumber || '');
+
     // Check if this service has a dedicated form → redirect there
-    const routeName = getDedicatedRoute(type);
+    const routeName = getDedicatedRoute(serviceName);
     if (routeName) {
         // For Admission/Lying-In: guard against creating duplicate active admissions.
         // If the patient already has a non-discharged admission, just resume it.
@@ -215,7 +220,8 @@ async function selectType(type: string) {
         try {
             const res = await axios.post('http://localhost:8080/api/patient-services', {
                 patientID: Number(route.params.id),
-                serviceName: type,
+                serviceName: serviceName,
+                caseNumber: svcCaseNumber || '---',
                 employeeName: '---',
                 wardName: '---',
                 dateAvailed: new Date().toISOString().split('T')[0],
@@ -227,13 +233,14 @@ async function selectType(type: string) {
             step.value = 'select';
             router.push(`/uikit/${routeName}/${route.params.id}/${newServiceID}`);
         } catch (e) {
-            console.error(`Failed to save ${type} service`, e);
+            console.error(`Failed to save ${serviceName} service`, e);
         }
         return;
     }
 
     // Generic service → show the inline form
-    selectedType.value = type;
+    selectedType.value = serviceName;
+    form.caseNumber = svcCaseNumber || '';
     step.value = 'form';
     showModal.value = true;
 }
@@ -244,6 +251,7 @@ function closeModal() {
     form.dateAvailed = new Date().toISOString().split('T')[0];
     form.ward = '';
     form.employee = '';
+    form.caseNumber = '';
     form.remarks = '';
 }
 
@@ -265,6 +273,7 @@ async function handleSubmit() {
         await axios.post('http://localhost:8080/api/patient-services', {
             patientID: Number(route.params.id),
             serviceName: selectedType.value,
+            caseNumber: form.caseNumber || '---',
             employeeName: form.employee,
             wardName: form.ward,
             dateAvailed: form.dateAvailed,
@@ -468,17 +477,23 @@ async function handleSubmit() {
                             <th class="th">Employee</th>
                             <th class="th">Ward</th>
                             <th class="th">Date Availed</th>
-                            <th class="th">Remarks</th>
+                            <th class="th">Case Number</th>
                             <th class="th">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="service in services" :key="service.id" class="border-b hover:bg-gray-50">
-                            <td class="td">{{ service.service }}</td>
+                            <td class="td font-medium text-gray-900">{{ service.service }}</td>
                             <td class="td">{{ service.employee }}</td>
                             <td class="td">{{ service.ward }}</td>
                             <td class="td">{{ service.dateAvailed }}</td>
-                            <td class="td">{{ service.remarks }}</td>
+                            <td class="td font-semibold text-gray-700">
+                                <span v-if="service.caseNumber && service.caseNumber !== '---'"
+                                      class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200">
+                                    {{ service.caseNumber }}
+                                </span>
+                                <span v-else class="text-gray-400">---</span>
+                            </td>
                             <td class="td">
                                 <div class="flex gap-2">
                                     <button @click="viewService(service)"
@@ -547,10 +562,15 @@ async function handleSubmit() {
                         <button
                             v-for="svc in clinicalServices"
                             :key="svc.id"
-                            @click="selectType(svc.name)"
+                            @click="selectType(svc)"
                             class="w-full p-4 bg-white border rounded-lg text-left hover:border-blue-500 hover:bg-blue-50 transition flex justify-between items-center group"
                         >
-                            <span class="font-semibold text-gray-700">{{ svc.name }}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold text-gray-700">{{ svc.name }}</span>
+                                <span v-if="svc.caseNumber" class="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded border border-teal-200">
+                                    Case: {{ svc.caseNumber }}
+                                </span>
+                            </div>
                             <span class="text-gray-400 text-xs mr-2">{{ svc.category }}</span>
                             <span class="text-blue-500 opacity-0 group-hover:opacity-100">➔</span>
                         </button>
@@ -569,15 +589,22 @@ async function handleSubmit() {
                                     class="w-full border rounded-lg px-3 py-2 bg-white" required />
                             </div>
                             <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Case Number</label>
+                                <input v-model="form.caseNumber" type="text" placeholder="e.g. CASE-001"
+                                    class="w-full border rounded-lg px-3 py-2 bg-white" />
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Ward</label>
                                 <input v-model="form.ward" type="text" placeholder="e.g. Ward 1"
                                     class="w-full border rounded-lg px-3 py-2 bg-white" required />
                             </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Attending Employee</label>
-                            <input v-model="form.employee" type="text" placeholder="Name"
-                                class="w-full border rounded-lg px-3 py-2 bg-white" required />
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Attending Employee</label>
+                                <input v-model="form.employee" type="text" placeholder="Name"
+                                    class="w-full border rounded-lg px-3 py-2 bg-white" required />
+                            </div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Remarks</label>

@@ -10,6 +10,7 @@ const loading = ref(false);
 const errorMsg = ref('');
 
 const formData = ref({
+    caseNumber: '',
     name: '',
     description: '',
     price: '',
@@ -40,6 +41,7 @@ async function handleAddService() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                caseNumber: formData.value.caseNumber,
                 name: formData.value.name,
                 description: formData.value.description,
                 price: parseFloat(formData.value.price),
@@ -64,6 +66,7 @@ async function handleEditService() {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                caseNumber: formData.value.caseNumber,
                 name: formData.value.name,
                 description: formData.value.description,
                 price: parseFloat(formData.value.price),
@@ -96,6 +99,7 @@ async function handleDeleteService(id) {
 
 function resetForm() {
     formData.value = {
+        caseNumber: '',
         name: '',
         description: '',
         price: '',
@@ -108,6 +112,7 @@ function resetForm() {
 function openEditForm(service) {
     selectedService.value = service;
     formData.value = {
+        caseNumber: service.caseNumber || '',
         name: service.name,
         description: service.description,
         price: service.price.toString(),
@@ -135,6 +140,16 @@ onMounted(fetchServices);
                     {{ view === 'add' ? 'Add New Clinical Service' : 'Edit Clinical Service' }}
                 </h3>
                 <form @submit.prevent="view === 'add' ? handleAddService() : handleEditService()" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Case Number</label>
+                        <input
+                            v-model="formData.caseNumber"
+                            type="text"
+                            placeholder="e.g., CASE-001"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        />
+                    </div>
+
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Service Name *</label>
                         <input
@@ -242,7 +257,12 @@ onMounted(fetchServices);
                     <div class="flex items-start justify-between mb-4">
                         <div>
                             <h4 class="font-bold text-gray-800">{{ service.name }}</h4>
-                            <p class="text-sm text-gray-500 mt-1">{{ service.category }}</p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <p class="text-sm text-gray-500">{{ service.category }}</p>
+                                <span v-if="service.caseNumber" class="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded font-medium border border-teal-200">
+                                    Case: {{ service.caseNumber }}
+                                </span>
+                            </div>
                         </div>
                         <span class="px-3 py-1 bg-teal-100 text-teal-700 rounded font-semibold text-sm">
                             {{ service.serviceCode }}

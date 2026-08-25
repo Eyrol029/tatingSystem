@@ -39,6 +39,9 @@ public class DatabaseMigration {
             jdbcTemplate.execute(
                 "ALTER TABLE \"PatientService\" ADD COLUMN IF NOT EXISTS \"wardName\" VARCHAR(255)"
             );
+            jdbcTemplate.execute(
+                "ALTER TABLE \"PatientService\" ADD COLUMN IF NOT EXISTS \"caseNumber\" VARCHAR(255)"
+            );
 
             System.out.println("[DatabaseMigration] PatientService table migration completed successfully.");
         } catch (Exception e) {

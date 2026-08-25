@@ -111,7 +111,12 @@ onMounted(fetchServices);
                 <div class="flex items-start justify-between mb-4">
                     <div>
                         <h4 class="font-bold text-gray-800">{{ service.name }}</h4>
-                        <p class="text-sm text-gray-500 mt-1">{{ service.category }}</p>
+                        <div class="flex items-center gap-2 mt-1">
+                            <p class="text-sm text-gray-500">{{ service.category }}</p>
+                            <span v-if="service.caseNumber" class="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded font-medium border border-teal-200">
+                                Case: {{ service.caseNumber }}
+                            </span>
+                        </div>
                     </div>
                     <span class="px-3 py-1 bg-teal-100 text-teal-700 rounded font-semibold text-sm">
                         {{ service.serviceCode }}

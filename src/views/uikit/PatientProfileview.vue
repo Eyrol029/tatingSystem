@@ -65,6 +65,7 @@ async function fetchServices() {
             employee: item.employeeName ?? '---',
             ward: item.wardName ?? '---',
             dateAvailed: item.dateAvailed,
+            caseNumber: item.caseNumber ?? '---',
             remarks: item.remarks ?? '---'
         }));
     } catch (e) {
@@ -118,23 +119,24 @@ onMounted(() => {
                         class="text-gray-600 hover:text-gray-800 font-semibold">
                         ←
                     </button>
-                    <h1 class="text-2xl font-semibold text-gray-800">My Profile</h1>
+                    <h1 class="text-2xl font-semibold text-gray-800">My Profile & Records</h1>
                 </div>
                 <button @click="printServices"
-                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
-                    🖨️ Print My Services
+                    class="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition flex items-center gap-2">
+                    Print Records
                 </button>
             </div>
 
-            <h2 class="text-3xl font-bold text-gray-900 mb-6">
-                {{ patientData.fName }} {{ patientData.middleI }} {{ patientData.lName }}
-            </h2>
-
-            <!-- General Information — VIEW ONLY, no Edit button -->
+            <!-- General Information (Read Only) -->
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">General Information</h3>
-
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
                 <div class="grid grid-cols-3 gap-6">
+                    <div>
+                        <p class="text-sm text-gray-500">Full Name</p>
+                        <p class="font-medium text-gray-900">
+                            {{ patientData.fName }} {{ patientData.middleI }} {{ patientData.lName }}
+                        </p>
+                    </div>
                     <div>
                         <p class="text-sm text-gray-500">Patient ID</p>
                         <p class="font-medium text-gray-900">{{ patientData.patientID }}</p>
@@ -202,17 +204,23 @@ onMounted(() => {
                             <th class="th">Employee</th>
                             <th class="th">Ward</th>
                             <th class="th">Date Availed</th>
-                            <th class="th">Remarks</th>
+                            <th class="th">Case Number</th>
                             <th class="th no-print">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="service in services" :key="service.id" class="border-b hover:bg-gray-50">
-                            <td class="td">{{ service.service }}</td>
+                            <td class="td font-medium text-gray-900">{{ service.service }}</td>
                             <td class="td">{{ service.employee }}</td>
                             <td class="td">{{ service.ward }}</td>
                             <td class="td">{{ service.dateAvailed }}</td>
-                            <td class="td">{{ service.remarks }}</td>
+                            <td class="td font-semibold text-gray-700">
+                                <span v-if="service.caseNumber && service.caseNumber !== '---'"
+                                      class="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200">
+                                    {{ service.caseNumber }}
+                                </span>
+                                <span v-else class="text-gray-400">---</span>
+                            </td>
                             <td class="td no-print">
                                 <button @click="viewService(service)"
                                     class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700">

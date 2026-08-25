@@ -58,6 +58,7 @@ public class ClinicalServiceServiceImpl implements ClinicalServiceServiceInterfa
             existing.setPrice(updatedService.getPrice());
             existing.setCategory(updatedService.getCategory());
             existing.setDuration(updatedService.getDuration());
+            existing.setCaseNumber(updatedService.getCaseNumber());
             return repository.save(existing);
         });
     }

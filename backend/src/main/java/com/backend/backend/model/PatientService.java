@@ -45,6 +45,9 @@ public class PatientService {
     @Column(name = "paymentStatus", length = 20)
     private String paymentStatus = "Pending";
 
+    @Column(name = "caseNumber")
+    private String caseNumber;
+
     @Column(name = "remarks", columnDefinition = "TEXT")
     private String remarks;
 
@@ -55,6 +58,14 @@ public class PatientService {
 
     public void setPatientServiceID(Integer patientServiceID) {
         this.patientServiceID = patientServiceID;
+    }
+
+    public String getCaseNumber() {
+        return caseNumber;
+    }
+
+    public void setCaseNumber(String caseNumber) {
+        this.caseNumber = caseNumber;
     }
 
     public Integer getPatientID() {

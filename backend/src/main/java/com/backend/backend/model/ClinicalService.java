@@ -13,6 +13,9 @@ public class ClinicalService {
     @Column(nullable = false)
     private String serviceCode; // e.g., S001
 
+    @Column(name = "case_number")
+    private String caseNumber;
+
     @Column(nullable = false)
     private String name;
 
@@ -42,6 +45,14 @@ public class ClinicalService {
 
     public void setServiceCode(String serviceCode) {
         this.serviceCode = serviceCode;
+    }
+
+    public String getCaseNumber() {
+        return caseNumber;
+    }
+
+    public void setCaseNumber(String caseNumber) {
+        this.caseNumber = caseNumber;
     }
 
     public String getName() {
