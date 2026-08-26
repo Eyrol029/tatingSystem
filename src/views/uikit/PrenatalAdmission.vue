@@ -115,6 +115,17 @@ const riskResult   = ref(null)
 const riskLoading  = ref(false)
 const employeesList = ref([])
 const patientName = ref('')
+const labTests = [
+  'Pregnancy Test',
+  'Complete Blood Count (CBC)',
+  'Urinalysis (UA)',
+  'Blood Typing (BT)',
+  'Hepatitis B Screening (HbsAg)',
+  'HIV Screening',
+  'Syphilis screening (RPR or EIA)',
+  'Oral Glucose Tolerance Test (OGTT)',
+  'Pelvic Ultrasound or Transvaginal UTZ'
+]
 
 
 const onAttendingStaffChange = () => {
@@ -151,8 +162,8 @@ const form = ref({
     referralHospitalName: '', type: 'Normal Spontaneous Vaginal Delivery'
   },
   labs: {
-    ua: '', purulentSubstance: '', rbc: '', cbc: '',
-    hemoglobin: '', vdrl: '', hiv: '', ultrasound: ''
+    ua: '', purulentSubstance: '', rbc: '', cbc: '', laboratoryNote: '',
+    hemoglobin: '', vdrl: '', hiv: '', ultrasound: '', selectedTests: []
   },
   visitLabs: {
     2: { undergoesLab: false, ua: '', purulentSubstance: '', rbc: '', cbc: '', hemoglobin: '', vdrl: '', hiv: '', ultrasound: '' },
@@ -683,6 +694,8 @@ async function loadPrenatalDetailData(prenatalrecordID) {
       form.value.labs.vdrl              = firstLab.venerealDiseaseResearchLaboratoryTest || ''
       form.value.labs.hiv               = firstLab.humanImmunodeficiencyVirusTest || ''
       form.value.labs.ultrasound        = firstLab.ultrasoundResult || ''
+      form.value.labs.laboratoryNote    = firstLab.laboratoryNote || ''
+      form.value.labs.selectedTests     = Array.isArray(firstLab.selectedTests) ? [...firstLab.selectedTests] : []
     }
 
     labRecords.forEach(r => {
@@ -926,7 +939,9 @@ async function submitForm() {
       hemoglobin:    form.value.labs.hemoglobin ? Number(form.value.labs.hemoglobin) : null,
       venerealDiseaseResearchLaboratoryTest: form.value.labs.vdrl || null,
       humanImmunodeficiencyVirusTest:        form.value.labs.hiv  || null,
-      ultrasoundResult: form.value.labs.ultrasound || null
+      ultrasoundResult: form.value.labs.ultrasound || null,
+      selectedTests: form.value.labs.selectedTests,
+      laboratoryNote: form.value.labs.laboratoryNote || null
     })
 
     // Save laboratory results for follow-up visits (2+) only when undergoesLab is true
@@ -1418,62 +1433,42 @@ async function submitForm() {
       :class="labHighRisk ? 'border-red-400 bg-red-50' : 'border-gray-200'">
       <h3 class="text-center font-bold text-sm tracking-widest mb-1">LABORATORY RESULTS (INITIAL / VISIT #1)</h3>
       <p v-if="labHighRisk" class="text-center text-xs text-red-600 font-bold mb-3">⚠ Abnormal lab result(s) detected</p>
-      <div class="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
-        <div class="col-span-2 flex items-center gap-2">
-          <label class="w-36 font-medium shrink-0">Urinalysis:</label>
-          <select v-model="form.labs.ua" class="select-field flex-1">
-            <option value="">— Select —</option><option>Normal</option><option>Protein+</option><option>Protein++</option><option>Protein+++</option><option>Pus Cells Present</option><option>Protein + Pus Cells</option><option>Glucose Present</option><option>RBC Present</option>
-          </select>
-        </div>
-        <div class="flex items-center gap-2">
-          <label class="w-36 font-medium shrink-0">Purulent (Pus Cells):</label>
-          <select v-model="form.labs.purulentSubstance" class="select-field flex-1">
-            <option value="">— Select —</option><option>None</option><option>Few</option><option>Moderate</option><option>Many</option><option>TNTC</option>
-          </select>
-        </div>
-        <div class="flex items-center gap-2">
-          <label class="w-36 font-medium shrink-0">Red Blood Cells:</label>
-          <select v-model="form.labs.rbc" class="select-field flex-1">
-            <option value="">— Select —</option><option>Normal</option><option>Few</option><option>Moderate</option><option>Many</option><option>TNTC</option>
-          </select>
-        </div>
-        <div class="flex items-center gap-2">
-          <label class="w-36 font-medium shrink-0">CBC:</label>
-          <select v-model="form.labs.cbc" class="select-field flex-1">
-            <option value="">— Select —</option><option>Normal</option><option>Low WBC</option><option>High WBC</option><option>Anemia</option><option>Thrombocytopenia</option><option>Pancytopenia</option>
-          </select>
-        </div>
-        <div class="flex items-center gap-2">
-          <label class="w-36 font-medium shrink-0">Hemoglobin (g/dL):</label>
-          <input v-model="form.labs.hemoglobin" type="number" step="0.1" min="0" max="20" placeholder="e.g. 12.5" class="input-line flex-1"
-            :class="form.labs.hemoglobin && parseFloat(form.labs.hemoglobin) < 11 ? 'text-red-600 font-bold border-red-400' : ''" />
-          <span v-if="form.labs.hemoglobin && parseFloat(form.labs.hemoglobin) < 11" class="text-red-600 font-bold text-xs shrink-0">⚠ Anemia</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <label class="w-36 font-medium shrink-0">VDRL:</label>
-          <select v-model="form.labs.vdrl" class="select-field flex-1">
-            <option value="">— Select —</option><option>Non-Reactive</option><option>Reactive (Positive)</option><option>Weakly Reactive</option>
-          </select>
-        </div>
-        <div class="flex items-center gap-2">
-          <label class="w-36 font-medium shrink-0">HIV Test:</label>
-          <select v-model="form.labs.hiv" class="select-field flex-1">
-            <option value="">— Select —</option><option>Non-Reactive</option><option>Reactive (Positive)</option><option>Indeterminate</option>
-          </select>
-        </div>
-        <div class="col-span-2">
-          <label class="block font-medium mb-1">Ultrasound Results:</label>
-          <div class="flex gap-2 mb-2 flex-wrap">
-            <button type="button" v-for="tag in ['Normal','Placenta Previa','Oligohydramnios','Polyhydramnios','Fetal Anomaly','IUGR','Breech Presentation','Multiple Gestation']" :key="tag"
-              @click="toggleUltrasoundTag(tag)" :disabled="isReadOnly"
-              class="text-xs px-2 py-1 rounded border transition disabled:opacity-50 disabled:cursor-not-allowed"
-              :class="ultrasoundTags.includes(tag) ? (['Placenta Previa','Oligohydramnios','Fetal Anomaly','IUGR'].includes(tag) ? 'bg-red-500 text-white border-red-500' : 'bg-indigo-500 text-white border-indigo-500') : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'">
-              {{ tag }}
-            </button>
-          </div>
-          <textarea v-model="form.labs.ultrasound" rows="2" placeholder="Additional findings or notes..." class="w-full border border-gray-300 rounded p-2 text-sm"></textarea>
+
+      <div class="border border-gray-200 rounded-lg p-4 mb-5">
+        <h4 class="text-center font-bold text-sm tracking-widest mb-4 uppercase">
+          REQUESTED EXAMINATIONS <span class="text-red-500">*</span>
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <label
+            v-for="(test, index) in labTests"
+            :key="index"
+            class="flex items-center gap-3 p-3 rounded-lg border transition cursor-pointer"
+            :class="form.labs.selectedTests.includes(test)
+              ? 'border-indigo-500 bg-indigo-50/50 shadow-sm'
+              : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-gray-50'"
+          >
+            <input
+              type="checkbox"
+              :value="test"
+              v-model="form.labs.selectedTests"
+              :disabled="isReadOnly"
+              class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+            />
+            <span class="text-xs font-semibold text-gray-800">{{ test }}</span>
+          </label>
         </div>
       </div>
+
+      <div class="mt-5">
+        <label class="block font-medium mb-1">Laboratory Note:</label>
+        <textarea
+          v-model="form.labs.laboratoryNote"
+          rows="3"
+          placeholder="Enter laboratory notes..."
+          class="w-full border border-gray-300 rounded p-2 text-sm"
+        ></textarea>
+      </div>
+
     </div>
 
     <!-- ── Case 2: Returning visit – Lab Results History accordion ── -->
@@ -1507,6 +1502,10 @@ async function submitForm() {
 
         <!-- Read-only display of the selected lab record -->
         <div v-if="selectedLabHistoryRecord" class="p-4 grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
+          <div class="col-span-2">
+            <span class="font-medium text-gray-500 block mb-1">Laboratory Note:</span>
+            <span class="text-gray-800 whitespace-pre-line">{{ selectedLabHistoryRecord.laboratoryNote || '—' }}</span>
+          </div>
           <div class="col-span-2 flex items-center gap-2">
             <span class="w-36 font-medium shrink-0 text-gray-500">Urinalysis:</span>
             <span class="font-semibold text-gray-800">{{ selectedLabHistoryRecord.urinalysis || '—' }}</span>

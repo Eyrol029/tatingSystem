@@ -1,12 +1,16 @@
 package com.backend.backend.model.Prenatal;
 
 import java.math.BigDecimal;
+import java.util.List;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 
 @Entity
@@ -54,6 +58,14 @@ public class LaboratoryResults {
     @Column(name = "visitNumber")
     private Integer visitNumber;
 
+    @Column(name = "laboratoryNote", columnDefinition = "TEXT")
+    private String laboratoryNote;
+
+    @ElementCollection
+    @CollectionTable(name = "prenatal_lab_requested_tests", joinColumns = @JoinColumn(name = "laboratory_result_id"))
+    @Column(name = "test_name")
+    private List<String> selectedTests;
+
     // Getters and Setters
     public Integer getLaboratoryResultID() { return laboratoryResultID; }
     public void setLaboratoryResultID(Integer laboratoryResultID) { this.laboratoryResultID = laboratoryResultID; }
@@ -93,4 +105,10 @@ public class LaboratoryResults {
 
     public String getTetanusToxoid() { return tetanusToxoid; }
     public void setTetanusToxoid(String tetanusToxoid) { this.tetanusToxoid = tetanusToxoid; }
+
+    public String getLaboratoryNote() { return laboratoryNote; }
+    public void setLaboratoryNote(String laboratoryNote) { this.laboratoryNote = laboratoryNote; }
+
+    public List<String> getSelectedTests() { return selectedTests; }
+    public void setSelectedTests(List<String> selectedTests) { this.selectedTests = selectedTests; }
 }
