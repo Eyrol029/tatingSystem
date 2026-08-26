@@ -51,12 +51,18 @@ public class LaboratoryResults {
     @Column(name = "tetanusToxoid")
     private String tetanusToxoid;
 
+    @Column(name = "visitNumber")
+    private Integer visitNumber;
+
     // Getters and Setters
     public Integer getLaboratoryResultID() { return laboratoryResultID; }
     public void setLaboratoryResultID(Integer laboratoryResultID) { this.laboratoryResultID = laboratoryResultID; }
 
     public Integer getPrenatalRecordID() { return prenatalRecordID; }
     public void setPrenatalRecordID(Integer prenatalRecordID) { this.prenatalRecordID = prenatalRecordID; }
+
+    public Integer getVisitNumber() { return visitNumber; }
+    public void setVisitNumber(Integer visitNumber) { this.visitNumber = visitNumber; }
 
     public String getUrinalysis() { return urinalysis; }
     public void setUrinalysis(String urinalysis) { this.urinalysis = urinalysis; }

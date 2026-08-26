@@ -80,6 +80,36 @@ const serviceID    = ref(null)
 const prenatalID   = ref(null)
 const submitStatus = ref({ loading: false, error: '', success: '' })
 
+const loadedLabRecords = ref([])
+const selectedLabHistoryId = ref(null)
+const labHistoryOpen = ref(false)
+const isInitialLoadWithVisits = ref(false)
+
+// True when this record already has saved visit data (i.e. reopening after first save)
+const hasSavedVisits = computed(() => isInitialLoadWithVisits.value)
+
+const labHistoryOptions = computed(() => {
+  return loadedLabRecords.value.map(r => {
+    const label = (r.visitNumber && r.visitNumber > 1)
+      ? `Visit #${r.visitNumber} Laboratory Results`
+      : `Initial / Visit #1 Laboratory Results`
+    return { id: r.laboratoryResultID, label, data: r }
+  })
+})
+
+const selectedLabHistoryRecord = computed(() => {
+  const option = labHistoryOptions.value.find(opt => opt.id === selectedLabHistoryId.value)
+  return option ? option.data : null
+})
+
+// The next unfilled visit number (used to decide which visit is "current" when returning)
+const currentVisitNumber = computed(() => {
+  if (!hasSavedVisits.value) return 1
+  // Find the first visit row that has no date filled yet
+  const nextEmpty = form.value.visits.find(v => !v.date)
+  return nextEmpty ? nextEmpty.visit : null  // null means all visits are filled
+})
+
 
 const riskResult   = ref(null)
 const riskLoading  = ref(false)
@@ -124,6 +154,17 @@ const form = ref({
     ua: '', purulentSubstance: '', rbc: '', cbc: '',
     hemoglobin: '', vdrl: '', hiv: '', ultrasound: ''
   },
+  visitLabs: {
+    2: { undergoesLab: false, ua: '', purulentSubstance: '', rbc: '', cbc: '', hemoglobin: '', vdrl: '', hiv: '', ultrasound: '' },
+    3: { undergoesLab: false, ua: '', purulentSubstance: '', rbc: '', cbc: '', hemoglobin: '', vdrl: '', hiv: '', ultrasound: '' },
+    4: { undergoesLab: false, ua: '', purulentSubstance: '', rbc: '', cbc: '', hemoglobin: '', vdrl: '', hiv: '', ultrasound: '' },
+    5: { undergoesLab: false, ua: '', purulentSubstance: '', rbc: '', cbc: '', hemoglobin: '', vdrl: '', hiv: '', ultrasound: '' },
+    6: { undergoesLab: false, ua: '', purulentSubstance: '', rbc: '', cbc: '', hemoglobin: '', vdrl: '', hiv: '', ultrasound: '' },
+    7: { undergoesLab: false, ua: '', purulentSubstance: '', rbc: '', cbc: '', hemoglobin: '', vdrl: '', hiv: '', ultrasound: '' },
+    8: { undergoesLab: false, ua: '', purulentSubstance: '', rbc: '', cbc: '', hemoglobin: '', vdrl: '', hiv: '', ultrasound: '' },
+    9: { undergoesLab: false, ua: '', purulentSubstance: '', rbc: '', cbc: '', hemoglobin: '', vdrl: '', hiv: '', ultrasound: '' },
+    10: { undergoesLab: false, ua: '', purulentSubstance: '', rbc: '', cbc: '', hemoglobin: '', vdrl: '', hiv: '', ultrasound: '' }
+  },
   visits: Array.from({ length: 10 }, (_, i) => ({
     visit: i + 1, date: '', aog: '', fht: '', fh: '',
     position: '', presentation: '', weight: '', bp: '', nextVisit: ''
@@ -158,25 +199,57 @@ const labHighRisk = computed(() => {
 })
 const referralHighRisk = computed(() => form.value.deliveryDetails.referralHospitalNeeded)
 const visitHighRisk = computed(() => {
-  return form.value.visits.some(v => {
-    if (v.bp) {
-      const parts = v.bp.split('/')
-      if (parts.length === 2) {
-        const s = parseInt(parts[0]), d = parseInt(parts[1])
-        if (!isNaN(s) && !isNaN(d) && (s >= 140 || d >= 90)) return true
-      }
-    }
-    if (v.fht) {
-      const fht = parseInt(v.fht)
-      if (!isNaN(fht) && (fht < 110 || fht > 160)) return true
-    }
-    if (v.presentation) {
-      const p = v.presentation.toLowerCase()
-      if (['breech','transverse','oblique','face','brow','shoulder'].some(k => p.includes(k))) return true
-    }
+  return form.value.visits.some((v, index) => {
+    if (isVisitBpHigh(v)) return true
+    if (isVisitFhtAbnormal(v)) return true
+    if (isVisitPresentationAbnormal(v)) return true
+    if (isVisitFhAbnormal(v)) return true
+    if (isVisitWeightChangeSignificant(v, index)) return true
     return false
   })
 })
+
+const visitComplications = computed(() => {
+  const flags = []
+  form.value.visits.forEach((v, index) => {
+    if (!v.date && !v.aog && !v.fht && !v.fh && !v.position && !v.presentation && !v.weight && !v.bp) return
+    const rowFlags = []
+    
+    if (isVisitFhtAbnormal(v)) {
+      rowFlags.push({ type: 'Abnormal FHT', detail: `FHT: ${v.fht} bpm` })
+    }
+    if (isVisitFhAbnormal(v)) {
+      rowFlags.push({ type: 'Abnormal Fundal Height', detail: `FH: ${v.fh} cm, AOG: ${v.aog} wks` })
+    }
+    if (isVisitWeightChangeSignificant(v, index)) {
+      const diff = getVisitWeightDiff(v, index)
+      const diffStr = diff > 0 ? `+${diff.toFixed(1)}` : `${diff.toFixed(1)}`
+      rowFlags.push({ type: 'Significant Weight Change', detail: `Change: ${diffStr} kg` })
+    }
+    if (isVisitBpHigh(v)) {
+      rowFlags.push({ type: 'Elevated BP', detail: `BP: ${v.bp}` })
+    }
+
+    if (rowFlags.length > 0) {
+      flags.push({
+        visitNum: v.visit,
+        date: v.date || `Visit ${v.visit}`,
+        complications: rowFlags
+      })
+    }
+  })
+  return flags
+})
+
+function navigateToLabForm() {
+  if (!clientId) {
+    alert("Patient ID is missing. Please open the Prenatal Consultation Form from the patient's profile page.")
+    return
+  }
+  router.push({
+    path: `/uikit/Laboratoryform/${clientId}/${serviceID.value || serviceId || 0}`
+  })
+}
 
 
 // ─── Ultrasound tag picker ────────────────────────────────────────────────────
@@ -190,6 +263,28 @@ function toggleUltrasoundTag(tag) {
   if (idx === -1) { ultrasoundTags.value.push(tag) }
   else { ultrasoundTags.value.splice(idx, 1) }
   form.value.labs.ultrasound = ultrasoundTags.value.join(', ')
+}
+
+function getVisitComplicationsList(v, index) {
+  const list = []
+  if (isVisitFhtAbnormal(v)) list.push('Abnormal FHT')
+  if (isVisitFhAbnormal(v)) list.push('Abnormal Fundal Height')
+  if (isVisitWeightChangeSignificant(v, index)) list.push('Significant Weight Change')
+  if (isVisitBpHigh(v)) list.push('Elevated BP')
+  return list
+}
+
+function toggleVisitUltrasoundTag(visitNum, tag) {
+  if (isReadOnly.value) return
+  const currentStr = form.value.visitLabs[visitNum].ultrasound || ''
+  const tags = currentStr ? currentStr.split(', ') : []
+  const idx = tags.indexOf(tag)
+  if (idx === -1) {
+    tags.push(tag)
+  } else {
+    tags.splice(idx, 1)
+  }
+  form.value.visitLabs[visitNum].ultrasound = tags.join(', ')
 }
 
 
@@ -222,8 +317,43 @@ function isVisitPresentationAbnormal(v) {
   const p = v.presentation.toLowerCase()
   return ['breech','transverse','oblique','face','brow','shoulder'].some(k => p.includes(k))
 }
-function isVisitRowHighRisk(v) {
-  return isVisitBpHigh(v) || isVisitFhtAbnormal(v) || isVisitPresentationAbnormal(v)
+function isVisitFhAbnormal(v) {
+  if (!v.fh || !v.aog) return false
+  const fh = parseFloat(v.fh)
+  const aog = parseFloat(v.aog)
+  return !isNaN(fh) && !isNaN(aog) && (fh < (aog - 3) || fh > (aog + 3))
+}
+function getPreviousVisitWithWeight(currentIndex) {
+  for (let i = currentIndex - 1; i >= 0; i--) {
+    const prev = form.value.visits[i]
+    if (prev.weight && !isNaN(parseFloat(prev.weight))) {
+      return prev
+    }
+  }
+  return null
+}
+function isVisitWeightChangeSignificant(v, index) {
+  if (!v.weight || isNaN(parseFloat(v.weight))) return false
+  const prev = getPreviousVisitWithWeight(index)
+  if (!prev) return false
+  const currentW = parseFloat(v.weight)
+  const prevW = parseFloat(prev.weight)
+  return Math.abs(currentW - prevW) > 2
+}
+function getVisitWeightDiff(v, index) {
+  if (!v.weight || isNaN(parseFloat(v.weight))) return null
+  const prev = getPreviousVisitWithWeight(index)
+  if (!prev) return null
+  const currentW = parseFloat(v.weight)
+  const prevW = parseFloat(prev.weight)
+  return currentW - prevW
+}
+function isVisitRowHighRisk(v, index) {
+  return isVisitBpHigh(v) ||
+         isVisitFhtAbnormal(v) ||
+         isVisitPresentationAbnormal(v) ||
+         isVisitFhAbnormal(v) ||
+         isVisitWeightChangeSignificant(v, index)
 }
 
 
@@ -536,16 +666,43 @@ async function loadPrenatalDetailData(prenatalrecordID) {
 
 
     const labRecords = Array.isArray(labRes.data) ? labRes.data : []
-    const lab = labRecords.sort((a, b) => (b.laboratoryResultID || 0) - (a.laboratoryResultID || 0))[0] || null
-    if (lab) {
-      form.value.labs.ua                = lab.urinalysis || ''
-      form.value.labs.purulentSubstance = lab.pusCells || ''
-      form.value.labs.rbc               = lab.redBloodCells || ''
-      form.value.labs.cbc               = lab.completeBloodCount || ''
-      form.value.labs.hemoglobin        = lab.hemoglobin != null ? String(lab.hemoglobin) : ''
-      form.value.labs.vdrl              = lab.venerealDiseaseResearchLaboratoryTest || ''
-      form.value.labs.hiv               = lab.humanImmunodeficiencyVirusTest || ''
-      form.value.labs.ultrasound        = lab.ultrasoundResult || ''
+    loadedLabRecords.value = labRecords
+    
+    // Reset all visitLabs in case we are reloading for a new service
+    for (let k = 2; k <= 10; k++) {
+      form.value.visitLabs[k] = { undergoesLab: false, ua: '', purulentSubstance: '', rbc: '', cbc: '', hemoglobin: '', vdrl: '', hiv: '', ultrasound: '' }
+    }
+
+    const firstLab = labRecords.find(r => r.visitNumber === null || r.visitNumber === undefined || r.visitNumber === 1) || labRecords[0]
+    if (firstLab) {
+      form.value.labs.ua                = firstLab.urinalysis || ''
+      form.value.labs.purulentSubstance = firstLab.pusCells || ''
+      form.value.labs.rbc               = firstLab.redBloodCells || ''
+      form.value.labs.cbc               = firstLab.completeBloodCount || ''
+      form.value.labs.hemoglobin        = firstLab.hemoglobin != null ? String(firstLab.hemoglobin) : ''
+      form.value.labs.vdrl              = firstLab.venerealDiseaseResearchLaboratoryTest || ''
+      form.value.labs.hiv               = firstLab.humanImmunodeficiencyVirusTest || ''
+      form.value.labs.ultrasound        = firstLab.ultrasoundResult || ''
+    }
+
+    labRecords.forEach(r => {
+      if (r.visitNumber && r.visitNumber >= 2 && r.visitNumber <= 10) {
+        form.value.visitLabs[r.visitNumber] = {
+          undergoesLab: true,
+          ua: r.urinalysis || '',
+          purulentSubstance: r.pusCells || '',
+          rbc: r.redBloodCells || '',
+          cbc: r.completeBloodCount || '',
+          hemoglobin: r.hemoglobin != null ? String(r.hemoglobin) : '',
+          vdrl: r.venerealDiseaseResearchLaboratoryTest || '',
+          hiv: r.humanImmunodeficiencyVirusTest || '',
+          ultrasound: r.ultrasoundResult || ''
+        }
+      }
+    })
+
+    if (labHistoryOptions.value.length > 0) {
+      selectedLabHistoryId.value = labHistoryOptions.value[0].id
     }
 
 
@@ -577,6 +734,10 @@ async function loadPrenatalDetailData(prenatalrecordID) {
         form.value.visits[index].aog  = visit.ageOfGestationInWeeks != null ? String(visit.ageOfGestationInWeeks) : ''
       }
     })
+
+    if (visits.some(v => v.visitDate)) {
+      isInitialLoadWithVisits.value = true
+    }
 
 
     const vitals = Array.isArray(vitalRes.data) ? vitalRes.data : []
@@ -757,6 +918,7 @@ async function submitForm() {
     // 7. LaboratoryResults
     await axios.post(`${BASE}/laboratory-results`, {
       prenatalRecordID: prenatalrecordID,
+      visitNumber: 1,
       urinalysis:    form.value.labs.ua || null,
       pusCells:      form.value.labs.purulentSubstance || null,
       redBloodCells: form.value.labs.rbc || null,
@@ -766,6 +928,28 @@ async function submitForm() {
       humanImmunodeficiencyVirusTest:        form.value.labs.hiv  || null,
       ultrasoundResult: form.value.labs.ultrasound || null
     })
+
+    // Save laboratory results for follow-up visits (2+) only when undergoesLab is true
+    for (let i = 1; i < form.value.visits.length; i++) {
+      const v = form.value.visits[i]
+      const visitNum = v.visit
+      const visitLab = form.value.visitLabs[visitNum]
+      // Only save if: complications exist AND user confirmed patient undergoes lab
+      if (visitLab && visitLab.undergoesLab && isVisitRowHighRisk(v, i)) {
+        await axios.post(`${BASE}/laboratory-results`, {
+          prenatalRecordID: prenatalrecordID,
+          visitNumber: visitNum,
+          urinalysis:    visitLab.ua || null,
+          pusCells:      visitLab.purulentSubstance || null,
+          redBloodCells: visitLab.rbc || null,
+          completeBloodCount: visitLab.cbc || null,
+          hemoglobin:    visitLab.hemoglobin ? Number(visitLab.hemoglobin) : null,
+          venerealDiseaseResearchLaboratoryTest: visitLab.vdrl || null,
+          humanImmunodeficiencyVirusTest:        visitLab.hiv  || null,
+          ultrasoundResult: visitLab.ultrasound || null
+        })
+      }
+    }
 
 
     // 8. TreatmentManagement
@@ -1147,155 +1331,327 @@ async function submitForm() {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="v in form.visits" :key="v.visit"
-              :class="isVisitRowHighRisk(v) ? 'bg-red-50' : ''">
+            <tr v-for="(v, index) in form.visits" :key="v.visit"
+              :class="isVisitRowHighRisk(v, index) ? 'bg-red-50' : ''">
               <td class="td text-center font-semibold"
-                :class="isVisitRowHighRisk(v) ? 'text-red-600' : ''">{{ v.visit }}</td>
+                :class="isVisitRowHighRisk(v, index) ? 'text-red-600' : ''">{{ v.visit }}</td>
               <td class="td"><input v-model="v.date" type="date" class="input-table" /></td>
               <td class="td"><input v-model="v.aog" class="input-table" /></td>
               <td class="td">
                 <input v-model="v.fht" class="input-table"
-                  :class="isVisitFhtAbnormal(v) ? 'text-red-600 font-bold' : ''" />
+                  :class="isVisitFhtAbnormal(v) ? 'text-red-600 font-bold bg-red-100/50' : ''" />
               </td>
-              <td class="td"><input v-model="v.fh" class="input-table" /></td>
+              <td class="td">
+                <input v-model="v.fh" class="input-table"
+                  :class="isVisitFhAbnormal(v) ? 'text-red-600 font-bold bg-red-100/50' : ''" />
+              </td>
               <td class="td"><input v-model="v.position" class="input-table" /></td>
               <td class="td">
                 <input v-model="v.presentation" class="input-table"
-                  :class="isVisitPresentationAbnormal(v) ? 'text-red-600 font-bold' : ''" />
+                  :class="isVisitPresentationAbnormal(v) ? 'text-red-600 font-bold bg-red-100/50' : ''" />
               </td>
-              <td class="td"><input v-model="v.weight" class="input-table" /></td>
+              <td class="td">
+                <input v-model="v.weight" class="input-table"
+                  :class="isVisitWeightChangeSignificant(v, index) ? 'text-red-600 font-bold bg-red-100/50' : ''" />
+              </td>
               <td class="td">
                 <input v-model="v.bp" class="input-table"
-                  :class="isVisitBpHigh(v) ? 'text-red-600 font-bold' : ''" />
+                  :class="isVisitBpHigh(v) ? 'text-red-600 font-bold bg-red-100/50' : ''" />
               </td>
               <td class="td"><input v-model="v.nextVisit" type="date" class="input-table" /></td>
             </tr>
           </tbody>
         </table>
-        <p v-if="visitHighRisk" class="text-xs text-red-600 mt-1 no-print">
-          🔴 Red values indicate: FHT &lt;110 or &gt;160 bpm | BP ≥ 140/90 mmHg | Non-vertex presentation
+        <p v-if="visitHighRisk" class="text-xs text-red-600 mt-1 no-print font-medium">
+          🔴 Red/Highlighted values indicate: FHT &lt; 110 or &gt; 160 bpm | FH &lt; (AOG - 3) or &gt; (AOG + 3) | Weight difference &gt; 2 kg from previous visit | BP ≥ 140/90 mmHg | Non-vertex presentation
         </p>
+      </div>
+
+      <!-- Follow-Up Complications & Laboratory Request Prompt -->
+      <div v-if="visitComplications.length > 0" class="no-print mt-4 p-4 border border-red-200 rounded-lg bg-red-50/50 shadow-sm transition">
+        <div class="flex items-start gap-3">
+          <div class="p-2 bg-red-100 text-red-700 rounded-full shrink-0">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <h4 class="font-bold text-red-800 text-sm mb-1">Complication Flagged in Follow-Up Visit(s)</h4>
+            <div class="text-xs text-red-700 space-y-2 mb-3">
+              <div v-for="item in visitComplications" :key="item.visitNum" class="flex gap-2">
+                <span class="font-semibold text-red-800">Visit #{{ item.visitNum }}:</span>
+                <span class="flex flex-wrap gap-x-2">
+                  <span v-for="comp in item.complications" :key="comp.type" class="bg-red-100 px-1.5 py-0.5 rounded text-[10px] font-medium text-red-800">
+                    {{ comp.type }} ({{ comp.detail }})
+                  </span>
+                </span>
+              </div>
+            </div>
+            
+            <!-- Laboratory request prompt -->
+            <div class="border-t border-red-200 pt-3 flex flex-wrap items-center justify-between gap-3">
+              <div class="text-xs text-gray-700">
+                <span class="font-semibold text-red-800">Complications detected:</span> Would you like to request laboratory tests for this patient?
+              </div>
+              <button @click="navigateToLabForm" type="button" 
+                class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow transition">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+                Request Laboratory?
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
 
-    <!-- Laboratory Results -->
-    <div class="no-break border rounded p-4 mb-6"
+    <!-- ═══ LABORATORY SECTION ═══
+         • First time (no saved visits): show editable Visit #1 lab form always
+         • Returning visits: show Laboratory Results History accordion + conditional
+           new-entry form only when the CURRENT visit has complications
+    -->
+
+    <!-- ── Case 1: First visit – always show initial lab form ── -->
+    <div v-if="!hasSavedVisits" class="no-break border rounded p-4 mb-6"
       :class="labHighRisk ? 'border-red-400 bg-red-50' : 'border-gray-200'">
-      <h3 class="text-center font-bold text-sm tracking-widest mb-1">LABORATORY RESULTS</h3>
+      <h3 class="text-center font-bold text-sm tracking-widest mb-1">LABORATORY RESULTS (INITIAL / VISIT #1)</h3>
       <p v-if="labHighRisk" class="text-center text-xs text-red-600 font-bold mb-3">⚠ Abnormal lab result(s) detected</p>
       <div class="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
-
-
         <div class="col-span-2 flex items-center gap-2">
           <label class="w-36 font-medium shrink-0">Urinalysis:</label>
           <select v-model="form.labs.ua" class="select-field flex-1">
-            <option value="">— Select —</option>
-            <option>Normal</option>
-            <option>Protein+</option>
-            <option>Protein++</option>
-            <option>Protein+++</option>
-            <option>Pus Cells Present</option>
-            <option>Protein + Pus Cells</option>
-            <option>Glucose Present</option>
-            <option>RBC Present</option>
+            <option value="">— Select —</option><option>Normal</option><option>Protein+</option><option>Protein++</option><option>Protein+++</option><option>Pus Cells Present</option><option>Protein + Pus Cells</option><option>Glucose Present</option><option>RBC Present</option>
           </select>
         </div>
-
-
         <div class="flex items-center gap-2">
           <label class="w-36 font-medium shrink-0">Purulent (Pus Cells):</label>
           <select v-model="form.labs.purulentSubstance" class="select-field flex-1">
-            <option value="">— Select —</option>
-            <option>None</option>
-            <option>Few</option>
-            <option>Moderate</option>
-            <option>Many</option>
-            <option>TNTC</option>
+            <option value="">— Select —</option><option>None</option><option>Few</option><option>Moderate</option><option>Many</option><option>TNTC</option>
           </select>
         </div>
-
-
         <div class="flex items-center gap-2">
           <label class="w-36 font-medium shrink-0">Red Blood Cells:</label>
           <select v-model="form.labs.rbc" class="select-field flex-1">
-            <option value="">— Select —</option>
-            <option>Normal</option>
-            <option>Few</option>
-            <option>Moderate</option>
-            <option>Many</option>
-            <option>TNTC</option>
+            <option value="">— Select —</option><option>Normal</option><option>Few</option><option>Moderate</option><option>Many</option><option>TNTC</option>
           </select>
         </div>
-
-
         <div class="flex items-center gap-2">
           <label class="w-36 font-medium shrink-0">CBC:</label>
           <select v-model="form.labs.cbc" class="select-field flex-1">
-            <option value="">— Select —</option>
-            <option>Normal</option>
-            <option>Low WBC</option>
-            <option>High WBC</option>
-            <option>Anemia</option>
-            <option>Thrombocytopenia</option>
-            <option>Pancytopenia</option>
+            <option value="">— Select —</option><option>Normal</option><option>Low WBC</option><option>High WBC</option><option>Anemia</option><option>Thrombocytopenia</option><option>Pancytopenia</option>
           </select>
         </div>
-
-
         <div class="flex items-center gap-2">
           <label class="w-36 font-medium shrink-0">Hemoglobin (g/dL):</label>
-          <input v-model="form.labs.hemoglobin" type="number" step="0.1" min="0" max="20"
-            placeholder="e.g. 12.5" class="input-line flex-1"
+          <input v-model="form.labs.hemoglobin" type="number" step="0.1" min="0" max="20" placeholder="e.g. 12.5" class="input-line flex-1"
             :class="form.labs.hemoglobin && parseFloat(form.labs.hemoglobin) < 11 ? 'text-red-600 font-bold border-red-400' : ''" />
-          <span v-if="form.labs.hemoglobin && parseFloat(form.labs.hemoglobin) < 11"
-            class="text-red-600 font-bold text-xs shrink-0">⚠ Anemia</span>
+          <span v-if="form.labs.hemoglobin && parseFloat(form.labs.hemoglobin) < 11" class="text-red-600 font-bold text-xs shrink-0">⚠ Anemia</span>
         </div>
-
-
         <div class="flex items-center gap-2">
           <label class="w-36 font-medium shrink-0">VDRL:</label>
           <select v-model="form.labs.vdrl" class="select-field flex-1">
-            <option value="">— Select —</option>
-            <option>Non-Reactive</option>
-            <option>Reactive (Positive)</option>
-            <option>Weakly Reactive</option>
+            <option value="">— Select —</option><option>Non-Reactive</option><option>Reactive (Positive)</option><option>Weakly Reactive</option>
           </select>
         </div>
-
-
         <div class="flex items-center gap-2">
           <label class="w-36 font-medium shrink-0">HIV Test:</label>
           <select v-model="form.labs.hiv" class="select-field flex-1">
-            <option value="">— Select —</option>
-            <option>Non-Reactive</option>
-            <option>Reactive (Positive)</option>
-            <option>Indeterminate</option>
+            <option value="">— Select —</option><option>Non-Reactive</option><option>Reactive (Positive)</option><option>Indeterminate</option>
           </select>
         </div>
-
-
         <div class="col-span-2">
           <label class="block font-medium mb-1">Ultrasound Results:</label>
           <div class="flex gap-2 mb-2 flex-wrap">
-            <button type="button"
-              v-for="tag in ['Normal','Placenta Previa','Oligohydramnios','Polyhydramnios','Fetal Anomaly','IUGR','Breech Presentation','Multiple Gestation']"
-              :key="tag"
-              @click="toggleUltrasoundTag(tag)"
-              :disabled="isReadOnly"
+            <button type="button" v-for="tag in ['Normal','Placenta Previa','Oligohydramnios','Polyhydramnios','Fetal Anomaly','IUGR','Breech Presentation','Multiple Gestation']" :key="tag"
+              @click="toggleUltrasoundTag(tag)" :disabled="isReadOnly"
               class="text-xs px-2 py-1 rounded border transition disabled:opacity-50 disabled:cursor-not-allowed"
-              :class="ultrasoundTags.includes(tag)
-                ? (['Placenta Previa','Oligohydramnios','Fetal Anomaly','IUGR'].includes(tag) ? 'bg-red-500 text-white border-red-500' : 'bg-indigo-500 text-white border-indigo-500')
-                : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'">
+              :class="ultrasoundTags.includes(tag) ? (['Placenta Previa','Oligohydramnios','Fetal Anomaly','IUGR'].includes(tag) ? 'bg-red-500 text-white border-red-500' : 'bg-indigo-500 text-white border-indigo-500') : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'">
               {{ tag }}
             </button>
           </div>
-          <textarea v-model="form.labs.ultrasound" rows="2"
-            placeholder="Additional findings or notes..."
-            class="w-full border border-gray-300 rounded p-2 text-sm"></textarea>
+          <textarea v-model="form.labs.ultrasound" rows="2" placeholder="Additional findings or notes..." class="w-full border border-gray-300 rounded p-2 text-sm"></textarea>
         </div>
       </div>
     </div>
+
+    <!-- ── Case 2: Returning visit – Lab Results History accordion ── -->
+    <div v-if="hasSavedVisits" class="mb-6">
+
+      <!-- History accordion toggle -->
+      <button type="button" @click="labHistoryOpen = !labHistoryOpen"
+        class="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 transition text-left">
+        <div class="flex items-center gap-2">
+          <svg class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+          </svg>
+          <span class="font-semibold text-indigo-800 text-sm">Laboratory Results History</span>
+          <span class="text-xs text-indigo-500 bg-indigo-100 px-2 py-0.5 rounded-full">{{ labHistoryOptions.length }} record(s)</span>
+        </div>
+        <svg class="h-4 w-4 text-indigo-500 transition-transform" :class="labHistoryOpen ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <!-- History accordion body -->
+      <div v-if="labHistoryOpen" class="border border-indigo-200 border-t-0 rounded-b-lg bg-white">
+
+        <!-- Select dropdown to pick which record to view -->
+        <div class="p-3 border-b border-indigo-100 flex items-center gap-3">
+          <label class="text-xs font-semibold text-gray-600 shrink-0">View record:</label>
+          <select v-model="selectedLabHistoryId" class="select-field flex-1 text-sm">
+            <option v-for="opt in labHistoryOptions" :key="opt.id" :value="opt.id">{{ opt.label }}</option>
+          </select>
+        </div>
+
+        <!-- Read-only display of the selected lab record -->
+        <div v-if="selectedLabHistoryRecord" class="p-4 grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
+          <div class="col-span-2 flex items-center gap-2">
+            <span class="w-36 font-medium shrink-0 text-gray-500">Urinalysis:</span>
+            <span class="font-semibold text-gray-800">{{ selectedLabHistoryRecord.urinalysis || '—' }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-36 font-medium shrink-0 text-gray-500">Purulent Cells:</span>
+            <span class="font-semibold text-gray-800">{{ selectedLabHistoryRecord.pusCells || '—' }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-36 font-medium shrink-0 text-gray-500">Red Blood Cells:</span>
+            <span class="font-semibold text-gray-800">{{ selectedLabHistoryRecord.redBloodCells || '—' }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-36 font-medium shrink-0 text-gray-500">CBC:</span>
+            <span class="font-semibold text-gray-800">{{ selectedLabHistoryRecord.completeBloodCount || '—' }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-36 font-medium shrink-0 text-gray-500">Hemoglobin:</span>
+            <span class="font-semibold" :class="selectedLabHistoryRecord.hemoglobin && selectedLabHistoryRecord.hemoglobin < 11 ? 'text-red-600' : 'text-gray-800'">
+              {{ selectedLabHistoryRecord.hemoglobin != null ? selectedLabHistoryRecord.hemoglobin + ' g/dL' : '—' }}
+              <span v-if="selectedLabHistoryRecord.hemoglobin && selectedLabHistoryRecord.hemoglobin < 11" class="text-xs ml-1">⚠ Anemia</span>
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-36 font-medium shrink-0 text-gray-500">VDRL:</span>
+            <span class="font-semibold" :class="selectedLabHistoryRecord.venerealDiseaseResearchLaboratoryTest && selectedLabHistoryRecord.venerealDiseaseResearchLaboratoryTest.toLowerCase().includes('positive') ? 'text-red-600' : 'text-gray-800'">
+              {{ selectedLabHistoryRecord.venerealDiseaseResearchLaboratoryTest || '—' }}
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="w-36 font-medium shrink-0 text-gray-500">HIV Test:</span>
+            <span class="font-semibold" :class="selectedLabHistoryRecord.humanImmunodeficiencyVirusTest && selectedLabHistoryRecord.humanImmunodeficiencyVirusTest.toLowerCase().includes('positive') ? 'text-red-600' : 'text-gray-800'">
+              {{ selectedLabHistoryRecord.humanImmunodeficiencyVirusTest || '—' }}
+            </span>
+          </div>
+          <div class="col-span-2">
+            <span class="font-medium text-gray-500 block mb-1">Ultrasound:</span>
+            <span class="text-gray-800">{{ selectedLabHistoryRecord.ultrasoundResult || '—' }}</span>
+          </div>
+        </div>
+        <div v-else class="p-4 text-center text-xs text-gray-400">Select a record above to view details.</div>
+      </div>
+    </div>
+
+    <!-- ── Conditional new lab entry for current return visit with complications ── -->
+    <template v-if="hasSavedVisits">
+      <div v-for="(v, index) in form.visits" :key="'lab-entry-' + v.visit">
+        <!-- Show lab entry form only for the current (first unfilled) visit that has complications -->
+        <div v-if="v.visit === currentVisitNumber && isVisitRowHighRisk(v, index)"
+          class="no-break border-2 border-amber-400 rounded-xl p-5 mb-6 bg-amber-50/30 shadow-sm">
+
+          <!-- Header with complication badges -->
+          <div class="flex items-start gap-3 mb-4">
+            <div class="p-2 bg-amber-100 rounded-full shrink-0">
+              <svg class="h-5 w-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h3 class="font-bold text-amber-900 text-sm">Laboratory Results — Visit #{{ v.visit }} <span class="font-normal text-amber-600">({{ v.date || 'Date not set' }})</span></h3>
+              <p class="text-xs text-amber-700 mt-0.5">Complications detected — laboratory results are required for this visit:</p>
+              <div class="flex flex-wrap gap-1 mt-1">
+                <span v-for="comp in getVisitComplicationsList(v, index)" :key="comp"
+                  class="bg-amber-200 text-amber-900 text-[10px] font-semibold px-2 py-0.5 rounded-full">{{ comp }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Prompt to confirm lab needed -->
+          <div class="mb-4 p-3 bg-white rounded-lg border border-amber-200 flex items-center justify-between gap-3">
+            <span class="text-sm text-gray-700">Does this patient need to undergo laboratory tests for this visit?</span>
+            <div class="flex gap-2 shrink-0">
+              <button type="button" @click="form.visitLabs[v.visit].undergoesLab = true"
+                class="px-3 py-1.5 text-xs font-semibold rounded-md border transition"
+                :class="form.visitLabs[v.visit].undergoesLab ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'">Yes</button>
+              <button type="button" @click="form.visitLabs[v.visit].undergoesLab = false"
+                class="px-3 py-1.5 text-xs font-semibold rounded-md border transition"
+                :class="!form.visitLabs[v.visit].undergoesLab ? 'bg-gray-500 text-white border-gray-500' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'">No</button>
+            </div>
+          </div>
+
+          <!-- Lab form — only shown when user picks Yes -->
+          <div v-if="form.visitLabs[v.visit].undergoesLab" class="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
+            <div class="col-span-2 flex items-center gap-2">
+              <label class="w-36 font-medium shrink-0">Urinalysis:</label>
+              <select v-model="form.visitLabs[v.visit].ua" class="select-field flex-1">
+                <option value="">— Select —</option><option>Normal</option><option>Protein+</option><option>Protein++</option><option>Protein+++</option><option>Pus Cells Present</option><option>Protein + Pus Cells</option><option>Glucose Present</option><option>RBC Present</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="w-36 font-medium shrink-0">Purulent (Pus Cells):</label>
+              <select v-model="form.visitLabs[v.visit].purulentSubstance" class="select-field flex-1">
+                <option value="">— Select —</option><option>None</option><option>Few</option><option>Moderate</option><option>Many</option><option>TNTC</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="w-36 font-medium shrink-0">Red Blood Cells:</label>
+              <select v-model="form.visitLabs[v.visit].rbc" class="select-field flex-1">
+                <option value="">— Select —</option><option>Normal</option><option>Few</option><option>Moderate</option><option>Many</option><option>TNTC</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="w-36 font-medium shrink-0">CBC:</label>
+              <select v-model="form.visitLabs[v.visit].cbc" class="select-field flex-1">
+                <option value="">— Select —</option><option>Normal</option><option>Low WBC</option><option>High WBC</option><option>Anemia</option><option>Thrombocytopenia</option><option>Pancytopenia</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="w-36 font-medium shrink-0">Hemoglobin (g/dL):</label>
+              <input v-model="form.visitLabs[v.visit].hemoglobin" type="number" step="0.1" min="0" max="20" placeholder="e.g. 12.5" class="input-line flex-1"
+                :class="form.visitLabs[v.visit].hemoglobin && parseFloat(form.visitLabs[v.visit].hemoglobin) < 11 ? 'text-red-600 font-bold border-red-400' : ''" />
+              <span v-if="form.visitLabs[v.visit].hemoglobin && parseFloat(form.visitLabs[v.visit].hemoglobin) < 11" class="text-red-600 font-bold text-xs shrink-0">⚠ Anemia</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="w-36 font-medium shrink-0">VDRL:</label>
+              <select v-model="form.visitLabs[v.visit].vdrl" class="select-field flex-1">
+                <option value="">— Select —</option><option>Non-Reactive</option><option>Reactive (Positive)</option><option>Weakly Reactive</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="w-36 font-medium shrink-0">HIV Test:</label>
+              <select v-model="form.visitLabs[v.visit].hiv" class="select-field flex-1">
+                <option value="">— Select —</option><option>Non-Reactive</option><option>Reactive (Positive)</option><option>Indeterminate</option>
+              </select>
+            </div>
+            <div class="col-span-2">
+              <label class="block font-medium mb-1">Ultrasound Results:</label>
+              <div class="flex gap-2 mb-2 flex-wrap">
+                <button type="button" v-for="tag in ['Normal','Placenta Previa','Oligohydramnios','Polyhydramnios','Fetal Anomaly','IUGR','Breech Presentation','Multiple Gestation']" :key="tag"
+                  @click="toggleVisitUltrasoundTag(v.visit, tag)" :disabled="isReadOnly"
+                  class="text-xs px-2 py-1 rounded border transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  :class="(form.visitLabs[v.visit].ultrasound || '').split(', ').includes(tag) ? (['Placenta Previa','Oligohydramnios','Fetal Anomaly','IUGR'].includes(tag) ? 'bg-red-500 text-white border-red-500' : 'bg-indigo-500 text-white border-indigo-500') : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'">
+                  {{ tag }}
+                </button>
+              </div>
+              <textarea v-model="form.visitLabs[v.visit].ultrasound" rows="2" placeholder="Additional findings or notes..." class="w-full border border-gray-300 rounded p-2 text-sm"></textarea>
+            </div>
+          </div>
+
+          <p v-if="!form.visitLabs[v.visit].undergoesLab" class="text-xs text-gray-500 text-center mt-2 italic">
+            No laboratory required — only vitals (FHT, FH, Position, Presentation, Weight, BP) will be saved for this visit.
+          </p>
+        </div>
+      </div>
+    </template>
 
 
     <!-- Treatment -->
