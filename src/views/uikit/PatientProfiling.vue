@@ -166,16 +166,13 @@ const form = reactive({
  * Map a clinical‑service name to its dedicated route path, or null if it
  * does not have a dedicated form.
  */
-function getDedicatedRoute(serviceName) {
-    // Normalize: lowercase + strip all whitespace, so "Ultra Sound",
-    // "UltraSound", and "ultrasound" all match the same way. Also handles
-    // common typos like "Admision" (missing a letter) via startsWith.
-    const normalized = serviceName.toLowerCase().replace(/\s+/g, '');
+function getDedicatedRoute(serviceName, category = '') {
+    const normalized = `${serviceName || ''} ${category || ''}`.toLowerCase().replace(/\s+/g, '');
 
-    if (normalized === 'prenatal') return 'PrenatalAdmission';
-    if (normalized === 'familyplanning') return 'FamilyPlanningAdmission';
-    if (normalized === 'ultrasound') return 'UltrasoundAdmission';
-    if (normalized.includes('laboratory')) return 'Laboratoryform';
+    if (normalized.includes('prenatal')) return 'PrenatalAdmission';
+    if (normalized.includes('familyplanning')) return 'FamilyPlanningAdmission';
+    if (normalized.includes('ultrasound')) return 'UltrasoundAdmission';
+    if (normalized.includes('laboratory') || normalized.includes('lab')) return 'Laboratoryform';
     if (normalized.includes('admi') || normalized.includes('lyingin')) return 'Admission';
     return null;
 }
@@ -185,7 +182,7 @@ async function selectType(svc: any) {
     const svcCaseNumber = typeof svc === 'object' ? (svc.caseNumber || '') : (clinicalServices.value.find(c => c.name === serviceName)?.caseNumber || '');
 
     // Check if this service has a dedicated form → redirect there
-    const routeName = getDedicatedRoute(serviceName);
+    const routeName = getDedicatedRoute(serviceName, typeof svc === 'object' ? svc.category : '');
     if (routeName) {
         // For Admission/Lying-In: guard against creating duplicate active admissions.
         // If the patient already has a non-discharged admission, just resume it.

@@ -168,6 +168,9 @@ onMounted(fetchServices);
                         >
                             <option>Maternity</option>
                             <option>Family Planning</option>
+                            <option>Ultrasound</option>
+                            <option>Laboratory</option>
+                            <option>Admission</option>
                             <option>Prenatal Care</option>
                             <option>Postnatal Care</option>
                             <option>General Consultation</option>
