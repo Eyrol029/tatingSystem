@@ -616,7 +616,7 @@ async function deletePatient(patient) {
                                     {{ serviceName }}
                                 </option>
                             </select>
-                        </div>z
+                        </div>
                     </div>
 
                     <!-- Action buttons -->
