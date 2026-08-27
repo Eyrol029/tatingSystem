@@ -16,6 +16,10 @@ public interface StatementOfAccountService {
 
     StatementOfAccount updateSoa(StatementOfAccount soa);
 
+    List<StatementOfAccount> updatePatientCaseNumber(Integer patientId, String caseNumber);
+
+    List<StatementOfAccount> updateAllCaseNumbers(String caseNumber);
+
     void deleteSoa(Integer id);
 
     // CHANGED: now accepts the payment notes plus the structured discount / service

@@ -25,6 +25,9 @@ public class StatementOfAccount {
     @Column(name = "patientID")
     private Integer patientID;
 
+    @Column(name = "caseNumber")
+    private String caseNumber;
+
     private Integer billingID;
 
     private String invoiceReceiptNumber;
@@ -85,6 +88,14 @@ public class StatementOfAccount {
 
     public void setPatientID(Integer patientID) {
         this.patientID = patientID;
+    }
+
+    public String getCaseNumber() {
+        return caseNumber;
+    }
+
+    public void setCaseNumber(String caseNumber) {
+        this.caseNumber = caseNumber;
     }
 
     public Integer getBillingID() {

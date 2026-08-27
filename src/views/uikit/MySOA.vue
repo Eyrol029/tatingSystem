@@ -308,7 +308,7 @@ onMounted(() => {
                 <!-- Payment history -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                     <div class="px-6 py-4 border-b border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-800">Payment History</h3>
+                        <h3 class="text-lg font-semibold text-gray-800">Service Availed</h3>
                     </div>
 
                     <div v-if="installments.length === 0" class="text-center py-12 text-gray-400 italic">

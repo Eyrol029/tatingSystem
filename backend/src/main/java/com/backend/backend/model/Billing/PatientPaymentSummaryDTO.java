@@ -7,6 +7,7 @@ public class PatientPaymentSummaryDTO {
     private Integer patientServiceId;
     private Integer patientId;
     private String patientName;
+    private String caseNumber;
     private String email;
     private String phone;
     private String serviceName;
@@ -28,6 +29,9 @@ public class PatientPaymentSummaryDTO {
 
     public String getPatientName() { return patientName; }
     public void setPatientName(String patientName) { this.patientName = patientName; }
+
+    public String getCaseNumber() { return caseNumber; }
+    public void setCaseNumber(String caseNumber) { this.caseNumber = caseNumber; }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }

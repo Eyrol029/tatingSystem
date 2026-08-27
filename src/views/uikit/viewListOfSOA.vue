@@ -6,6 +6,8 @@ import axios from 'axios'
 const router = useRouter()
 const showViewModal = ref(false)
 const showAddModal = ref(false)
+const caseNumberInput = ref('')
+const caseNumberMessage = ref('')
 const showPaymentModal = ref(false)
 const showSOAModal = ref(false)
 const showReceiptModal = ref(false)
@@ -28,7 +30,6 @@ const availedServices = ref([])
 
 const servicesList = ref([])
 const selectedServiceId = ref('')
-const selectedAddSoaServiceId = ref('')
 
 function parseNumber(value) {
   if (value === null || value === undefined) return 0
@@ -84,16 +85,6 @@ const filteredSoaList = computed(() => {
   })
 })
 
-const newSOA = ref({
-  patientId: '',
-  patientName: '',
-  otherDiagnosis: '',
-  date: '',
-  services: []
-})
-
-const newService = ref({ name: '', amount: '' })
-
 const BASE_URL = 'http://localhost:8080/api/billing/soa'
 const DASHBOARD_URL = `${BASE_URL}/dashboard`
 const INSTALLMENTS_URL = 'http://localhost:8080/api/billing/installments'
@@ -120,22 +111,6 @@ function onPaymentServiceChange() {
     } else {
       paymentForm.value.serviceName = ''
       paymentForm.value.totalAmount = ''
-    }
-  }
-}
-
-function onAddSoaServiceChange() {
-  if (selectedAddSoaServiceId.value === 'custom') {
-    newService.value.name = ''
-    newService.value.amount = ''
-  } else {
-    const service = servicesList.value.find(s => s.id === Number(selectedAddSoaServiceId.value))
-    if (service) {
-      newService.value.name = service.name
-      newService.value.amount = service.price
-    } else {
-      newService.value.name = ''
-      newService.value.amount = ''
     }
   }
 }
@@ -192,6 +167,7 @@ async function loadSoaList() {
         soaId: resolvedId,
         patientId: soa.patientId,
         patientName: soa.patientName,
+        caseNumber: soa.caseNumber || '',
         date: soa.dueDate || soa.invoiceReceiptNumber || '',
         otherDiagnosis: soa.description || soa.serviceName || 'Statement of Account',
         serviceName: soa.serviceName || 'SOA Service',
@@ -255,6 +231,11 @@ function closeView() {
 function goToPaymentDashboard(soa) {
   if (!soa.patientId) return
   router.push({ path: '/uikit/viewListOfSOA', query: { patientId: soa.patientId } })
+}
+
+function goToMySoa(soa) {
+  if (!soa?.patientId) return
+  router.push(`/uikit/MySOA/${soa.patientId}`)
 }
 
 async function openAddPayment(soa) {
@@ -479,39 +460,26 @@ async function addPayment() {
   }
 }
 
-function addService() {
-  if (!newService.value.name || !newService.value.amount) return
-  newSOA.value.services.push({
-    name: newService.value.name,
-    amount: Number(newService.value.amount)
-  })
-  newService.value = { name: '', amount: '' }
-  selectedAddSoaServiceId.value = ''
+function openCaseNumberModal() {
+  caseNumberInput.value = soaList.value.find(soa => soa.caseNumber)?.caseNumber || ''
+  caseNumberMessage.value = ''
+  showAddModal.value = true
 }
 
-function removeService(index) {
-  newSOA.value.services.splice(index, 1)
-}
-
-async function saveSOA() {
-  if (!newSOA.value.patientName || !newSOA.value.patientId) return
-
+async function saveCaseNumber() {
+  if (!caseNumberInput.value.trim()) {
+    caseNumberMessage.value = 'Please enter a case number.'
+    return
+  }
   try {
-    await axios.post(BASE_URL, {
-      patientID: Number(newSOA.value.patientId),
-      patientServiceID: null,
-      totalAmount: newSOA.value.services.reduce((sum, item) => sum + item.amount, 0),
-      amountPaid: 0.0,
-      balanceAmount: newSOA.value.services.reduce((sum, item) => sum + item.amount, 0),
-      description: newSOA.value.otherDiagnosis,
-      invoiceReceiptNumber: 'SOA-' + Math.floor(Math.random() * 10000),
-      dueDate: newSOA.value.date ? new Date(newSOA.value.date).toISOString() : null
+    await axios.put(`${BASE_URL}/case-number`, {
+      caseNumber: caseNumberInput.value.trim()
     })
     await loadSoaList()
     showAddModal.value = false
-    newSOA.value = { patientId: '', patientName: '', otherDiagnosis: '', date: '', services: [] }
   } catch (error) {
-    console.error('Failed to save SOA', error)
+    console.error('Failed to save patient SOA case number', error)
+    caseNumberMessage.value = 'Unable to save the case number.'
   }
 }
 
@@ -551,6 +519,12 @@ onMounted(() => {
       <div>
         <h2 class="text-2xl font-bold">Statement of Account</h2>
       </div>
+      <button
+        @click="openCaseNumberModal"
+        class="bg-teal-600 text-white px-4 py-2 rounded hover:bg-teal-700"
+      >
+        Add Case Number
+      </button>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-[1.5fr_auto] gap-3 mb-6">
@@ -584,10 +558,11 @@ onMounted(() => {
           <div>
             <p class="font-semibold">{{ soa.patientName }}</p>
             <p class="text-sm text-gray-500">{{ soa.date }}</p>
+            <p v-if="soa.caseNumber" class="text-sm font-medium text-teal-700">Case: {{ soa.caseNumber }}</p>
           </div>
           <div class="space-x-3">
             <button
-              @click="openView(soa)"
+              @click="goToMySoa(soa)"
               class="text-blue-600 hover:underline"
             >
               View
@@ -929,51 +904,26 @@ onMounted(() => {
 
     <!-- ADD SOA MODAL -->
     <div v-if="showAddModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div class="bg-white w-full max-w-2xl p-6 rounded-lg">
-        <h2 class="text-xl font-bold mb-4">Add Statement of Account</h2>
+      <div class="bg-white w-full max-w-md p-6 rounded-lg">
+        <h2 class="text-xl font-bold mb-2">Add SOA Case Number</h2>
+        <p class="mb-4 text-sm text-gray-600">
+          This case number will be applied to all SOA records for all patients.
+        </p>
 
-        <div class="grid grid-cols-2 gap-4">
-          <input v-model="newSOA.patientId" placeholder="Patient ID" class="border p-2 rounded" />
-          <input v-model="newSOA.patientName" placeholder="Patient Name" class="border p-2 rounded" />
-          <input v-model="newSOA.date" type="date" class="border p-2 rounded" />
-          <input v-model="newSOA.otherDiagnosis" placeholder="Diagnosis" class="border p-2 rounded" />
-        </div>
-
-        <h3 class="mt-4 font-semibold">Services</h3>
-        <div class="flex flex-col gap-2 mt-2">
-          <div class="flex gap-2">
-            <select
-              v-model="selectedAddSoaServiceId"
-              @change="onAddSoaServiceChange"
-              class="border p-2 flex-1 rounded"
-            >
-              <option value="" disabled>Select a service</option>
-              <option v-for="service in servicesList" :key="service.id" :value="service.id">
-                {{ service.name }} (₱{{ service.price }})
-              </option>
-              <option value="custom">-- Custom Service --</option>
-            </select>
-            <input v-model="newService.amount" type="number" placeholder="Amount" class="border p-2 w-32 rounded" />
-            <button @click="addService" class="bg-blue-600 text-white px-4 rounded">Add</button>
-          </div>
+        <label class="block">
+          <span class="text-sm font-semibold mb-1 block">Case Number</span>
           <input
-            v-if="selectedAddSoaServiceId === 'custom'"
-            v-model="newService.name"
-            placeholder="Enter custom service name"
-            class="border p-2 rounded"
+            v-model="caseNumberInput"
+            type="text"
+            placeholder="Enter case number"
+            class="w-full border p-2 rounded"
           />
-        </div>
-
-        <ul class="mt-3 space-y-1">
-          <li v-for="(s, i) in newSOA.services" :key="i" class="flex justify-between bg-gray-100 p-2 rounded">
-            <span>{{ s.name }} - ₱{{ s.amount }}</span>
-            <button @click="removeService(i)" class="text-red-600">✕</button>
-          </li>
-        </ul>
+        </label>
+        <p v-if="caseNumberMessage" class="mt-2 text-sm text-red-600">{{ caseNumberMessage }}</p>
 
         <div class="flex justify-end mt-4 gap-3">
           <button @click="showAddModal = false" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
-          <button @click="saveSOA" class="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
+          <button @click="saveCaseNumber" class="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
         </div>
       </div>
     </div>

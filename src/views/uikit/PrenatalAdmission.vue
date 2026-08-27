@@ -684,7 +684,7 @@ async function loadPrenatalDetailData(prenatalrecordID) {
       form.value.visitLabs[k] = { undergoesLab: false, ua: '', purulentSubstance: '', rbc: '', cbc: '', hemoglobin: '', vdrl: '', hiv: '', ultrasound: '' }
     }
 
-    const firstLab = labRecords.find(r => r.visitNumber === null || r.visitNumber === undefined || r.visitNumber === 1) || labRecords[0]
+    const firstLab = labRecords.find(r => r.visitNumber == null || Number(r.visitNumber) === 1) || labRecords[0]
     if (firstLab) {
       form.value.labs.ua                = firstLab.urinalysis || ''
       form.value.labs.purulentSubstance = firstLab.pusCells || ''
@@ -716,6 +716,7 @@ async function loadPrenatalDetailData(prenatalrecordID) {
 
     if (labHistoryOptions.value.length > 0) {
       selectedLabHistoryId.value = labHistoryOptions.value[0].id
+      labHistoryOpen.value = true
     }
 
 
@@ -1506,44 +1507,16 @@ async function submitForm() {
             <span class="font-medium text-gray-500 block mb-1">Laboratory Note:</span>
             <span class="text-gray-800 whitespace-pre-line">{{ selectedLabHistoryRecord.laboratoryNote || '—' }}</span>
           </div>
-          <div class="col-span-2 flex items-center gap-2">
-            <span class="w-36 font-medium shrink-0 text-gray-500">Urinalysis:</span>
-            <span class="font-semibold text-gray-800">{{ selectedLabHistoryRecord.urinalysis || '—' }}</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-36 font-medium shrink-0 text-gray-500">Purulent Cells:</span>
-            <span class="font-semibold text-gray-800">{{ selectedLabHistoryRecord.pusCells || '—' }}</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-36 font-medium shrink-0 text-gray-500">Red Blood Cells:</span>
-            <span class="font-semibold text-gray-800">{{ selectedLabHistoryRecord.redBloodCells || '—' }}</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-36 font-medium shrink-0 text-gray-500">CBC:</span>
-            <span class="font-semibold text-gray-800">{{ selectedLabHistoryRecord.completeBloodCount || '—' }}</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-36 font-medium shrink-0 text-gray-500">Hemoglobin:</span>
-            <span class="font-semibold" :class="selectedLabHistoryRecord.hemoglobin && selectedLabHistoryRecord.hemoglobin < 11 ? 'text-red-600' : 'text-gray-800'">
-              {{ selectedLabHistoryRecord.hemoglobin != null ? selectedLabHistoryRecord.hemoglobin + ' g/dL' : '—' }}
-              <span v-if="selectedLabHistoryRecord.hemoglobin && selectedLabHistoryRecord.hemoglobin < 11" class="text-xs ml-1">⚠ Anemia</span>
-            </span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-36 font-medium shrink-0 text-gray-500">VDRL:</span>
-            <span class="font-semibold" :class="selectedLabHistoryRecord.venerealDiseaseResearchLaboratoryTest && selectedLabHistoryRecord.venerealDiseaseResearchLaboratoryTest.toLowerCase().includes('positive') ? 'text-red-600' : 'text-gray-800'">
-              {{ selectedLabHistoryRecord.venerealDiseaseResearchLaboratoryTest || '—' }}
-            </span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="w-36 font-medium shrink-0 text-gray-500">HIV Test:</span>
-            <span class="font-semibold" :class="selectedLabHistoryRecord.humanImmunodeficiencyVirusTest && selectedLabHistoryRecord.humanImmunodeficiencyVirusTest.toLowerCase().includes('positive') ? 'text-red-600' : 'text-gray-800'">
-              {{ selectedLabHistoryRecord.humanImmunodeficiencyVirusTest || '—' }}
-            </span>
-          </div>
           <div class="col-span-2">
-            <span class="font-medium text-gray-500 block mb-1">Ultrasound:</span>
-            <span class="text-gray-800">{{ selectedLabHistoryRecord.ultrasoundResult || '—' }}</span>
+            <span class="font-medium text-gray-500 block mb-2">Requested Examinations:</span>
+            <div v-if="selectedLabHistoryRecord.selectedTests?.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              <span v-for="test in selectedLabHistoryRecord.selectedTests" :key="test"
+                class="flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-gray-800">
+                <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-blue-500 text-white">✓</span>
+                {{ test }}
+              </span>
+            </div>
+            <span v-else class="text-gray-800">—</span>
           </div>
         </div>
         <div v-else class="p-4 text-center text-xs text-gray-400">Select a record above to view details.</div>

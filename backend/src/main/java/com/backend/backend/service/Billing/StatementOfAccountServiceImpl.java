@@ -36,6 +36,14 @@ public class StatementOfAccountServiceImpl implements StatementOfAccountService 
 
     @Override
     public StatementOfAccount addSoa(StatementOfAccount soa) {
+        if (soa.getPatientID() != null && (soa.getCaseNumber() == null || soa.getCaseNumber().isBlank())) {
+            repository.findAll().stream()
+                    .filter(existing -> Objects.equals(existing.getPatientID(), soa.getPatientID()))
+                    .map(StatementOfAccount::getCaseNumber)
+                    .filter(caseNumber -> caseNumber != null && !caseNumber.isBlank())
+                    .findFirst()
+                    .ifPresent(soa::setCaseNumber);
+        }
         if (soa.getTotalAmount() == null || soa.getTotalAmount() == 0.0) {
             soa.setTotalAmount(soa.getSummaryFees());
         }
@@ -59,6 +67,22 @@ public class StatementOfAccountServiceImpl implements StatementOfAccountService 
     @Override
     public StatementOfAccount updateSoa(StatementOfAccount soa) {
         return repository.save(soa);
+    }
+
+    @Override
+    public List<StatementOfAccount> updatePatientCaseNumber(Integer patientId, String caseNumber) {
+        List<StatementOfAccount> patientSoas = repository.findAll().stream()
+                .filter(soa -> Objects.equals(soa.getPatientID(), patientId))
+                .toList();
+        patientSoas.forEach(soa -> soa.setCaseNumber(caseNumber));
+        return repository.saveAll(patientSoas);
+    }
+
+    @Override
+    public List<StatementOfAccount> updateAllCaseNumbers(String caseNumber) {
+        List<StatementOfAccount> allSoas = repository.findAll();
+        allSoas.forEach(soa -> soa.setCaseNumber(caseNumber));
+        return repository.saveAll(allSoas);
     }
 
     @Override
@@ -159,6 +183,10 @@ public class StatementOfAccountServiceImpl implements StatementOfAccountService 
             dto.setPatientServiceId(patientSoas.isEmpty() ? null : patientSoas.get(0).getPatientServiceID());
             dto.setPatientId(patient.getPatientID());
             dto.setPatientName(patient.getFName() + " " + patient.getLName());
+                dto.setCaseNumber(patientSoas.stream()
+                    .map(StatementOfAccount::getCaseNumber)
+                    .filter(value -> value != null && !value.isBlank())
+                    .findFirst().orElse(null));
             dto.setEmail(patient.getEmail());
             dto.setPhone(patient.getContactNumber());
             dto.setServiceName(serviceNames);
@@ -204,6 +232,10 @@ public class StatementOfAccountServiceImpl implements StatementOfAccountService 
         dto.setSoaId(patientSoas.isEmpty() ? null : patientSoas.get(0).getSoaID());
         dto.setPatientId(patientId);
         dto.setPatientName(patient.getFName() + " " + patient.getLName());
+        dto.setCaseNumber(patientSoas.stream()
+            .map(StatementOfAccount::getCaseNumber)
+            .filter(value -> value != null && !value.isBlank())
+            .findFirst().orElse(null));
         dto.setPatientServiceId(patientSoas.isEmpty() ? null : patientSoas.get(0).getPatientServiceID());
         dto.setServiceName(serviceNames.isBlank() ? "No services" : serviceNames);
         dto.setTotalAmount(totalAmount);

@@ -6,6 +6,7 @@ public class StatementOfAccountDetailsDTO {
     private Integer soaId;
     private Integer patientId;
     private String patientName;
+    private String caseNumber;
     private Integer patientServiceId;
     private String serviceName;
     private Double totalAmount;
@@ -38,6 +39,14 @@ public class StatementOfAccountDetailsDTO {
 
     public void setPatientName(String patientName) {
         this.patientName = patientName;
+    }
+
+    public String getCaseNumber() {
+        return caseNumber;
+    }
+
+    public void setCaseNumber(String caseNumber) {
+        this.caseNumber = caseNumber;
     }
 
     public Integer getPatientServiceId() {

@@ -52,9 +52,33 @@ public class StatementOfAccountController {
         return service.getPatientSoaDetails(patientId);
     }
 
+    @PutMapping("/patient/{patientId}/case-number")
+    public List<StatementOfAccount> updatePatientCaseNumber(
+            @PathVariable Integer patientId,
+            @RequestBody CaseNumberRequest request) {
+        return service.updatePatientCaseNumber(patientId, request.getCaseNumber());
+    }
+
+    @PutMapping("/case-number")
+    public List<StatementOfAccount> updateAllCaseNumbers(@RequestBody CaseNumberRequest request) {
+        return service.updateAllCaseNumbers(request.getCaseNumber());
+    }
+
     @PutMapping
     public StatementOfAccount update(@RequestBody StatementOfAccount soa) {
         return service.updateSoa(soa);
+    }
+
+    public static class CaseNumberRequest {
+        private String caseNumber;
+
+        public String getCaseNumber() {
+            return caseNumber;
+        }
+
+        public void setCaseNumber(String caseNumber) {
+            this.caseNumber = caseNumber;
+        }
     }
 
     @DeleteMapping("/{id}")
