@@ -1,5 +1,6 @@
 package com.backend.backend.controller.Billing;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -17,6 +18,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.backend.backend.model.Billing.PatientPaymentSummaryDTO;
 import com.backend.backend.model.Billing.StatementOfAccount;
 import com.backend.backend.model.Billing.StatementOfAccountDetailsDTO;
+import com.backend.backend.model.CalendarEvent;
+import com.backend.backend.repository.PatientRepository;
+import com.backend.backend.service.Calendar.CalendarEventService;
 import com.backend.backend.service.Billing.StatementOfAccountService;
 
 @CrossOrigin(origins = "*")
@@ -26,6 +30,12 @@ public class StatementOfAccountController {
 
     @Autowired
     private StatementOfAccountService service;
+
+    @Autowired
+    private CalendarEventService calendarEventService;
+
+    @Autowired
+    private PatientRepository patientRepository;
 
     @PostMapping
     public StatementOfAccount add(@RequestBody StatementOfAccount soa) {
@@ -50,6 +60,45 @@ public class StatementOfAccountController {
     @GetMapping("/patient/{patientId}")
     public StatementOfAccountDetailsDTO getPatientSoa(@PathVariable Integer patientId) {
         return service.getPatientSoaDetails(patientId);
+    }
+
+    @GetMapping("/patient/{patientId}/promissory-letter")
+    public PromissoryLetterResponse getPromissoryLetter(@PathVariable Integer patientId) {
+        StatementOfAccountDetailsDTO details = service.getPatientSoaDetails(patientId);
+        PromissoryLetterResponse response = new PromissoryLetterResponse();
+        response.setPatientName(details.getPatientName());
+        response.setCaseNumber(details.getCaseNumber());
+        response.setTotalAmount(details.getTotalAmount());
+        response.setBalanceAmount(details.getBalanceAmount());
+        response.setDueDate(details.getDueDate());
+        response.setIssuedAt(java.time.LocalDateTime.now());
+        return response;
+    }
+
+    @PostMapping("/{soaId}/promissory-letter")
+    public CalendarEvent savePromissoryLetter(
+            @PathVariable Integer soaId,
+            @RequestBody PromissoryLetterRequest request) {
+        StatementOfAccount soa = service.getSoaById(soaId);
+        Integer patientId = soa.getPatientID() != null ? soa.getPatientID() : request.getPatientId();
+        String patientName = patientId == null
+                ? request.getPatientName()
+                : patientRepository.findById(patientId)
+                        .map(patient -> (patient.getFName() + " " + patient.getLName()).trim())
+                        .orElse(request.getPatientName());
+
+        LocalDate dueDate = request.getDueDate();
+        soa.setDueDate(dueDate.atStartOfDay());
+        service.updateSoa(soa);
+
+        CalendarEvent event = new CalendarEvent();
+        event.setTitle("Promissory Letter Due");
+        event.setEventDate(dueDate);
+        event.setEventType("promissory-letter");
+        event.setPatientID(patientId);
+        event.setPatientName(patientName);
+        event.setDescription("Promissory letter due for " + patientName + ". Handled by " + request.getStaffName() + ".");
+        return calendarEventService.addManualEvent(event);
     }
 
     @PutMapping("/patient/{patientId}/case-number")
@@ -81,6 +130,22 @@ public class StatementOfAccountController {
         }
     }
 
+    public static class PromissoryLetterRequest {
+        private LocalDate dueDate;
+        private String staffName;
+        private Integer patientId;
+        private String patientName;
+
+        public LocalDate getDueDate() { return dueDate; }
+        public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
+        public String getStaffName() { return staffName; }
+        public void setStaffName(String staffName) { this.staffName = staffName; }
+        public Integer getPatientId() { return patientId; }
+        public void setPatientId(Integer patientId) { this.patientId = patientId; }
+        public String getPatientName() { return patientName; }
+        public void setPatientName(String patientName) { this.patientName = patientName; }
+    }
+
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {
         service.deleteSoa(id);
@@ -110,6 +175,63 @@ public class StatementOfAccountController {
                 request.getServiceBreakdown()
         );
         return soa;
+    }
+
+    public static class PromissoryLetterResponse {
+        private String patientName;
+        private String caseNumber;
+        private Double totalAmount;
+        private Double balanceAmount;
+        private LocalDateTime dueDate;
+        private LocalDateTime issuedAt;
+
+        public String getPatientName() {
+            return patientName;
+        }
+
+        public void setPatientName(String patientName) {
+            this.patientName = patientName;
+        }
+
+        public String getCaseNumber() {
+            return caseNumber;
+        }
+
+        public void setCaseNumber(String caseNumber) {
+            this.caseNumber = caseNumber;
+        }
+
+        public Double getTotalAmount() {
+            return totalAmount;
+        }
+
+        public void setTotalAmount(Double totalAmount) {
+            this.totalAmount = totalAmount;
+        }
+
+        public Double getBalanceAmount() {
+            return balanceAmount;
+        }
+
+        public void setBalanceAmount(Double balanceAmount) {
+            this.balanceAmount = balanceAmount;
+        }
+
+        public LocalDateTime getDueDate() {
+            return dueDate;
+        }
+
+        public void setDueDate(LocalDateTime dueDate) {
+            this.dueDate = dueDate;
+        }
+
+        public LocalDateTime getIssuedAt() {
+            return issuedAt;
+        }
+
+        public void setIssuedAt(LocalDateTime issuedAt) {
+            this.issuedAt = issuedAt;
+        }
     }
 
     public static class PaymentRequest {

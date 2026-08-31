@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { useRoute, useRouter } from 'vue-router';
 import { useUserDataStore } from '@/stores/userData';
+import PromissoryLetter from './PromissoryLetter.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -48,6 +49,15 @@ const loading = ref(true);
 const error = ref('');
 const soaDetails = ref(null);
 const installments = ref([]);
+const showPromissoryModal = ref(false);
+const employeeList = ref([]);
+
+function getEmployeeFullName(employee) {
+    if (!employee) return '';
+    const first = employee.fName || employee.firstName || employee.firstname || '';
+    const last = employee.lName || employee.lastName || employee.lastname || '';
+    return `${first} ${last}`.trim();
+}
 
 function formatCurrency(value) {
     return '₱' + Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
@@ -118,6 +128,25 @@ async function loadSOA() {
 
 function printSOA() {
     window.print();
+}
+
+async function loadStaffOptions() {
+    try {
+        const res = await axios.get('http://localhost:8080/api/employees');
+        const raw = Array.isArray(res.data) ? res.data : [];
+        employeeList.value = raw
+            .filter(emp => getEmployeeFullName(emp))
+            .map(emp => ({
+                id: emp.employeeID ?? emp.id ?? null,
+                name: getEmployeeFullName(emp),
+                department: emp.department || '',
+                position: emp.position || ''
+            }));
+
+    } catch (e) {
+        console.error('Failed to load staff list for promissory letter', e);
+        employeeList.value = [];
+    }
 }
 
 const patientDisplayName = computed(() => {
@@ -221,8 +250,9 @@ function openNativeSms() {
     window.open(url, '_blank');
 }
 
-onMounted(() => {
-    loadSOA();
+onMounted(async () => {
+    await loadStaffOptions();
+    await loadSOA();
 });
 </script>
 
@@ -248,6 +278,10 @@ onMounted(() => {
                     <button @click="openSmsModal"
                         class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition flex items-center gap-2 shadow-sm font-medium">
                         💬 Send SMS
+                    </button>
+                    <button @click="showPromissoryModal = true"
+                        class="bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700 transition flex items-center gap-2 shadow-sm font-medium">
+                        📝 Promissory Letter
                     </button>
                     <button @click="printSOA"
                         class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 shadow-sm font-medium">
@@ -344,6 +378,16 @@ onMounted(() => {
                 </div>
             </div>
         </div>
+
+        <PromissoryLetter
+            v-if="showPromissoryModal"
+            :patient-id="patientId"
+            :patient-name="patientDisplayName"
+            :soa-details="soaDetails"
+            :employee-list="employeeList"
+            @close="showPromissoryModal = false"
+            @saved="showPromissoryModal = false"
+        />
 
         <!-- SMS Modal -->
         <div v-if="showSmsModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 no-print">

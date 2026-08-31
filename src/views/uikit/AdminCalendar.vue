@@ -1,8 +1,11 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const BASE = 'http://localhost:8080/api/calendar'
+const PATIENTS_URL = 'http://localhost:8080/api/patients'
 
 const currentDate  = ref(new Date())
 const selectedDay  = ref(new Date())
@@ -14,6 +17,7 @@ const saveLoading  = ref(false)
 // ── Add-event form ────────────────────────────────────────────────────────────
 const newEventTitle       = ref('')
 const newEventType        = ref('appointment')
+const newEventPatientId   = ref('')
 const newEventPatientName = ref('')
 const newEventDescription = ref('')
 const newEventDate        = ref(formatLocalDate(new Date()))
@@ -79,18 +83,18 @@ function formatLocalDate(date) {
 function normalizeEvent(raw) {
   const et     = (raw.eventType || raw.source || 'manual').toLowerCase()
   const source = (raw.source || '').toLowerCase()
+  const rawPatientName = raw.patientName || '—'
+  const normalizedPatientName = String(rawPatientName).trim()
+  const hasMeaningfulPatientName = normalizedPatientName && normalizedPatientName.toLowerCase() !== 'patient' && normalizedPatientName.toLowerCase() !== '—'
 
   let type = 'appointment'
   if (['expected-delivery','edc','delivery','labor'].includes(et)) {
     type = 'labor'
   } else if (['prenatal-exam','prenatal-visit','next-visit'].includes(et)) {
     type = 'prenatal'
+  } else if (et === 'billing-due') {
+    type = 'billing'
   } else if (source === 'manual' || et === 'manual') {
-    // Any event that came from the manual events table — including custom
-    // eventType values like "family-planning-followup" that don't match
-    // the known appointment/prenatal/labor lists above — should be styled
-    // and treated as a manual event, not silently fall through to the
-    // "appointment" default.
     type = 'manual'
   }
 
@@ -101,7 +105,7 @@ function normalizeEvent(raw) {
     type,
     eventType:   et,
     patientId:   raw.patientId    || raw.patientID || null,
-    patientName: raw.patientName  || '—',
+    patientName: hasMeaningfulPatientName ? normalizedPatientName : '—',
     description: raw.description  || '',
     source:      raw.source       || 'manual'
   }
@@ -179,6 +183,7 @@ function tileCss(type) {
     labor:       'bg-pink-100 text-pink-700 border border-pink-200',
     prenatal:    'bg-teal-100 text-teal-700 border border-teal-200',
     manual:      'bg-indigo-100 text-indigo-700 border border-indigo-200',
+    billing:     'bg-amber-100 text-amber-700 border border-amber-200',
     appointment: 'bg-blue-100 text-blue-700 border border-blue-200'
   }[type] || 'bg-gray-100 text-gray-700 border border-gray-200'
 }
@@ -188,6 +193,7 @@ function cardBorder(type) {
     labor:       'border-pink-200 bg-pink-50',
     prenatal:    'border-teal-200 bg-teal-50',
     manual:      'border-indigo-200 bg-indigo-50',
+    billing:     'border-amber-200 bg-amber-50',
     appointment: 'border-blue-200 bg-blue-50'
   }[type] || 'border-gray-200 bg-gray-50'
 }
@@ -197,6 +203,7 @@ function badgeCss(type) {
     labor:       'bg-pink-200 text-pink-800',
     prenatal:    'bg-teal-200 text-teal-800',
     manual:      'bg-indigo-200 text-indigo-800',
+    billing:     'bg-amber-200 text-amber-800',
     appointment: 'bg-blue-200 text-blue-800'
   }[type] || 'bg-gray-200 text-gray-800'
 }
@@ -206,6 +213,7 @@ function dividerCss(type) {
     labor:       'border-pink-200',
     prenatal:    'border-teal-200',
     manual:      'border-indigo-200',
+    billing:     'border-amber-200',
     appointment: 'border-blue-200'
   }[type] || 'border-gray-200'
 }
@@ -218,12 +226,85 @@ function typeLabel(type, eventType) {
     'prenatal-exam':              'Prenatal Exam',
     'prenatal-visit':             'Prenatal Visit',
     'next-visit':                 'Next Visit',
+    'billing-due':                'Billing Due',
     'appointment':                'Appointment',
     'manual':                     'Manual Event',
     'labor':                      'Labor Day',
     'family-planning-followup':   'Family Planning Follow-up'
   }
   return labels[eventType] || labels[type] || type
+}
+
+function getEventPatientId(event) {
+  const value = event?.patientId ?? event?.patientID ?? event?.patient_id ?? null
+  const asNumber = Number(value)
+  return Number.isFinite(asNumber) && asNumber > 0 ? asNumber : null
+}
+
+async function resolvePatientIdByName(patientName) {
+  if (!patientName || !String(patientName).trim()) return null
+
+  try {
+    const res = await axios.get(PATIENTS_URL)
+    const patients = Array.isArray(res.data) ? res.data : []
+    const target = String(patientName).trim().toLowerCase()
+
+    const match = patients.find((patient) => {
+      const firstName = String(patient?.fName || '').trim().toLowerCase()
+      const lastName = String(patient?.lName || '').trim().toLowerCase()
+      const fullName = `${firstName} ${lastName}`.trim()
+      const nameParts = [firstName, lastName, fullName]
+
+      return nameParts.some((value) => value && value === target) ||
+        fullName.includes(target) ||
+        target.includes(fullName)
+    })
+
+    return match?.patientID ?? match?.patientId ?? null
+  } catch (e) {
+    console.error('Failed to resolve patient ID by name', e)
+    return null
+  }
+}
+
+async function viewPatientSOA(event) {
+  const eventPatientId = getEventPatientId(event)
+  if (eventPatientId) {
+    await router.push(`/uikit/MySOA/${eventPatientId}`)
+    return
+  }
+
+  const patientName = event?.patientName
+  if (!patientName || patientName === '—' || patientName.toLowerCase() === 'patient') {
+    return
+  }
+
+  const matchedPatientId = await resolvePatientIdByName(patientName)
+  if (matchedPatientId) {
+    await router.push(`/uikit/MySOA/${matchedPatientId}`)
+    return
+  }
+
+  alert('No matching patient found for this event. Please enter a valid Patient ID or patient name.')
+}
+
+function isBillingDueEvent(event) {
+  const type = String(event?.type || '').toLowerCase()
+  const eventType = String(event?.eventType || '').toLowerCase()
+  const source = String(event?.source || '').toLowerCase()
+  const title = String(event?.title || '').toLowerCase()
+
+  return type === 'billing'
+    || eventType === 'billing-due'
+    || source === 'billing'
+    || title.includes('billing due')
+}
+
+function isManualPatientEvent(event) {
+  const type = String(event?.type || '').toLowerCase()
+  const eventType = String(event?.eventType || '').toLowerCase()
+  const source = String(event?.source || '').toLowerCase()
+  return source === 'manual' || type === 'manual' || eventType === 'manual'
 }
 
 // ── Add manual event ──────────────────────────────────────────────────────────
@@ -235,16 +316,21 @@ async function addManualEvent() {
   saveLoading.value = true
   errorMsg.value    = ''
   try {
+    const patientId = newEventPatientId.value !== '' ? Number(newEventPatientId.value) : null
+
     await axios.post(`${BASE}/manual`, {
       title:       newEventTitle.value,
       eventDate:   newEventDate.value,
       eventType:   newEventType.value  || 'manual',
+      patientID:   patientId,
+      patientId:   patientId,
       patientName: newEventPatientName.value || null,
       description: newEventDescription.value || null
     })
     // Reset form
     newEventTitle.value       = ''
     newEventType.value        = 'appointment'
+    newEventPatientId.value   = ''
     newEventPatientName.value = ''
     newEventDescription.value = ''
     await fetchEventsForMonth()
@@ -424,15 +510,14 @@ watch([currentMonth, currentYear], fetchEventsForMonth)
                 Notify Patient
               </button>
 
-              <!-- Any event carrying a patientId can jump to that patient's
-                   profile — this used to be limited to type === 'prenatal'
-                   or 'appointment' only, which meant manually-sourced events
-                   with a real patientId (e.g. Family Planning follow-up
-                   syncs) never showed a working link even once the backend
-                   started sending patientId. Checking patientId directly
-                   works for every event source. -->
-              <button v-else-if="event.patientId"
-                @click="$router.push(`/uikit/PatientProfiling/${event.patientId}`)"
+              <button v-else-if="(isBillingDueEvent(event) || isManualPatientEvent(event)) && (getEventPatientId(event) || (event.patientName && event.patientName !== '—' && event.patientName.toLowerCase() !== 'patient'))"
+                @click="viewPatientSOA(event)"
+                class="w-full bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
+                View Patient SOA →
+              </button>
+
+              <button v-else-if="getEventPatientId(event)"
+                @click="$router.push(`/uikit/PatientProfiling/${getEventPatientId(event)}`)"
                 class="w-full text-center text-sm font-medium transition"
                 :class="event.type === 'prenatal' ? 'text-teal-600 hover:text-teal-800' : 'text-blue-600 hover:text-blue-800'">
                 View Patient Record →
@@ -469,6 +554,12 @@ watch([currentMonth, currentYear], fetchEventsForMonth)
                 <option value="prenatal-visit">Prenatal Visit</option>
                 <option value="manual">General / Note</option>
               </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Patient ID</label>
+              <input v-model="newEventPatientId" type="number" min="1" placeholder="Optional patient ID"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none" />
             </div>
 
             <div>

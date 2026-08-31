@@ -573,12 +573,6 @@ onMounted(() => {
             >
               Add Payment
             </button>
-            <button
-              @click="goToPaymentDashboard(soa)"
-              class="text-green-600 hover:underline"
-            >
-              Payments
-            </button>
           </div>
         </div>
 

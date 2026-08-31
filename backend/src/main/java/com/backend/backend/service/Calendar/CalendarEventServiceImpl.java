@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.backend.backend.model.Appointment.Appointment;
+import com.backend.backend.model.Billing.StatementOfAccount;
 import com.backend.backend.model.CalendarEvent;
 import com.backend.backend.model.CalendarEventDto;
 import com.backend.backend.model.Patient;
@@ -18,6 +19,7 @@ import com.backend.backend.model.PatientService;
 import com.backend.backend.model.Prenatal.PrenatalRecord;
 import com.backend.backend.model.Prenatal.VitalSigns;
 import com.backend.backend.repository.Appointment.AppointmentRepository;
+import com.backend.backend.repository.Billing.StatementOfAccountRepository;
 import com.backend.backend.repository.Calendar.CalendarEventRepository;
 import com.backend.backend.repository.PatientRepository;
 import com.backend.backend.repository.PatientServiceRepository;
@@ -49,6 +51,9 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     @Autowired
     private PatientRepository patientRepository;
 
+    @Autowired
+    private StatementOfAccountRepository statementOfAccountRepository;
+
     @Override
     public List<CalendarEventDto> getAllCalendarEvents() {
         return getCalendarEventsInRange(null, null);
@@ -59,6 +64,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
         List<CalendarEventDto> events = new ArrayList<>();
         events.addAll(loadAppointmentEvents(start, end));
         events.addAll(loadPrenatalEvents(start, end));
+        events.addAll(loadBillingDueEvents(start, end));
         events.addAll(loadManualEvents(start, end));
         return events.stream()
                 .sorted((a, b) -> a.getEventDate().compareTo(b.getEventDate()))
@@ -201,6 +207,66 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                 .collect(Collectors.toList());
     }
 
+    private List<CalendarEventDto> loadBillingDueEvents(LocalDate start, LocalDate end) {
+        if (statementOfAccountRepository == null) {
+            return List.of();
+        }
+
+        return statementOfAccountRepository.findAll().stream()
+                .filter(soa -> soa != null && soa.getDueDate() != null)
+                .map(this::mapBillingDueToDto)
+                .filter(Objects::nonNull)
+                .filter(event -> isInRange(event.getEventDate(), start, end))
+                .collect(Collectors.toList());
+    }
+
+    private CalendarEventDto mapBillingDueToDto(StatementOfAccount soa) {
+        if (soa == null || soa.getDueDate() == null) {
+            return null;
+        }
+
+        Integer patientId = resolvePatientIdFromSoa(soa);
+        LocalDate eventDate = soa.getDueDate().toLocalDate();
+        CalendarEventDto dto = new CalendarEventDto();
+        dto.setEventID(soa.getSoaID() != null ? soa.getSoaID() + 900000 : null);
+        dto.setTitle("Billing Due Date");
+        dto.setEventDate(eventDate);
+        dto.setEventType("billing-due");
+        dto.setPatientId(patientId);
+        dto.setPatientName(resolvePatientNameById(patientId));
+        dto.setDescription("SOA due date — balance: ₱" + (soa.getBalanceAmount() == null ? 0 : soa.getBalanceAmount()));
+        dto.setSource("billing");
+        return dto;
+    }
+
+    private Integer resolvePatientIdFromSoa(StatementOfAccount soa) {
+        if (soa == null) {
+            return null;
+        }
+
+        if (soa.getPatientID() != null) {
+            return soa.getPatientID();
+        }
+
+        if (soa.getPatientServiceID() != null) {
+            return patientServiceRepository.findById(soa.getPatientServiceID())
+                    .map(PatientService::getPatientID)
+                    .orElse(null);
+        }
+
+        return null;
+    }
+
+    private String resolvePatientNameById(Integer patientId) {
+        if (patientId == null) {
+            return "Patient";
+        }
+
+        return patientRepository.findById(patientId)
+                .map(patient -> buildPatientName(patient.getFName(), patient.getLName()))
+                .orElse("Patient");
+    }
+
     private CalendarEventDto mapAppointmentToDto(Appointment appointment) {
         CalendarEventDto dto = new CalendarEventDto();
         dto.setEventID(appointment.getAppointmentID());
@@ -256,6 +322,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
         dto.setTitle(event.getTitle());
         dto.setEventDate(event.getEventDate());
         dto.setEventType(event.getEventType() != null ? event.getEventType() : "manual");
+        dto.setPatientId(event.getPatientID());
         dto.setPatientName(event.getPatientName());
         dto.setDescription(event.getDescription());
         dto.setSource("manual");

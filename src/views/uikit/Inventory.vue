@@ -160,6 +160,77 @@ function resetForm() {
     selectedToolForAction.value = null;
     error.value = '';
 }
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function generateInventoryReport() {
+    const printWindow = window.open('', '_blank', 'width=1000,height=800');
+    if (!printWindow) {
+        error.value = 'Your browser blocked the report window. Please allow pop-ups and try again.';
+        return;
+    }
+
+    const reportDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
+    });
+    const totalInventoryValue = inventoryItems.value.reduce((sum, item) => sum + (item.quantity * item.cost), 0);
+    const rows = inventoryItems.value.map((item, index) => {
+        const status = item.quantity === 0
+            ? 'Out of Stock'
+            : item.quantity <= item.minStock ? 'Low Stock' : 'In Stock';
+        return `<tr>
+            <td>${index + 1}</td>
+            <td>${escapeHtml(item.name)}</td>
+            <td>${item.quantity}</td>
+            <td>${item.minStock}</td>
+            <td>₱${item.cost.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+            <td>₱${(item.quantity * item.cost).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+            <td class="${status === 'Out of Stock' ? 'out' : status === 'Low Stock' ? 'low' : 'in'}">${status}</td>
+        </tr>`;
+    }).join('');
+
+    printWindow.document.write(`<!DOCTYPE html>
+        <html><head><title>Inventory Report - ${reportDate}</title>
+        <style>
+            * { box-sizing: border-box; }
+            body { font-family: Arial, sans-serif; color: #1e293b; margin: 32px; }
+            header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #0f766e; padding-bottom: 16px; }
+            h1 { margin: 0 0 6px; color: #0f766e; font-size: 26px; }
+            p { margin: 4px 0; color: #64748b; font-size: 12px; }
+            .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 24px 0; }
+            .summary div { border: 1px solid #cbd5e1; padding: 12px; border-radius: 6px; }
+            .summary strong { display: block; font-size: 18px; color: #0f172a; margin-top: 4px; }
+            .summary span { font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold; }
+            table { width: 100%; border-collapse: collapse; font-size: 11px; }
+            th { background: #0f766e; color: white; text-align: left; padding: 10px 8px; }
+            td { border-bottom: 1px solid #e2e8f0; padding: 9px 8px; }
+            tr:nth-child(even) { background: #f8fafc; }
+            .in { color: #047857; font-weight: bold; } .low { color: #b45309; font-weight: bold; } .out { color: #b91c1c; font-weight: bold; }
+            footer { margin-top: 24px; border-top: 1px solid #cbd5e1; padding-top: 10px; font-size: 11px; color: #64748b; }
+            @media print { body { margin: 12mm; } }
+        </style></head><body>
+        <header><div><h1>Clinical Tools Inventory Report</h1><p>Inventory stock and valuation summary</p></div><p>Generated: ${reportDate}</p></header>
+        <section class="summary">
+            <div><span>Unique Tools</span><strong>${totalDistinctTools.value}</strong></div>
+            <div><span>Total Stock Units</span><strong>${totalPhysicalCount.value}</strong></div>
+            <div><span>Low / Out of Stock</span><strong>${lowStockItemsCount.value} / ${outOfStockItemsCount.value}</strong></div>
+            <div><span>Total Stock Value</span><strong>₱${totalInventoryValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong></div>
+        </section>
+        <table><thead><tr><th>#</th><th>Tool Name</th><th>Stock Units</th><th>Min. Stock</th><th>Unit Cost</th><th>Stock Value</th><th>Status</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="7">No inventory items found.</td></tr>'}</tbody></table>
+        <footer>Prepared from the Tating Maternity Clinic inventory records.</footer>
+        </body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 300);
+}
 </script>
 
 <template>
@@ -178,7 +249,11 @@ function resetForm() {
                     class="px-4 py-2.5 bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-xl font-semibold flex items-center gap-2 transition-all">
                     ← Back to Inventory
                 </button>
-                <button v-else @click="view = 'add'"
+                <button v-if="view === 'list'" @click="generateInventoryReport"
+                    class="px-5 py-2.5 bg-slate-700 hover:bg-slate-800 text-white rounded-xl font-semibold flex items-center gap-2 shadow-lg shadow-slate-700/20 transition-all">
+                    🖨️ Generate Report
+                </button>
+                <button v-if="view === 'list'" @click="view = 'add'"
                     class="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-semibold flex items-center gap-2 shadow-lg shadow-teal-600/20 transform hover:-translate-y-0.5 transition-all">
                     <span class="text-lg font-bold">+</span> Add Clinical Tool
                 </button>
