@@ -84,6 +84,30 @@ public class PostpartumCareServiceImpl implements PostpartumCareService {
         existing.setPatientConformeName(updatedRecord.getPatientConformeName());
         existing.setDateSigned(updatedRecord.getDateSigned());
 
+        // PART III: NEWBORN CARE
+        existing.setImmediateDrying(updatedRecord.getImmediateDrying());
+        existing.setSkinToSkinContact(updatedRecord.getSkinToSkinContact());
+        existing.setProperCordClamping(updatedRecord.getProperCordClamping());
+        existing.setEarlyBreastfeedingInitiation(updatedRecord.getEarlyBreastfeedingInitiation());
+
+        existing.setEyeProphylaxis(updatedRecord.getEyeProphylaxis());
+        existing.setVitaminKAdministered(updatedRecord.getVitaminKAdministered());
+        existing.setHepatitisBVaccine(updatedRecord.getHepatitisBVaccine());
+        existing.setBcgVaccine(updatedRecord.getBcgVaccine());
+        existing.setCordCareApplied(updatedRecord.getCordCareApplied());
+
+        existing.setBirthWeight(updatedRecord.getBirthWeight());
+        existing.setBirthLength(updatedRecord.getBirthLength());
+        existing.setHeadCircumference(updatedRecord.getHeadCircumference());
+        existing.setChestCircumference(updatedRecord.getChestCircumference());
+        existing.setApgarScore1Min(updatedRecord.getApgarScore1Min());
+        existing.setApgarScore5Min(updatedRecord.getApgarScore5Min());
+        existing.setGestationalAgeWeeks(updatedRecord.getGestationalAgeWeeks());
+
+        existing.setNewbornScreening(updatedRecord.getNewbornScreening());
+        existing.setNewbornHearingScreening(updatedRecord.getNewbornHearingScreening());
+        existing.setNewbornCareNotes(updatedRecord.getNewbornCareNotes());
+
         // Clear and replace visits
         existing.getVisits().clear();
         if (updatedRecord.getVisits() != null) {

@@ -92,12 +92,12 @@ public class StatementOfAccountController {
         service.updateSoa(soa);
 
         CalendarEvent event = new CalendarEvent();
-        event.setTitle("Promissory Letter Due");
+        event.setTitle("Billing Due Date");
         event.setEventDate(dueDate);
-        event.setEventType("promissory-letter");
+        event.setEventType("billing-due-date");
         event.setPatientID(patientId);
         event.setPatientName(patientName);
-        event.setDescription("Promissory letter due for " + patientName + ". Handled by " + request.getStaffName() + ".");
+        event.setDescription("Billing due date for " + patientName + ". Handled by " + request.getStaffName() + ".");
         return calendarEventService.addManualEvent(event);
     }
 

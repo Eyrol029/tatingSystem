@@ -11,6 +11,9 @@ public class Patient {
     @Column(name = "patientID")
     private Integer patientID;
 
+    @Column(name = "patientCode", length = 50)
+    private String patientCode;
+
     // Personal Details
     @Column(name = "fName", nullable = false, length = 50)
     private String fName;
@@ -59,6 +62,9 @@ public class Patient {
     @Column(name = "occupation", length = 100)
     private String occupation;
 
+    @Column(name = "numberOfPregnancy")
+    private Integer numberOfPregnancy = 0;
+
     @Column(name = "createdAt", updatable = false)
     private java.time.LocalDateTime createdAt;
 
@@ -70,6 +76,9 @@ public class Patient {
     // Getters and Setters
     public Integer getPatientID() { return patientID; }
     public void setPatientID(Integer patientID) { this.patientID = patientID; }
+
+    public String getPatientCode() { return patientCode; }
+    public void setPatientCode(String patientCode) { this.patientCode = patientCode; }
 
     public String getFName() { return fName; }
     public void setFName(String fName) { this.fName = fName; }
@@ -115,6 +124,9 @@ public class Patient {
 
     public String getOccupation() { return occupation; }
     public void setOccupation(String occupation) { this.occupation = occupation; }
+
+    public Integer getNumberOfPregnancy() { return numberOfPregnancy; }
+    public void setNumberOfPregnancy(Integer numberOfPregnancy) { this.numberOfPregnancy = numberOfPregnancy; }
 
     public java.time.LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(java.time.LocalDateTime createdAt) { this.createdAt = createdAt; }

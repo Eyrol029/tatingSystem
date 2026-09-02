@@ -101,7 +101,37 @@ const form = ref({
   attendingStaffID: null,
   attendingSignatureName: '',
   patientConformeName: '',
-  dateSigned: todayLocalDateString()
+  dateSigned: todayLocalDateString(),
+
+  // PART III: NEWBORN CARE
+  // 1. Immediate Newborn Care (EINC)
+  immediateDrying: false,
+  skinToSkinContact: false,
+  properCordClamping: false,
+  earlyBreastfeedingInitiation: false,
+
+  // 2. Routine Preventive Care
+  eyeProphylaxis: false,
+  vitaminKAdministered: false,
+  hepatitisBVaccine: false,
+  bcgVaccine: false,
+  cordCareApplied: false,
+
+  // 3. Physical Exam & Measurements
+  birthWeight: '',
+  birthLength: '',
+  headCircumference: '',
+  chestCircumference: '',
+  apgarScore1Min: '',
+  apgarScore5Min: '',
+  gestationalAgeWeeks: '',
+
+  // 4. Screening Tests
+  newbornScreening: '',
+  newbornHearingScreening: '',
+
+  // 5. Newborn Care Notes
+  newbornCareNotes: ''
 })
 
 function todayLocalDateString() {
@@ -175,6 +205,30 @@ async function loadExistingRecord() {
       form.value.referredReason = latest.referredReason || ''
       form.value.patientConformeName = latest.patientConformeName || ''
       form.value.dateSigned = parseDateForForm(latest.dateSigned) || form.value.dateSigned
+
+      // Newborn Care fields
+      form.value.immediateDrying = !!latest.immediateDrying
+      form.value.skinToSkinContact = !!latest.skinToSkinContact
+      form.value.properCordClamping = !!latest.properCordClamping
+      form.value.earlyBreastfeedingInitiation = !!latest.earlyBreastfeedingInitiation
+
+      form.value.eyeProphylaxis = !!latest.eyeProphylaxis
+      form.value.vitaminKAdministered = !!latest.vitaminKAdministered
+      form.value.hepatitisBVaccine = !!latest.hepatitisBVaccine
+      form.value.bcgVaccine = !!latest.bcgVaccine
+      form.value.cordCareApplied = !!latest.cordCareApplied
+
+      form.value.birthWeight = latest.birthWeight || ''
+      form.value.birthLength = latest.birthLength || ''
+      form.value.headCircumference = latest.headCircumference || ''
+      form.value.chestCircumference = latest.chestCircumference || ''
+      form.value.apgarScore1Min = latest.apgarScore1Min || ''
+      form.value.apgarScore5Min = latest.apgarScore5Min || ''
+      form.value.gestationalAgeWeeks = latest.gestationalAgeWeeks || ''
+
+      form.value.newbornScreening = latest.newbornScreening || ''
+      form.value.newbornHearingScreening = latest.newbornHearingScreening || ''
+      form.value.newbornCareNotes = latest.newbornCareNotes || ''
 
       if (latest.attendingStaffID != null) {
         form.value.attendingStaffID = Number(latest.attendingStaffID)
@@ -297,6 +351,31 @@ async function submitForm() {
     attendingSignatureName: form.value.attendingSignatureName || null,
     patientConformeName: form.value.patientConformeName || null,
     dateSigned: form.value.dateSigned || null,
+
+    // PART III: NEWBORN CARE
+    immediateDrying: form.value.immediateDrying,
+    skinToSkinContact: form.value.skinToSkinContact,
+    properCordClamping: form.value.properCordClamping,
+    earlyBreastfeedingInitiation: form.value.earlyBreastfeedingInitiation,
+
+    eyeProphylaxis: form.value.eyeProphylaxis,
+    vitaminKAdministered: form.value.vitaminKAdministered,
+    hepatitisBVaccine: form.value.hepatitisBVaccine,
+    bcgVaccine: form.value.bcgVaccine,
+    cordCareApplied: form.value.cordCareApplied,
+
+    birthWeight: form.value.birthWeight || null,
+    birthLength: form.value.birthLength || null,
+    headCircumference: form.value.headCircumference || null,
+    chestCircumference: form.value.chestCircumference || null,
+    apgarScore1Min: form.value.apgarScore1Min || null,
+    apgarScore5Min: form.value.apgarScore5Min || null,
+    gestationalAgeWeeks: form.value.gestationalAgeWeeks || null,
+
+    newbornScreening: form.value.newbornScreening || null,
+    newbornHearingScreening: form.value.newbornHearingScreening || null,
+    newbornCareNotes: form.value.newbornCareNotes || null,
+
     visits: form.value.visits.map((v, i) => ({
       visitNumber: i + 1,
       dateOfVisit: v.dateOfVisit || null,
@@ -625,6 +704,127 @@ onMounted(async () => {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- PART III: NEWBORN CARE -->
+      <div class="section-header">PART III. NEWBORN CARE</div>
+
+      <!-- 1. Immediate Newborn Care (EINC) -->
+      <div class="mb-4 bg-purple-50/60 border border-purple-200 rounded-lg p-4">
+        <h4 class="font-bold text-sm text-purple-900 mb-3 flex items-center gap-2">
+          <span>👶</span> 1. Immediate Newborn Care (EINC Checklist)
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <label class="flex items-center gap-2 bg-white p-2.5 rounded border border-purple-100 hover:bg-purple-50 cursor-pointer transition text-xs font-medium text-gray-800">
+            <input type="checkbox" v-model="form.immediateDrying" class="w-4 h-4 text-purple-600 rounded" />
+            <span>Immediate and thorough drying</span>
+          </label>
+          <label class="flex items-center gap-2 bg-white p-2.5 rounded border border-purple-100 hover:bg-purple-50 cursor-pointer transition text-xs font-medium text-gray-800">
+            <input type="checkbox" v-model="form.skinToSkinContact" class="w-4 h-4 text-purple-600 rounded" />
+            <span>Skin-to-skin contact (Uninterrupted)</span>
+          </label>
+          <label class="flex items-center gap-2 bg-white p-2.5 rounded border border-purple-100 hover:bg-purple-50 cursor-pointer transition text-xs font-medium text-gray-800">
+            <input type="checkbox" v-model="form.properCordClamping" class="w-4 h-4 text-purple-600 rounded" />
+            <span>Proper cord clamping and cutting (Delayed 1-3 mins)</span>
+          </label>
+          <label class="flex items-center gap-2 bg-white p-2.5 rounded border border-purple-100 hover:bg-purple-50 cursor-pointer transition text-xs font-medium text-gray-800">
+            <input type="checkbox" v-model="form.earlyBreastfeedingInitiation" class="w-4 h-4 text-purple-600 rounded" />
+            <span>Early breastfeeding initiation (Non-separation)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 2. Routine Preventive Care -->
+      <div class="mb-4 bg-teal-50/60 border border-teal-200 rounded-lg p-4">
+        <h4 class="font-bold text-sm text-teal-900 mb-3 flex items-center gap-2">
+          <span>💉</span> 2. Routine Preventive Care
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <label class="flex items-center gap-2 bg-white p-2.5 rounded border border-teal-100 hover:bg-teal-50 cursor-pointer transition text-xs font-medium text-gray-800">
+            <input type="checkbox" v-model="form.eyeProphylaxis" class="w-4 h-4 text-teal-600 rounded" />
+            <span>Eye Prophylaxis: Erythromycin / Tetracycline</span>
+          </label>
+          <label class="flex items-center gap-2 bg-white p-2.5 rounded border border-teal-100 hover:bg-teal-50 cursor-pointer transition text-xs font-medium text-gray-800">
+            <input type="checkbox" v-model="form.vitaminKAdministered" class="w-4 h-4 text-teal-600 rounded" />
+            <span>Vitamin K: Administered (1 mg IM)</span>
+          </label>
+          <label class="flex items-center gap-2 bg-white p-2.5 rounded border border-teal-100 hover:bg-teal-50 cursor-pointer transition text-xs font-medium text-gray-800">
+            <input type="checkbox" v-model="form.hepatitisBVaccine" class="w-4 h-4 text-teal-600 rounded" />
+            <span>Hepatitis B Vaccine: Birth dose (IM)</span>
+          </label>
+          <label class="flex items-center gap-2 bg-white p-2.5 rounded border border-teal-100 hover:bg-teal-50 cursor-pointer transition text-xs font-medium text-gray-800">
+            <input type="checkbox" v-model="form.bcgVaccine" class="w-4 h-4 text-teal-600 rounded" />
+            <span>BCG Vaccine: Birth dose (ID)</span>
+          </label>
+          <label class="flex items-center gap-2 bg-white p-2.5 rounded border border-teal-100 hover:bg-teal-50 cursor-pointer transition text-xs font-medium text-gray-800">
+            <input type="checkbox" v-model="form.cordCareApplied" class="w-4 h-4 text-teal-600 rounded" />
+            <span>Cord Care: Clean, dry cord care applied</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 3. Physical Exam & Measurements -->
+      <div class="mb-4 bg-blue-50/60 border border-blue-200 rounded-lg p-4">
+        <h4 class="font-bold text-sm text-blue-900 mb-3 flex items-center gap-2">
+          <span>📏</span> 3. Physical Exam & Measurements
+        </h4>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <label class="field-label">Birth Weight</label>
+            <input type="text" v-model="form.birthWeight" class="input bg-white" placeholder="e.g. 3,200 g / 3.2 kg" />
+          </div>
+          <div>
+            <label class="field-label">Birth Length (cm)</label>
+            <input type="text" v-model="form.birthLength" class="input bg-white" placeholder="e.g. 50 cm" />
+          </div>
+          <div>
+            <label class="field-label">Head Circumference (cm)</label>
+            <input type="text" v-model="form.headCircumference" class="input bg-white" placeholder="e.g. 34 cm" />
+          </div>
+          <div>
+            <label class="field-label">Chest Circumference (cm)</label>
+            <input type="text" v-model="form.chestCircumference" class="input bg-white" placeholder="e.g. 33 cm" />
+          </div>
+          <div>
+            <label class="field-label">APGAR Score (1 min)</label>
+            <input type="text" v-model="form.apgarScore1Min" class="input bg-white" placeholder="e.g. 8/10" />
+          </div>
+          <div>
+            <label class="field-label">APGAR Score (5 mins)</label>
+            <input type="text" v-model="form.apgarScore5Min" class="input bg-white" placeholder="e.g. 9/10" />
+          </div>
+          <div>
+            <label class="field-label">Gestational Age (weeks)</label>
+            <input type="text" v-model="form.gestationalAgeWeeks" class="input bg-white" placeholder="e.g. 38 weeks" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Screening Tests -->
+      <div class="mb-4 bg-amber-50/60 border border-amber-200 rounded-lg p-4">
+        <h4 class="font-bold text-sm text-amber-900 mb-3 flex items-center gap-2">
+          <span>🔬</span> 4. Screening Tests
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="field-label font-semibold text-gray-800">Newborn Screening (NBS) — Filter Paper Blood Spot</label>
+            <input type="text" v-model="form.newbornScreening" class="input bg-white" placeholder="e.g. Done / Blood spot collected / Referred" />
+          </div>
+          <div>
+            <label class="field-label font-semibold text-gray-800">Newborn Hearing Screening Test (NHST)</label>
+            <input type="text" v-model="form.newbornHearingScreening" class="input bg-white" placeholder="e.g. Done (Pass) / Referred" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Newborn Care Notes -->
+      <div class="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <label class="field-label text-gray-800 font-bold text-sm mb-2 flex items-center gap-2">
+          <span>📝</span> 5. Newborn Care Notes / Clinical Observations
+        </label>
+        <textarea v-model="form.newbornCareNotes" rows="3"
+          class="w-full border border-gray-300 rounded p-2 text-sm bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+          placeholder="Enter newborn care notes, clinical observations, feeding status, instructions given to parents..."></textarea>
       </div>
 
       <!-- Section 9: Referred -->

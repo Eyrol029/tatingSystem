@@ -157,6 +157,7 @@ const formData = ref({
     lName: '',
     middleI: '',
     age: '',
+    numberOfPregnancy: '',
     bDate: '',
     houseNo: '',
     street: '',
@@ -167,7 +168,8 @@ const formData = ref({
     religion: '',
     educationalAttainment: '',
     occupation: '',
-    email: ''
+    email: '',
+    initialService: ''
 });
 
 async function fetchPatients() {
@@ -245,6 +247,7 @@ const filteredPatients = computed(() => {
     if (!searchQuery.value) return result;
     const query = searchQuery.value.toLowerCase();
     return result.filter(patient =>
+        (patient.patientCode || '').toLowerCase().includes(query) ||
         (patient.patientID?.toString() || '').includes(query) ||
         (patient.fName || '').toLowerCase().includes(query) ||
         (patient.lName || '').toLowerCase().includes(query) ||
@@ -274,6 +277,7 @@ function resetForm() {
         lName: '',
         middleI: '',
         age: '',
+        numberOfPregnancy: '',
         bDate: '',
         houseNo: '',
         street: '',
@@ -284,7 +288,8 @@ function resetForm() {
         religion: '',
         educationalAttainment: '',
         occupation: '',
-        email: ''
+        email: '',
+        initialService: ''
     };
 }
 
@@ -295,11 +300,14 @@ async function handleAddPatient() {
     }
 
     try {
-        await axios.post(`${BASE_URL}`, {
+        const res = await axios.post(`${BASE_URL}`, {
             fName: formData.value.fName,
             lName: formData.value.lName,
             middleI: formData.value.middleI,
             age: formData.value.age ? parseInt(formData.value.age) : null,
+            numberOfPregnancy: formData.value.numberOfPregnancy !== '' && formData.value.numberOfPregnancy !== null
+                ? parseInt(formData.value.numberOfPregnancy, 10)
+                : 0,
             bDate: formData.value.bDate || null,
             houseNo: formData.value.houseNo,
             street: formData.value.street,
@@ -313,7 +321,17 @@ async function handleAddPatient() {
             email: formData.value.email
         });
 
+        // If an initial service was selected, create the initial patient service which assigns the ID
+        if (formData.value.initialService && res.data?.patientID) {
+            await axios.post('http://localhost:8080/api/patient-services', {
+                patientID: res.data.patientID,
+                serviceName: formData.value.initialService,
+                dateAvailed: new Date().toISOString().split('T')[0]
+            });
+        }
+
         await fetchPatients();
+        await fetchPatientServices();
         closeModal();
         alert('Patient added successfully!');
     } catch (e) {
@@ -391,9 +409,10 @@ async function deletePatient(patient) {
             <table class="w-full">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">ID</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Patient Case No.</th>
                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Patient Name</th>
                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Contact No.</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Pregnancies</th>
                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Services Availed</th>
                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Action</th>
@@ -402,11 +421,14 @@ async function deletePatient(patient) {
                 <tbody>
                     <tr v-for="patient in filteredPatients" :key="patient.patientID"
                         class="border-t border-gray-200 hover:bg-gray-50">
-                        <td class="px-6 py-4 text-sm text-gray-900">{{ patient.patientID }}</td>
+                        <td class="px-6 py-4 text-sm font-semibold text-purple-700">
+                            {{ patient.patientCode || patient.patientID }}
+                        </td>
                         <td class="px-6 py-4 text-sm text-gray-900">
                             {{ patient.fName }} {{ patient.middleI }} {{ patient.lName }}
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-900">{{ patient.contactNumber }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900">{{ patient.numberOfPregnancy ?? 0 }}</td>
                         <td class="px-6 py-4 text-sm text-gray-900">{{ patient.email ?? '—' }}</td>
                         <td class="px-6 py-4 text-sm text-gray-900">
                             <div class="flex flex-wrap gap-1">
@@ -480,11 +502,16 @@ async function deletePatient(patient) {
                             </div>
                         </div>
 
-                        <!-- Age, Birth Date, Email -->
-                        <div class="grid grid-cols-3 gap-4">
+                        <!-- Age, Number of Pregnancy, Birth Date, Email -->
+                        <div class="grid grid-cols-4 gap-4">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Age</label>
                                 <input v-model="formData.age" type="number"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">No. of Pregnancy</label>
+                                <input v-model="formData.numberOfPregnancy" type="number" min="0"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
                             </div>
                             <div>
@@ -564,6 +591,19 @@ async function deletePatient(patient) {
                                     placeholder="Current Occupation"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
                             </div>
+                        </div>
+
+                        <!-- Initial Service Availed (Condition for Patient ID generation) -->
+                        <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                            <label class="block text-sm font-semibold text-purple-900 mb-1">Initial Service Availed (First Service)</label>
+                            <p class="text-xs text-purple-700 mb-2">The patient's ID will be generated based on this first service's case number sequence (e.g. Prenatal 26-00-001, 26-00-002).</p>
+                            <select v-model="formData.initialService"
+                                class="w-full px-3 py-2 bg-white border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 font-medium text-gray-800">
+                                <option value="">-- Select First Service (Optional: or choose later upon availing) --</option>
+                                <option v-for="srv in clinicalServices" :key="srv.id" :value="srv.name">
+                                    {{ srv.name }} {{ srv.caseNumber ? `(${srv.caseNumber})` : '' }}
+                                </option>
+                            </select>
                         </div>
 
                         <!-- Buttons -->

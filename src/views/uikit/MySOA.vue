@@ -142,9 +142,8 @@ async function loadStaffOptions() {
                 department: emp.department || '',
                 position: emp.position || ''
             }));
-
     } catch (e) {
-        console.error('Failed to load staff list for promissory letter', e);
+        console.error('Failed to load staff list', e);
         employeeList.value = [];
     }
 }
@@ -281,7 +280,7 @@ onMounted(async () => {
                     </button>
                     <button @click="showPromissoryModal = true"
                         class="bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700 transition flex items-center gap-2 shadow-sm font-medium">
-                        📝 Promissory Letter
+                        � Set Due Date
                     </button>
                     <button @click="printSOA"
                         class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 shadow-sm font-medium">

@@ -64,6 +64,7 @@ const patientData = ref({
     firstName: '',
     lastName: '',
     age: '',
+    numberOfPregnancy: 0,
     gestationalAge: '',
     symptomsComplaints: '',
     feelsLaborPain: null,
@@ -190,6 +191,31 @@ const amountDue = computed(() => {
     return patientData.value.hasPhilHealth ? billingTotal.value - philHealthCoverage : billingTotal.value;
 });
 
+const philHealthRiskReasons = computed(() => {
+    const reasons = [];
+    const age = Number(patientData.value.age);
+    const pregCount = Number(patientData.value.numberOfPregnancy ?? 0);
+
+    if (!Number.isNaN(age) && (age <= 18 || age >= 36)) {
+        reasons.push(`Age ${age} is outside the allowed low-risk range of 19–35 years.`);
+    }
+    if (pregCount === 0) {
+        reasons.push('This is the first pregnancy (pregnancy count is 0).');
+    }
+    if (pregCount >= 4) {
+        reasons.push('Pregnancy count is 4 or more (5th pregnancy or later).');
+    }
+
+    return reasons;
+});
+
+const isHighRiskByRules = computed(() => philHealthRiskReasons.value.length > 0);
+const isLowRiskByRules = computed(() => {
+    const age = Number(patientData.value.age);
+    const pregCount = Number(patientData.value.numberOfPregnancy ?? 0);
+    return !Number.isNaN(age) && age >= 19 && age <= 35 && pregCount >= 2 && pregCount <= 4;
+});
+
 const selectedWardName = computed(() => {
     const ward = wardsList.value.find(w => w.id === patientData.value.wardID);
     return ward ? ward.name : '';
@@ -259,6 +285,7 @@ async function fetchExistingPatient() {
         patientData.value.firstName = res.data.fName || '';
         patientData.value.lastName = res.data.lName || '';
         patientData.value.age = res.data.age ?? '';
+        patientData.value.numberOfPregnancy = res.data.numberOfPregnancy ?? 0;
     } catch (error) {
         console.error('Failed to load existing patient record', error);
     }
@@ -648,12 +675,17 @@ async function completeDischarge() {
     saving.value = true;
     saveError.value = '';
     try {
+        const idToUse = patientId.value || patientID;
+        if (idToUse) {
+            await axios.patch(`${PATIENTS_URL}/${idToUse}/increment-pregnancy`);
+            patientData.value.numberOfPregnancy = Number(patientData.value.numberOfPregnancy ?? 0) + 1;
+        }
+
         currentStep.value = 'discharged';
         await saveAdmission({
             currentStep: 'discharged',
             dischargeDate: new Date().toISOString()
         });
-        const idToUse = patientId.value || patientID;
         if (idToUse) {
             router.push(`/uikit/PatientProfiling/${idToUse}`);
         } else {
@@ -784,6 +816,22 @@ onMounted(async () => {
                         <div class="p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm space-y-1">
                             <p class="font-semibold text-gray-800">Patient: {{ patientData.firstName }} {{ patientData.lastName }}</p>
                             <p class="text-gray-600">Age: {{ patientData.age }} | Gestational Age: {{ patientData.gestationalAge }} weeks</p>
+                            <p class="text-gray-600">No. of Pregnancy: {{ patientData.numberOfPregnancy ?? 0 }}</p>
+                        </div>
+
+                        <div class="p-4 rounded-lg border text-sm"
+                            :class="isHighRiskByRules ? 'bg-red-50 border-red-200 text-red-800' : 'bg-green-50 border-green-200 text-green-800'">
+                            <p class="font-bold mb-1">PhilHealth / DOH Risk Status</p>
+                            <div class="flex items-center justify-between gap-3">
+                                <span :class="isHighRiskByRules ? 'text-red-700' : 'text-green-700'">
+                                    {{ isHighRiskByRules ? 'HIGH RISK' : 'LOW RISK' }}
+                                </span>
+                                <span v-if="isHighRiskByRules" class="text-xs font-semibold uppercase tracking-wide">Age / pregnancy rule triggered</span>
+                            </div>
+                            <ul v-if="isHighRiskByRules" class="mt-2 list-disc list-inside space-y-1 text-xs">
+                                <li v-for="reason in philHealthRiskReasons" :key="reason">{{ reason }}</li>
+                            </ul>
+                            <p v-else class="mt-2 text-xs">Low risk: age 19–35 and pregnancy count 2–4.</p>
                         </div>
 
                         <!-- Step 1: Symptoms / Complaints -->

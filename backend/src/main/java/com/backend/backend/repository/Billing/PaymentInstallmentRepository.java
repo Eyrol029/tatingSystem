@@ -11,4 +11,6 @@ import com.backend.backend.model.Billing.PaymentInstallment;
 public interface PaymentInstallmentRepository extends JpaRepository<PaymentInstallment, Integer> {
     List<PaymentInstallment> findBySoaId(Integer soaId);
     List<PaymentInstallment> findByPatientServiceId(Integer patientServiceId);
+    List<PaymentInstallment> findByPatientId(Integer patientId);
+    void deleteByPatientId(Integer patientId);
 }

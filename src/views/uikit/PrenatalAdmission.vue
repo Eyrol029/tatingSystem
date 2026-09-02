@@ -115,6 +115,8 @@ const riskResult   = ref(null)
 const riskLoading  = ref(false)
 const employeesList = ref([])
 const patientName = ref('')
+const patientAge = ref(null)
+const patientPregnancyCount = ref(0)
 const labTests = [
   'Pregnancy Test',
   'Complete Blood Count (CBC)',
@@ -304,8 +306,62 @@ const ultrasoundHighRisk = computed(() =>
 )
 
 
+const currentPatientAge = computed(() => {
+  const age = Number(patientAge.value)
+  return Number.isFinite(age) ? age : null
+})
+
+const currentPatientPregnancyCount = computed(() => {
+  const count = Number(patientPregnancyCount.value)
+  return Number.isFinite(count) ? count : 0
+})
+
+const ruleRiskReasons = computed(() => {
+  const reasons = []
+  const age = currentPatientAge.value
+  const pregCount = currentPatientPregnancyCount.value
+
+  if (age !== null && (age <= 18 || age >= 36)) {
+    reasons.push(`Age ${age} is outside the low-risk range of 19–35 years`)
+  }
+  if (pregCount === 0) {
+    reasons.push('First pregnancy (pregnancy count is 0)')
+  }
+  if (pregCount >= 4) {
+    reasons.push('5th pregnancy or more')
+  }
+  if (form.value.obstetricRisk.multiplePregnancy) {
+    reasons.push('Multiple pregnancy')
+  }
+  if (obstetricHighRisk.value) reasons.push('Obstetric risk factor(s) checked')
+  if (medicalHighRisk.value) reasons.push('Medical/surgical risk condition(s) checked')
+  if (leopoldFhtHighRisk.value) reasons.push('Abnormal fetal heart tone')
+  if (labHighRisk.value) reasons.push('Abnormal laboratory findings')
+  if (ultrasoundHighRisk.value) reasons.push('Ultrasound findings indicate high risk')
+  if (referralHighRisk.value) reasons.push('Referral hospital is required')
+  if (visitHighRisk.value) reasons.push('Follow-up visit(s) show abnormal findings')
+
+  return reasons
+})
+
+const isHighRiskByRules = computed(() => ruleRiskReasons.value.length > 0)
+
+const isLowRiskByRules = computed(() => {
+  const age = currentPatientAge.value
+  const pregCount = currentPatientPregnancyCount.value
+  return age !== null && age >= 19 && age <= 35 && pregCount >= 2 && pregCount <= 4
+    && !form.value.obstetricRisk.multiplePregnancy
+    && !obstetricHighRisk.value
+    && !medicalHighRisk.value
+    && !leopoldFhtHighRisk.value
+    && !labHighRisk.value
+    && !ultrasoundHighRisk.value
+    && !referralHighRisk.value
+    && !visitHighRisk.value
+})
+
 const isLiveHighRisk = computed(() =>
-  obstetricHighRisk.value || medicalHighRisk.value || leopoldFhtHighRisk.value ||
+  isHighRiskByRules.value || obstetricHighRisk.value || medicalHighRisk.value || leopoldFhtHighRisk.value ||
   labHighRisk.value || ultrasoundHighRisk.value || referralHighRisk.value || visitHighRisk.value
 )
 
@@ -397,9 +453,13 @@ async function fetchPatientName() {
     const res = await axios.get(`http://localhost:8080/api/patients/${clientId}`)
     const patient = res.data || {}
     patientName.value = `${patient.fName || ''} ${patient.lName || ''}`.trim() || `Client ${clientId}`
+    patientAge.value = patient.age != null ? Number(patient.age) : null
+    patientPregnancyCount.value = patient.numberOfPregnancy != null ? Number(patient.numberOfPregnancy) : 0
   } catch (error) {
     console.error('Failed to load patient name for referral:', error)
     patientName.value = `Client ${clientId}`
+    patientAge.value = null
+    patientPregnancyCount.value = 0
   }
 }
 
@@ -1082,22 +1142,24 @@ async function submitForm() {
     </div>
 
 
-    <!-- HIGH-RISK BANNER (live) -->
-    <div v-if="isLiveHighRisk && !riskResult" class="no-print mb-4 rounded-lg border-2 border-red-500 bg-red-50 p-4">
+    <!-- HIGH-RISK / LOW-RISK BANNER (live) -->
+    <div v-if="!riskResult && (isHighRiskByRules || isLowRiskByRules)" class="no-print mb-4 rounded-lg border-2 p-4"
+      :class="isHighRiskByRules ? 'border-red-500 bg-red-50' : 'border-green-500 bg-green-50'">
       <div class="flex items-center gap-2 mb-2">
-        <span class="text-2xl">🚨</span>
-        <span class="font-bold text-red-700 text-lg">HIGH RISK PATIENT DETECTED</span>
-        <span class="ml-auto text-xs text-red-500 italic">Live preview — save to confirm</span>
+        <span class="text-2xl">{{ isHighRiskByRules ? '🚨' : '✅' }}</span>
+        <span class="font-bold text-lg" :class="isHighRiskByRules ? 'text-red-700' : 'text-green-700'">
+          {{ isHighRiskByRules ? 'HIGH RISK PATIENT DETECTED' : 'LOW RISK PATIENT' }}
+        </span>
+        <span class="ml-auto text-xs italic" :class="isHighRiskByRules ? 'text-red-500' : 'text-green-500'">
+          PhilHealth / DOH rule check
+        </span>
       </div>
-      <ul class="list-disc list-inside text-sm text-red-700 space-y-1">
-        <li v-if="obstetricHighRisk">One or more Obstetric Risk Factors are checked</li>
-        <li v-if="medicalHighRisk">One or more Medical / Surgical conditions are checked</li>
-        <li v-if="leopoldFhtHighRisk">Abnormal Fetal Heart Tone in Leopold section ({{ form.factors.leopold.fht }} bpm)</li>
-        <li v-if="labHighRisk">Lab result(s) indicate risk (VDRL / HIV positive or low Hemoglobin)</li>
-        <li v-if="ultrasoundHighRisk">Ultrasound findings indicate high-risk condition ({{ ultrasoundTags.filter(t => HIGH_RISK_US_TAGS.includes(t)).join(', ') }})</li>
-        <li v-if="referralHighRisk">Referral to hospital is marked as needed</li>
-        <li v-if="visitHighRisk">One or more follow-up visits have abnormal vitals or presentation</li>
+      <ul v-if="isHighRiskByRules" class="list-disc list-inside text-sm text-red-700 space-y-1">
+        <li v-for="reason in ruleRiskReasons" :key="reason">{{ reason }}</li>
       </ul>
+      <p v-else class="text-sm text-green-700">
+        Low risk: age 19–35, pregnancy count 2–4, and no high-risk conditions or multiple pregnancy.
+      </p>
     </div>
 
 
@@ -1142,7 +1204,7 @@ async function submitForm() {
 
 
     <!-- Basic Info -->
-    <div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="grid grid-cols-4 gap-4 mb-6">
       <div>
         <label class="field-label">LMP</label>
         <input type="date" v-model="form.lmp" class="input" />
@@ -1154,6 +1216,10 @@ async function submitForm() {
       <div>
         <label class="field-label">G-P-T-A-L</label>
         <input type="text" v-model="form.gpal" class="input" placeholder="e.g. 2-1-1-0-1" />
+      </div>
+      <div>
+        <label class="field-label">No. of Pregnancy</label>
+        <input type="number" min="0" v-model.number="patientPregnancyCount" class="input" />
       </div>
     </div>
 

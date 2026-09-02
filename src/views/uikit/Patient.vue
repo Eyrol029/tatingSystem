@@ -184,10 +184,12 @@ async function loadPatients() {
 
         return {
           id:              String(p.patientID),
+          patientCode:     p.patientCode || '',
           patientID:       p.patientID,
           prenatalRecordID,
           name:            buildName(p),
           age:             p.age ?? computeAge(p.birthDate || p.dob || p.dateOfBirth),
+          numberOfPregnancy: p.numberOfPregnancy ?? 0,
           contact:         p.contactNo || p.contact || '—',
           gestationalWeek: aog,
           vitals:          vitals || {},
@@ -290,7 +292,7 @@ const filteredPatients = computed(() => {
   const q = (searchQuery.value || '').trim().toLowerCase()
   if (!q) return list
   return list.filter(p =>
-    `${p.name} ${p.contact} ${p.id}`.toLowerCase().includes(q)
+    `${p.name} ${p.contact} ${p.patientCode || ''} ${p.id}`.toLowerCase().includes(q)
   )
 })
 
@@ -409,6 +411,7 @@ onMounted(loadPatients)
               <tr>
                 <th class="px-6 py-4 text-left text-base font-semibold text-gray-800 w-1/4">Patient</th>
                 <th class="px-6 py-4 text-left text-base font-semibold text-gray-800">Age</th>
+                <th class="px-6 py-4 text-left text-base font-semibold text-gray-800">Pregnancies</th>
                 <th class="px-6 py-4 text-left text-base font-semibold text-gray-800">AOG</th>
                 <th class="px-6 py-4 text-left text-base font-semibold text-gray-800">BP / FHT</th>
                 <th class="px-6 py-4 text-left text-base font-semibold text-gray-800">Status</th>
@@ -423,13 +426,23 @@ onMounted(loadPatients)
 
                 <!-- Name -->
                 <td class="px-6 py-5">
-                  <p class="font-semibold text-gray-900">{{ patient.name }}</p>
+                  <div class="flex items-center gap-2">
+                    <p class="font-semibold text-gray-900">{{ patient.name }}</p>
+                    <span v-if="patient.patientCode" class="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-mono font-semibold border border-purple-200">
+                      {{ patient.patientCode }}
+                    </span>
+                  </div>
                   <p class="text-sm text-gray-500">{{ patient.contact }}</p>
                 </td>
 
                 <!-- Age -->
                 <td class="px-6 py-5 text-gray-700">
                   {{ patient.age != null ? patient.age + ' yrs' : '—' }}
+                </td>
+
+                <!-- Pregnancies -->
+                <td class="px-6 py-5 text-gray-700">
+                  {{ patient.numberOfPregnancy ?? 0 }}
                 </td>
 
                 <!-- AOG -->
@@ -542,6 +555,10 @@ onMounted(loadPatients)
               <p class="font-semibold text-gray-900">
                 {{ selectedPatient.gestationalWeek != null ? 'Week ' + selectedPatient.gestationalWeek : '—' }}
               </p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500 uppercase font-semibold mb-0.5">No. of Pregnancies</p>
+              <p class="font-semibold text-gray-900">{{ selectedPatient.numberOfPregnancy ?? 0 }}</p>
             </div>
             <div>
               <p class="text-xs text-gray-500 uppercase font-semibold mb-0.5">Status</p>

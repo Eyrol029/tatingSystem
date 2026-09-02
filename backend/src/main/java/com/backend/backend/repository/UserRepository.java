@@ -21,6 +21,8 @@ public interface UserRepository extends CrudRepository<User, Long> {
 
     List<User> findByPatientID(Integer patientID);
 
+    void deleteByPatientID(Integer patientID);
+
     List<User> findByEmployeeID(Integer employeeID);
 
       Optional<User> findByEmailAndRole(String email, String role); 

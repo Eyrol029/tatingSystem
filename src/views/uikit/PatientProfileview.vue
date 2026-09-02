@@ -16,6 +16,7 @@ if (!userStore.user) {
 
 const patientData = reactive({
     patientID: null,
+    patientCode: '',
     fName: '',
     lName: '',
     middleI: '',
@@ -139,7 +140,7 @@ onMounted(() => {
                     </div>
                     <div>
                         <p class="text-sm text-gray-500">Patient ID</p>
-                        <p class="font-medium text-gray-900">{{ patientData.patientID }}</p>
+                        <p class="font-bold text-purple-700">{{ patientData.patientCode || patientData.patientID }}</p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500">Age</p>

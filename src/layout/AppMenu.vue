@@ -1,11 +1,52 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import axios from 'axios';
 import { useUserDataStore, UserRole } from '@/stores/userData';
 import AppMenuItem from './AppMenuItem.vue';
 
 // Access user store
 const userStore = useUserDataStore();
 const loggedInUser = computed(() => userStore.user);
+
+// ── Calendar "today" badge ─────────────────────────────────────────────────
+// Counts events (appointments, prenatal visits, deliveries, billing due,
+// manual events, etc.) that fall on today's date, and shows the count as a
+// red badge on the Calendar menu item so admins notice at a glance.
+const CALENDAR_URL = 'http://localhost:8080/api/calendar';
+const todayEventCount = ref(0);
+
+function formatLocalDate(date) {
+    const d = date instanceof Date ? date : new Date(date);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+async function fetchTodayEventCount() {
+    // Only admins see the Calendar link, so only bother fetching for them.
+    if (!loggedInUser.value || loggedInUser.value.role !== UserRole.ADMIN) {
+        todayEventCount.value = 0;
+        return;
+    }
+    try {
+        const today = formatLocalDate(new Date());
+        const res = await axios.get(`${CALENDAR_URL}/events`, { params: { start: today, end: today } });
+        todayEventCount.value = Array.isArray(res.data) ? res.data.length : 0;
+    } catch (e) {
+        console.error("Failed to fetch today's calendar events for badge", e);
+        todayEventCount.value = 0;
+    }
+}
+
+let refreshTimer = null;
+
+onMounted(() => {
+    fetchTodayEventCount();
+    // Keep the badge reasonably fresh without needing a page reload.
+    refreshTimer = setInterval(fetchTodayEventCount, 5 * 60 * 1000);
+});
+
+onUnmounted(() => {
+    if (refreshTimer) clearInterval(refreshTimer);
+});
 
 // Menu model with roles
 const model = [
@@ -35,19 +76,26 @@ const model = [
       ]   
     }
 ];
-// Filter model based on logged-in user's role
+
+// Filter model based on logged-in user's role, and attach the live
+// today-event count as a `badge` onto the Calendar item specifically.
 const filteredModel = computed(() => {
     if (!loggedInUser.value) return [];
 
     return model.map(section => {
         if (section.items) {
-            const filteredItems = section.items.filter(item =>
-                !item.roles || item.roles.includes(loggedInUser.value.role)
-            )
-            return { ...section, items: filteredItems }
+            const filteredItems = section.items
+                .filter(item => !item.roles || item.roles.includes(loggedInUser.value.role))
+                .map(item => {
+                    if (item.label === 'Calendar' && todayEventCount.value > 0) {
+                        return { ...item, badge: todayEventCount.value };
+                    }
+                    return item;
+                });
+            return { ...section, items: filteredItems };
         }
         if (!section.roles || section.roles.includes(loggedInUser.value.role)) {
-            return section
+            return section;
         }
         return null;
     }).filter(Boolean);

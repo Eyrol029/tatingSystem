@@ -12,5 +12,7 @@ public interface ReferralRepository extends JpaRepository<Referral, Long> {
 
     List<Referral> findByPatientId(Long patientId);
 
+    void deleteByPatientId(Long patientId);
+
     List<Referral> findByPatientNameContainingIgnoreCase(String patientName);
 }

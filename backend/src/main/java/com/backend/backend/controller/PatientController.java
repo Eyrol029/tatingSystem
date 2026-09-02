@@ -29,6 +29,12 @@ public class PatientController {
     public List<Patient> getPatients() {
         return patientService.getPatients();
     }
+
+        @CrossOrigin(origins = "*")
+    @PatchMapping("/{id}/increment-pregnancy")
+    public Patient incrementPregnancy(@PathVariable Integer id) {
+        return patientService.incrementPregnancy(id);
+    }
         @CrossOrigin(origins = "*")
     @PutMapping
     public Patient updatePatient(@RequestBody Patient patient) {

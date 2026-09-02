@@ -14,5 +14,9 @@ public interface ClinicalServiceRepository extends JpaRepository<ClinicalService
 
     Optional<ClinicalService> findByServiceCode(String serviceCode);
 
+    Optional<ClinicalService> findByName(String name);
+
+    Optional<ClinicalService> findByNameIgnoreCase(String name);
+
     boolean existsByServiceCode(String serviceCode);
 }

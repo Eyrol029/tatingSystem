@@ -1,7 +1,7 @@
 package com.backend.backend.controller;
 
 import java.util.List;
-
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -11,9 +11,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.backend.backend.model.PatientService;
+import com.backend.backend.service.PatientIdGeneratorService;
 import com.backend.backend.service.PatientServiceService;
 
 @CrossOrigin(origins = "*")
@@ -23,7 +25,17 @@ public class PatientServiceController {
 
     @Autowired
     private PatientServiceService patientServiceService;
- @CrossOrigin(origins = "*")
+
+    @Autowired
+    private PatientIdGeneratorService patientIdGeneratorService;
+
+    @GetMapping("/next-case-number")
+    public Map<String, String> getNextCaseNumber(@RequestParam String serviceName) {
+        String nextId = patientIdGeneratorService.generateNextPatientId(serviceName);
+        return Map.of("caseNumber", nextId);
+    }
+
+    @CrossOrigin(origins = "*")
     @PostMapping
     public PatientService addPatientService(@RequestBody PatientService patientService) {
         return patientServiceService.addPatientService(patientService);

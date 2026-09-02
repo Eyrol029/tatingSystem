@@ -11,4 +11,5 @@ public interface PatientService {
     void deletePatient(Integer id);
     List<Patient> getPatientsByLastName(String lName);
     List<Patient> getPatientsByBarangay(String barangay);
-}
+    Patient incrementPregnancy(Integer id);
+}

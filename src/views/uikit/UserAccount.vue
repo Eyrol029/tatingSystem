@@ -98,6 +98,7 @@ const filteredPatients = computed(() => {
   if (!search) return patientsList.value;
 
   return patientsList.value.filter(patient =>
+    (patient.patientCode || '').toLowerCase().includes(search) ||
     String(patient.patientID).includes(search) ||
     `${patient.fName} ${patient.lName}`.toLowerCase().includes(search) ||
     (patient.fName || '').toLowerCase().includes(search) ||
@@ -329,7 +330,7 @@ async function handleDeleteUser(userID) {
       :key="patient.patientID"
       :value="patient.patientID"
     >
-      {{ patient.patientID }} - {{ patient.fName }} {{ patient.lName }}
+      {{ patient.patientCode || patient.patientID }} - {{ patient.fName }} {{ patient.lName }}
     </option>
   </select>
 

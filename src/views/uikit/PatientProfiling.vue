@@ -10,6 +10,7 @@ const BASE_URL = 'http://localhost:8080/api/patients';
 
 const patientData = reactive({
     patientID: null,
+    patientCode: '',
     fName: '',
     lName: '',
     middleI: '',
@@ -134,6 +135,7 @@ async function confirmDeleteService() {
         showDeleteConfirm.value = false;
         serviceToDelete.value = null;
         await fetchServices();
+        await fetchPatient();
     } catch (e) {
         console.error('Failed to delete service record', e);
         deleteError.value = 'Failed to delete: ' + (e.response?.data || e.message);
@@ -225,6 +227,7 @@ async function selectType(svc: any) {
                 remarks: ''
             });
             await fetchServices();
+            await fetchPatient();
             const newServiceID = res.data.patientServiceID;
             showModal.value = false;
             step.value = 'select';
@@ -277,6 +280,7 @@ async function handleSubmit() {
             remarks: form.remarks
         });
         await fetchServices();
+        await fetchPatient();
     } catch (e) {
         console.error('Failed to save service', e);
         alert('Failed to save service: ' + e.message);
@@ -348,7 +352,7 @@ async function handleSubmit() {
                 <div v-if="!editingProfile" class="grid grid-cols-3 gap-6">
                     <div>
                         <p class="text-sm text-gray-500">Patient ID</p>
-                        <p class="font-medium text-gray-900">{{ patientData.patientID }}</p>
+                        <p class="font-bold text-purple-700">{{ patientData.patientCode || patientData.patientID }}</p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-500">Age</p>

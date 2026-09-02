@@ -15,5 +15,7 @@ public interface PatientRepository extends CrudRepository<Patient, Integer> {
 
     List<Patient> findByBarangay(String barangay);
 
+    List<Patient> findByPatientCodeStartingWith(String prefix);
+
     Optional<Patient> findByEmail(String email);
 }

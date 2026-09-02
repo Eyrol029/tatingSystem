@@ -19,4 +19,6 @@ public interface PatientServiceRepository extends CrudRepository<PatientService,
     List<PatientService> findByEmployeeName(String employeeName);
 
     List<PatientService> findByWardName(String wardName);
+
+    List<PatientService> findByCaseNumberStartingWith(String prefix);
 }

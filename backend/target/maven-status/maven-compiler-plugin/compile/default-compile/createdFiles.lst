@@ -1,14 +1,12 @@
 com\backend\backend\controller\FamilyPlanning\ClientController.class
 com\backend\backend\model\FamilyPlanning\Extremities.class
 com\backend\backend\model\Prenatal\ObstetricRiskFactor.class
-com\backend\backend\service\WardServiceImpl.class
 com\backend\backend\service\Prenatal\PrenatalRecordService.class
 com\backend\backend\repository\FamilyPlanning\ObstetricalHistoryRepository.class
 com\backend\backend\repository\FamilyPlanning\BreastRepository.class
 com\backend\backend\controller\FamilyPlanning\MedicalHistoryController.class
 com\backend\backend\model\ClinicLog.class
 com\backend\backend\repository\Prenatal\ClinicalHistoryAndPhysicalExaminationRepository.class
-com\backend\backend\service\Billing\StatementOfAccountServiceImpl.class
 com\backend\backend\controller\FamilyPlanning\PregnancyExclusionChecklistController.class
 com\backend\backend\model\CalendarEvent.class
 com\backend\backend\repository\Prenatal\MedicalSurgicalFactorMedConditionsRepository.class
@@ -21,17 +19,13 @@ com\backend\backend\service\FamilyPlanning\ClientService.class
 com\backend\backend\controller\EmployeeController.class
 com\backend\backend\repository\FamilyPlanning\TypeOfClientRepository.class
 com\backend\backend\repository\Prenatal\NormalVitalSignRepository.class
-com\backend\backend\service\Prenatal\PrenatalRecordServiceImpl.class
-com\backend\backend\service\Prenatal\TreatmentManagementServiceImpl.class
 com\backend\backend\repository\Prenatal\LaboratoryResultsRepository.class
 com\backend\backend\model\PatientService.class
 com\backend\backend\service\FamilyPlanning\FpAssessmentRecordService.class
 com\backend\backend\controller\Prenatal\ClinicalHistoryAndPhysicalExaminationController.class
 com\backend\backend\service\FamilyPlanning\ExtremitiesService.class
 com\backend\backend\model\FamilyPlanning\FamilyPlanningRecord.class
-com\backend\backend\service\Ultrasound\UltrasoundRecordServiceImpl.class
 com\backend\backend\repository\WardRepository.class
-com\backend\backend\service\Calendar\CalendarEventServiceImpl.class
 com\backend\backend\service\FamilyPlanning\MethodCurrentlyUsedServiceImpl.class
 com\backend\backend\controller\Prenatal\LaboratoryResultsController.class
 com\backend\backend\controller\FamilyPlanning\STI_ConditionController.class
@@ -40,9 +34,7 @@ com\backend\backend\repository\Prenatal\MenstrualHistoryRepository.class
 com\backend\backend\controller\ClinicalServiceController.class
 com\backend\backend\service\FamilyPlanning\NeckService.class
 com\backend\backend\repository\Calendar\CalendarEventRepository.class
-com\backend\backend\service\Prenatal\LaboratoryResultsServiceImpl.class
 com\backend\backend\service\FamilyPlanning\ObstetricalConditionServiceImpl.class
-com\backend\backend\service\Prenatal\AscertainPregnancyLowRiskServiceImpl.class
 com\backend\backend\service\Prenatal\ConsultationVisitsService.class
 com\backend\backend\repository\FamilyPlanning\SkinRepository.class
 com\backend\backend\controller\FamilyPlanning\BreastController.class
@@ -66,7 +58,6 @@ com\backend\backend\model\Billing\Billing.class
 com\backend\backend\service\FamilyPlanning\PelvicExaminationServiceImpl.class
 com\backend\backend\model\Prenatal\ClinicalHistoryAndPhysicalExamination.class
 com\backend\backend\service\FamilyPlanning\SpouseService.class
-com\backend\backend\service\Prenatal\MedicalSurgicalFactorMedConditionsServiceImpl.class
 com\backend\backend\controller\Billing\ExpenseController.class
 com\backend\backend\controller\Prenatal\MedicalSurgicalFactorMeasurementsController.class
 com\backend\backend\DatabaseMigration.class
@@ -78,11 +69,9 @@ com\backend\backend\model\User.class
 com\backend\backend\service\Prenatal\VitalSignsService.class
 com\backend\backend\service\FamilyPlanning\BreastService.class
 com\backend\backend\service\FamilyPlanning\TypeOfClientService.class
-com\backend\backend\service\Prenatal\VitalSignsServiceImpl.class
 com\backend\backend\repository\Prenatal\CompleteDiagnosisRepository.class
 com\backend\backend\model\Admission.class
 com\backend\backend\repository\FamilyPlanning\AbdomenRepository.class
-com\backend\backend\service\Prenatal\CompleteDiagnosisServiceImpl.class
 com\backend\backend\controller\Billing\PaymentInstallmentController$PaymentInstallmentRequest.class
 com\backend\backend\controller\FamilyPlanning\ObstetricalConditionDetailController.class
 com\backend\backend\model\Prenatal\MedicalSurgicalFactorMeasurements.class
@@ -91,7 +80,6 @@ com\backend\backend\service\FamilyPlanning\RiskForVAWService.class
 com\backend\backend\controller\Prenatal\CompleteDiagnosisController.class
 com\backend\backend\controller\FamilyPlanning\FpAssessmentRecordController.class
 com\backend\backend\model\Billing\Revenue.class
-com\backend\backend\service\Prenatal\ObstetricRiskFactorServiceImpl.class
 com\backend\backend\controller\Prenatal\TreatmentManagementController.class
 com\backend\backend\repository\ClinicalServiceRepository.class
 com\backend\backend\service\FamilyPlanning\FpAssessmentRecordServiceImpl.class
@@ -107,7 +95,6 @@ com\backend\backend\service\FamilyPlanning\SkinServiceImpl.class
 com\backend\backend\model\Prenatal\PrenatalRecord.class
 com\backend\backend\service\Prenatal\NormalVitalSignService.class
 com\backend\backend\repository\Prenatal\TreatmentManagementRepository.class
-com\backend\backend\service\Prenatal\MenstrualHistoryServiceImpl.class
 com\backend\backend\service\FamilyPlanning\MethodCurrentlyUsedService.class
 com\backend\backend\service\ClinicLogService.class
 com\backend\backend\service\FamilyPlanning\MedicalConditionServiceImpl.class
@@ -126,7 +113,6 @@ com\backend\backend\repository\FamilyPlanning\ObstetricalConditionRepository.cla
 com\backend\backend\controller\Prenatal\MedicalSurgicalFactorMedConditionsController.class
 com\backend\backend\model\Billing\Expense.class
 com\backend\backend\controller\PatientServiceController.class
-com\backend\backend\service\Prenatal\ConsultationVisitsServiceImpl.class
 com\backend\backend\service\FamilyPlanning\STI_RiskDetailServiceImpl.class
 com\backend\backend\controller\FamilyPlanning\STI_RiskDetailController.class
 com\backend\backend\model\Prenatal\MedicalSurgicalFactors.class
@@ -145,7 +131,6 @@ com\backend\backend\service\FamilyPlanning\TypeOfClientServiceImpl.class
 com\backend\backend\model\DashboardSummaryDTO.class
 com\backend\backend\service\PatientServiceService.class
 com\backend\backend\controller\FamilyPlanning\TypeOfClientController.class
-com\backend\backend\service\UserServiceImpl.class
 com\backend\backend\model\FamilyPlanning\Neck.class
 com\backend\backend\repository\FamilyPlanning\ClientRepository.class
 com\backend\backend\service\Prenatal\ObstetricRiskFactorService.class
@@ -172,7 +157,6 @@ com\backend\backend\repository\PatientServiceRepository.class
 com\backend\backend\service\FamilyPlanning\STI_ConditionServiceImpl.class
 com\backend\backend\model\FamilyPlanning\Skin.class
 com\backend\backend\service\FamilyPlanning\STI_RiskServiceImpl.class
-com\backend\backend\service\Billing\BillingServiceImpl.class
 com\backend\backend\model\FamilyPlanning\RiskForVAW.class
 com\backend\backend\controller\FamilyPlanning\RiskForVAWController.class
 com\backend\backend\model\Prenatal\CompleteDiagnosis.class
@@ -183,7 +167,6 @@ com\backend\backend\model\FamilyPlanning\ObstetricalConditionDetail.class
 com\backend\backend\repository\FamilyPlanning\STI_ConditionRepository.class
 com\backend\backend\repository\UserRepository.class
 com\backend\backend\repository\FamilyPlanning\SpouseRepository.class
-com\backend\backend\service\Prenatal\ConsultationRecordServiceImpl.class
 com\backend\backend\model\Prenatal\LaboratoryResults.class
 com\backend\backend\repository\FamilyPlanning\RiskForVAWRepository.class
 com\backend\backend\service\FamilyPlanning\ConjunctivaService.class
@@ -198,7 +181,6 @@ com\backend\backend\model\Ward.class
 com\backend\backend\service\FamilyPlanning\BreastServiceImpl.class
 com\backend\backend\service\FamilyPlanning\MedicalHistoryService.class
 com\backend\backend\repository\FamilyPlanning\PhysicalExaminationRepository.class
-com\backend\backend\service\DashboardServiceImpl.class
 com\backend\backend\service\WardServiceInterface.class
 com\backend\backend\service\FamilyPlanning\PelvicExaminationService.class
 com\backend\backend\service\FamilyPlanning\MedicalConditionService.class
@@ -219,15 +201,11 @@ com\backend\backend\repository\FamilyPlanning\NeckRepository.class
 com\backend\backend\service\DashboardService.class
 com\backend\backend\service\Prenatal\AscertainPregnancyLowRiskService.class
 com\backend\backend\config\StatementOfAccountConstraintFixer.class
-com\backend\backend\service\Prenatal\NormalVitalSignServiceImpl.class
 com\backend\backend\service\Billing\ExpenseServiceImpl.class
-com\backend\backend\service\Prenatal\MedicalSurgicalFactorsServiceImpl.class
 com\backend\backend\model\CalendarEventDto.class
-com\backend\backend\repository\Billing\StatementOfAccountRepository.class
 com\backend\backend\controller\FamilyPlanning\MedicalConditionController.class
 com\backend\backend\service\FamilyPlanning\PregnancyExclusionChecklistServiceImpl.class
 com\backend\backend\model\Prenatal\ConsultationRecord.class
-com\backend\backend\service\Billing\RevenueserviceImpl.class
 com\backend\backend\service\Prenatal\TreatmentManagementService.class
 com\backend\backend\model\Billing\StatementOfAccountDetailsDTO.class
 com\backend\backend\service\FamilyPlanning\STI_ConditionService.class
@@ -269,7 +247,6 @@ com\backend\backend\controller\Billing\Revenuecontroller.class
 com\backend\backend\model\Billing\PaymentInstallment.class
 com\backend\backend\repository\Inventory\ClinicalToolInventoryRepository.class
 com\backend\backend\service\FamilyPlanning\MedicalHistoryServiceImpl.class
-com\backend\backend\service\Prenatal\ClinicalHistoryAndPhysicalExaminationServiceImpl.class
 com\backend\backend\service\FamilyPlanning\FamilyPlanningRecordServiceImpl.class
 com\backend\backend\repository\Prenatal\ConsultationVisitsRepository.class
 com\backend\backend\service\EmployeeService.class
@@ -284,14 +261,10 @@ com\backend\backend\service\Prenatal\LaboratoryResultsService.class
 com\backend\backend\model\FamilyPlanning\STI_RiskDetail.class
 com\backend\backend\repository\Billing\PaymentInstallmentRepository.class
 com\backend\backend\service\FamilyPlanning\NeckServiceImpl.class
-com\backend\backend\repository\Billing\RevenueRepository.class
 com\backend\backend\service\ClinicalServiceServiceInterface.class
 com\backend\backend\repository\PatientRepository.class
 com\backend\backend\model\FamilyPlanning\MethodCurrentlyUsed.class
-com\backend\backend\service\Prenatal\MedicalSurgicalFactorMeasurementsServiceImpl.class
 com\backend\backend\service\FamilyPlanning\FamilyPlanningRecordService.class
-com\backend\backend\repository\Billing\BillingRepository.class
-com\backend\backend\service\PatientServiceImpl.class
 com\backend\backend\model\FamilyPlanning\ObstetricalHistory.class
 com\backend\backend\repository\Prenatal\ConsultationRecordRepository.class
 com\backend\backend\model\Ultrasound\UltrasoundRecord.class

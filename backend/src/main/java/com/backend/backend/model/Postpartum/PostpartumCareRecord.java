@@ -47,6 +47,37 @@ public class PostpartumCareRecord {
     private String patientConformeName;
     private LocalDate dateSigned;
 
+    // PART III: NEWBORN CARE
+    // 1. Immediate Newborn Care (EINC)
+    private Boolean immediateDrying;
+    private Boolean skinToSkinContact;
+    private Boolean properCordClamping;
+    private Boolean earlyBreastfeedingInitiation;
+
+    // 2. Routine Preventive Care
+    private Boolean eyeProphylaxis;
+    private Boolean vitaminKAdministered;
+    private Boolean hepatitisBVaccine;
+    private Boolean bcgVaccine;
+    private Boolean cordCareApplied;
+
+    // 3. Physical Exam & Measurements
+    private String birthWeight;
+    private String birthLength;
+    private String headCircumference;
+    private String chestCircumference;
+    private String apgarScore1Min;
+    private String apgarScore5Min;
+    private String gestationalAgeWeeks;
+
+    // 4. Screening Tests
+    private String newbornScreening;
+    private String newbornHearingScreening;
+
+    // 5. Newborn Care Notes
+    @Column(columnDefinition = "TEXT")
+    private String newbornCareNotes;
+
     @OneToMany(mappedBy = "postpartumCareRecord", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PostpartumVisit> visits = new ArrayList<>();
 
@@ -141,6 +172,64 @@ public class PostpartumCareRecord {
 
     public LocalDate getDateSigned() { return dateSigned; }
     public void setDateSigned(LocalDate dateSigned) { this.dateSigned = dateSigned; }
+
+    // Newborn Care Getters and Setters
+    public Boolean getImmediateDrying() { return immediateDrying; }
+    public void setImmediateDrying(Boolean immediateDrying) { this.immediateDrying = immediateDrying; }
+
+    public Boolean getSkinToSkinContact() { return skinToSkinContact; }
+    public void setSkinToSkinContact(Boolean skinToSkinContact) { this.skinToSkinContact = skinToSkinContact; }
+
+    public Boolean getProperCordClamping() { return properCordClamping; }
+    public void setProperCordClamping(Boolean properCordClamping) { this.properCordClamping = properCordClamping; }
+
+    public Boolean getEarlyBreastfeedingInitiation() { return earlyBreastfeedingInitiation; }
+    public void setEarlyBreastfeedingInitiation(Boolean earlyBreastfeedingInitiation) { this.earlyBreastfeedingInitiation = earlyBreastfeedingInitiation; }
+
+    public Boolean getEyeProphylaxis() { return eyeProphylaxis; }
+    public void setEyeProphylaxis(Boolean eyeProphylaxis) { this.eyeProphylaxis = eyeProphylaxis; }
+
+    public Boolean getVitaminKAdministered() { return vitaminKAdministered; }
+    public void setVitaminKAdministered(Boolean vitaminKAdministered) { this.vitaminKAdministered = vitaminKAdministered; }
+
+    public Boolean getHepatitisBVaccine() { return hepatitisBVaccine; }
+    public void setHepatitisBVaccine(Boolean hepatitisBVaccine) { this.hepatitisBVaccine = hepatitisBVaccine; }
+
+    public Boolean getBcgVaccine() { return bcgVaccine; }
+    public void setBcgVaccine(Boolean bcgVaccine) { this.bcgVaccine = bcgVaccine; }
+
+    public Boolean getCordCareApplied() { return cordCareApplied; }
+    public void setCordCareApplied(Boolean cordCareApplied) { this.cordCareApplied = cordCareApplied; }
+
+    public String getBirthWeight() { return birthWeight; }
+    public void setBirthWeight(String birthWeight) { this.birthWeight = birthWeight; }
+
+    public String getBirthLength() { return birthLength; }
+    public void setBirthLength(String birthLength) { this.birthLength = birthLength; }
+
+    public String getHeadCircumference() { return headCircumference; }
+    public void setHeadCircumference(String headCircumference) { this.headCircumference = headCircumference; }
+
+    public String getChestCircumference() { return chestCircumference; }
+    public void setChestCircumference(String chestCircumference) { this.chestCircumference = chestCircumference; }
+
+    public String getApgarScore1Min() { return apgarScore1Min; }
+    public void setApgarScore1Min(String apgarScore1Min) { this.apgarScore1Min = apgarScore1Min; }
+
+    public String getApgarScore5Min() { return apgarScore5Min; }
+    public void setApgarScore5Min(String apgarScore5Min) { this.apgarScore5Min = apgarScore5Min; }
+
+    public String getGestationalAgeWeeks() { return gestationalAgeWeeks; }
+    public void setGestationalAgeWeeks(String gestationalAgeWeeks) { this.gestationalAgeWeeks = gestationalAgeWeeks; }
+
+    public String getNewbornScreening() { return newbornScreening; }
+    public void setNewbornScreening(String newbornScreening) { this.newbornScreening = newbornScreening; }
+
+    public String getNewbornHearingScreening() { return newbornHearingScreening; }
+    public void setNewbornHearingScreening(String newbornHearingScreening) { this.newbornHearingScreening = newbornHearingScreening; }
+
+    public String getNewbornCareNotes() { return newbornCareNotes; }
+    public void setNewbornCareNotes(String newbornCareNotes) { this.newbornCareNotes = newbornCareNotes; }
 
     public List<PostpartumVisit> getVisits() { return visits; }
     public void setVisits(List<PostpartumVisit> visits) { this.visits = visits; }
