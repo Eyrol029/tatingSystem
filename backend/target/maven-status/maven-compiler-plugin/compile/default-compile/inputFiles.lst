@@ -74,6 +74,7 @@ C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Appointment\Appointment.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Billing\Billing.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Billing\Expense.java
+C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Billing\FinancialPoint.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Billing\PatientPaymentSummaryDTO.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Billing\PaymentInstallment.java
 C:\Users\Eyrol\Documents\tatingSystem\backend\src\main\java\com\backend\backend\model\Billing\Revenue.java

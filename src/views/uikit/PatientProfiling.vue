@@ -15,6 +15,7 @@ const patientData = reactive({
     lName: '',
     middleI: '',
     age: null,
+    numberOfPregnancy: 0,
     bDate: '',
     houseNo: '',
     street: '',
@@ -359,6 +360,10 @@ async function handleSubmit() {
                         <p class="font-medium text-gray-900">{{ patientData.age ?? '—' }}</p>
                     </div>
                     <div>
+                        <p class="text-sm text-gray-500">Number of Pregnancies</p>
+                        <p class="font-medium text-gray-900">{{ patientData.numberOfPregnancy ?? 0 }}</p>
+                    </div>
+                    <div>
                         <p class="text-sm text-gray-500">Birth Date</p>
                         <p class="font-medium text-gray-900">{{ patientData.bDate ?? '—' }}</p>
                     </div>
@@ -421,6 +426,10 @@ async function handleSubmit() {
                     <div>
                         <label class="text-sm text-gray-500 block mb-1">Age</label>
                         <input v-model="editForm.age" type="number" class="w-full border rounded-lg px-3 py-2" />
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500 block mb-1">Number of Pregnancies</label>
+                        <input v-model="editForm.numberOfPregnancy" type="number" min="0" class="w-full border rounded-lg px-3 py-2" />
                     </div>
                     <div>
                         <label class="text-sm text-gray-500 block mb-1">Birth Date</label>

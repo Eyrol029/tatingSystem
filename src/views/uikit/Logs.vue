@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
+import { recordReport } from '@/service/reportHistory'
 
 const BASE  = 'http://localhost:8080/api/clinic-logs'
 
@@ -23,9 +24,6 @@ function clearDateFilter() {
   filterFrom.value = ''
   filterTo.value   = ''
 }
-
-// ─── Download format picker ───────────────────────────────────────────────────
-const showDownloadMenu = ref(false)
 
 const emptyLog = { name: '', date: today, purpose: '', address: '', contactNo: '' }
 const newLog   = ref({ ...emptyLog })
@@ -150,39 +148,8 @@ function handleSort(field) {
   else { sortField.value = field; sortOrder.value = 'asc' }
 }
 
-// ─── Download CSV ─────────────────────────────────────────────────────────────
-function downloadCSV() {
-  showDownloadMenu.value = false
-  const rows = sortedLogs.value
-  if (!rows.length) { alert('No logs to export.'); return }
-
-  const headers = ['#', 'Name', 'Date', 'Purpose', 'Address', 'Contact No.']
-  const escape  = v => `"${String(v ?? '').replace(/"/g, '""')}"`
-  const lines   = [
-    headers.join(','),
-    ...rows.map((l, i) => [
-      i + 1,
-      escape(l.name),
-      escape(normalizeDate(l.date)),
-      escape(l.purpose),
-      escape(l.address),
-      escape(l.contactNo)
-    ].join(','))
-  ]
-
-  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
-  const url  = URL.createObjectURL(blob)
-  const a    = document.createElement('a')
-  a.href     = url
-  a.download = `clinic-logs-${today}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
-  showSuccess('✅ CSV downloaded!')
-}
-
 // ─── Download PDF (via print) ─────────────────────────────────────────────────
 function downloadPDF() {
-  showDownloadMenu.value = false
   const rows = sortedLogs.value
   if (!rows.length) { alert('No logs to export.'); return }
 
@@ -234,8 +201,18 @@ function downloadPDF() {
 </html>`
 
   const win = window.open('', '_blank')
+  if (!win) {
+    errorMsg.value = 'Please allow pop-ups to print the report.'
+    return
+  }
   win.document.write(html)
   win.document.close()
+  recordReport({
+    name: 'Clinic Logs Report',
+    type: 'Clinic Logs',
+    period: rangeLabel,
+    details: `${rows.length} record(s)`
+  })
   showSuccess('✅ PDF print dialog opened!')
 }
 
@@ -244,12 +221,7 @@ function showSuccess(msg) {
   setTimeout(() => { successMsg.value = '' }, 3000)
 }
 
-// Close download menu when clicking outside
-function handleOutsideClick(e) {
-  if (!e.target.closest('#download-menu-wrapper')) showDownloadMenu.value = false
-}
-
-onMounted(() => { fetchLogs(); document.addEventListener('click', handleOutsideClick) })
+onMounted(fetchLogs)
 </script>
 
 <template>
@@ -264,31 +236,12 @@ onMounted(() => { fetchLogs(); document.addEventListener('click', handleOutsideC
             <p class="text-gray-500 mt-1">Clinic visitor and patient logs</p>
           </div>
           <div class="flex gap-2 items-center">
-            <!-- Refresh -->
-            <button @click="fetchLogs" :disabled="loading"
-              class="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm flex items-center gap-1 transition">
-              <span :class="loading ? 'animate-spin inline-block' : ''">↻</span> Refresh
-            </button>
 
-            <!-- Download dropdown -->
-            <div id="download-menu-wrapper" class="relative">
-              <button @click.stop="showDownloadMenu = !showDownloadMenu"
-                class="px-4 py-2 border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 text-sm flex items-center gap-1 transition font-semibold">
-                ⬇ Download
-                <span class="text-xs">▾</span>
-              </button>
-              <div v-if="showDownloadMenu"
-                class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden">
-                <button @click="downloadCSV"
-                  class="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2">
-                  📄 Download CSV
-                </button>
-                <button @click="downloadPDF"
-                  class="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2 border-t border-gray-100">
-                  🖨️ Save as PDF
-                </button>
-              </div>
-            </div>
+            <!-- Print report -->
+            <button @click="downloadPDF"
+              class="px-4 py-2 border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 text-sm flex items-center gap-1 transition font-semibold">
+              🖨️ Print Report
+            </button>
 
             <!-- Add Log -->
             <button @click="openModal"
@@ -466,7 +419,7 @@ onMounted(() => { fetchLogs(); document.addEventListener('click', handleOutsideC
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
           </div>
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Date <span class="text-red-500">*</span></label>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Date<span class="text-red-500">*</span></label>
             <input v-model="newLog.date" type="date"
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" />
           </div>

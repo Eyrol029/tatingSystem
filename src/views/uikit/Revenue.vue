@@ -16,7 +16,7 @@ const filteredRevenues = computed(() => {
   return revenues.value.filter((rev) => {
     return (
       String(rev.dealer || '').toLowerCase().includes(q) ||
-      String(rev.patientID || '').includes(q) ||
+      String(getPatientCaseNumber(rev.patientID)).toLowerCase().includes(q) ||
       String(rev.description || '').toLowerCase().includes(q) ||
       `REV-${String(rev.id).padStart(5, '0')}`.toLowerCase().includes(q)
     )
@@ -26,9 +26,26 @@ const filteredRevenues = computed(() => {
 // List of existing patients — lets revenue be traced to a real billing record
 // instead of a free-typed name.
 const patientsList = ref([])
+const patientServicesList = ref([])
 const selectedPatientId = ref('')
 const patientSearchQuery = ref('')
 const loadingPatientTotals = ref(false)
+
+const patientCaseNumbers = computed(() => {
+  const caseNumbers = {}
+  patientServicesList.value.forEach((service) => {
+    const patientId = service.patientID
+    const caseNumber = String(service.caseNumber || '').trim()
+    if (patientId != null && caseNumber && caseNumber !== '---' && !caseNumbers[patientId]) {
+      caseNumbers[patientId] = caseNumber
+    }
+  })
+  return caseNumbers
+})
+
+function getPatientCaseNumber(patientId) {
+  return patientCaseNumbers.value[patientId] || '—'
+}
 
 // Filters the patient list by name or ID as the user types, so they don't
 // have to scroll through a long dropdown to find someone.
@@ -78,6 +95,15 @@ async function fetchPatients() {
     patientsList.value = res.data
   } catch (error) {
     console.error('Failed to fetch patients list', error)
+  }
+}
+
+async function fetchPatientServices() {
+  try {
+    const res = await axios.get('http://localhost:8080/api/patient-services')
+    patientServicesList.value = res.data
+  } catch (error) {
+    console.error('Failed to fetch patient case numbers', error)
   }
 }
 
@@ -163,6 +189,7 @@ async function deleteRevenue(id) {
 onMounted(() => {
   fetchRevenues()
   fetchPatients()
+  fetchPatientServices()
 })
 </script>
 
@@ -214,7 +241,7 @@ onMounted(() => {
           <tr v-for="rev in filteredRevenues" :key="rev.id" class="border-t">
             <td class="p-3 font-mono text-xs text-gray-500">REV-{{ String(rev.id).padStart(5, '0') }}</td>
             <td class="p-3">{{ rev.dealer }}</td>
-            <td class="p-3 text-gray-500">{{ rev.patientID ?? '—' }}</td>
+            <td class="p-3 text-gray-500">{{ getPatientCaseNumber(rev.patientID) }}</td>
             <td class="p-3 text-gray-600">
               {{ rev.revenueDate ? new Date(rev.revenueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' }}
             </td>
@@ -279,7 +306,7 @@ onMounted(() => {
                 :key="patient.patientID"
                 :value="patient.patientID"
               >
-                {{ patient.fName }} {{ patient.lName }} (ID: {{ patient.patientID }})
+                {{ patient.fName }} {{ patient.lName }} (Case: {{ getPatientCaseNumber(patient.patientID) }})
               </option>
             </select>
             <p v-if="patientSearchQuery && filteredPatientsList.length === 0" class="text-xs text-gray-400 mt-1">

@@ -13,6 +13,9 @@ const isEditing    = ref(false)
 const saveLoading  = ref(false)
 const today        = new Date().toISOString().split('T')[0]
 
+// NEW: filter for the checklist — All / Pending / Done
+const statusFilter = ref('All')
+
 const emptyForm = {
   appointmentID:   null,
   appointmentDate: '',
@@ -22,7 +25,8 @@ const emptyForm = {
   middleI:         '',
   age:             null,
   address:         '',
-  serviceType:     ''
+  serviceType:     '',
+  completed:       false // NEW
 }
 
 const form = ref({ ...emptyForm })
@@ -49,6 +53,18 @@ const upcomingAppointments = computed(() =>
     return dateStr > today
   }).length
 )
+
+// NEW: count of completed appointments
+const completedCount = computed(() =>
+  appointments.value.filter(a => a.completed).length
+)
+
+// NEW: appointments filtered by the checklist toggle (All / Pending / Done)
+const filteredAppointments = computed(() => {
+  if (statusFilter.value === 'Pending') return appointments.value.filter(a => !a.completed)
+  if (statusFilter.value === 'Done')    return appointments.value.filter(a => a.completed)
+  return appointments.value
+})
 
 // ─── Fetch ────────────────────────────────────────────────────────────────────
 async function fetchAppointments() {
@@ -77,7 +93,8 @@ function openEditModal(appointment) {
   form.value = {
     ...appointment,
     appointmentDate: normalizeDate(appointment.appointmentDate),
-    appointmentTime: normalizeTime(appointment.appointmentTime)
+    appointmentTime: normalizeTime(appointment.appointmentTime),
+    completed: !!appointment.completed
   }
   isEditing.value = true
   error.value = ''
@@ -138,6 +155,41 @@ async function deleteAppointment(id) {
   }
 }
 
+// ─── Toggle Done (checklist) ──────────────────────────────────────────────────
+// NEW: flips the "completed" flag for one appointment. Updates the UI right
+// away (optimistic), then saves the whole record via the existing PUT
+// endpoint. If the save fails, the checkbox reverts back.
+async function toggleCompleted(appointment) {
+  const previous = appointment.completed
+  appointment.completed = !previous // optimistic update
+
+  try {
+    const payload = {
+      appointmentID:   appointment.appointmentID,
+      appointmentDate: normalizeDate(appointment.appointmentDate),
+      appointmentTime: normalizeTime(appointment.appointmentTime)
+        ? normalizeTime(appointment.appointmentTime) + ':00'
+        : null,
+      fName:       appointment.fName || null,
+      lName:       appointment.lName || null,
+      middleI:     appointment.middleI || null,
+      age:         appointment.age ? Number(appointment.age) : null,
+      address:     appointment.address || null,
+      serviceType: appointment.serviceType || null,
+      completed:   appointment.completed
+    }
+
+    const res = await axios.put(BASE, payload)
+    const idx = appointments.value.findIndex(
+      a => a.appointmentID === appointment.appointmentID
+    )
+    if (idx !== -1) appointments.value[idx] = res.data
+  } catch (e) {
+    appointment.completed = previous // revert on failure
+    error.value = '❌ Failed to update status: ' + (e?.response?.data?.message ?? e.message)
+  }
+}
+
 // ─── Payload builder ──────────────────────────────────────────────────────────
 function buildPayload() {
   return {
@@ -152,7 +204,8 @@ function buildPayload() {
     middleI:     form.value.middleI || null,
     age:         form.value.age ? Number(form.value.age) : null,
     address:     form.value.address || null,
-    serviceType: form.value.serviceType || null
+    serviceType: form.value.serviceType || null,
+    completed:   !!form.value.completed // NEW
   }
 }
 
@@ -196,14 +249,6 @@ onMounted(fetchAppointments)
       <h1 class="text-2xl font-bold text-gray-800">Appointment Management</h1>
 
       <div class="flex gap-2">
-        <button
-          @click="fetchAppointments"
-          :disabled="loading"
-          class="flex items-center gap-1 px-4 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm transition"
-        >
-          <span :class="loading ? 'animate-spin inline-block' : ''">↻</span>
-          Refresh
-        </button>
 
         <button
           @click="openAddModal"
@@ -233,7 +278,7 @@ onMounted(fetchAppointments)
     </div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       <div class="bg-white rounded-lg shadow p-6">
         <p class="text-gray-500 text-sm mb-1">Total Appointments</p>
         <p class="text-3xl font-bold text-gray-800">{{ totalAppointments }}</p>
@@ -248,6 +293,24 @@ onMounted(fetchAppointments)
         <p class="text-gray-500 text-sm mb-1">Upcoming</p>
         <p class="text-3xl font-bold text-indigo-600">{{ upcomingAppointments }}</p>
       </div>
+
+      <!-- NEW: Completed stat card -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <p class="text-gray-500 text-sm mb-1">Completed</p>
+        <p class="text-3xl font-bold text-green-600">{{ completedCount }}</p>
+      </div>
+    </div>
+
+    <!-- NEW: Checklist filter tabs -->
+    <div class="flex gap-2 mb-4">
+      <button v-for="f in ['All', 'Pending', 'Done']" :key="f"
+        @click="statusFilter = f"
+        :class="['px-4 py-1.5 rounded-full text-xs font-medium transition',
+          statusFilter === f
+            ? 'bg-[#8e4f70] text-white'
+            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50']">
+        {{ f }}
+      </button>
     </div>
 
     <!-- Table -->
@@ -260,6 +323,8 @@ onMounted(fetchAppointments)
       <table v-else class="w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-200">
           <tr>
+            <!-- NEW: Done checkbox column -->
+            <th class="text-center px-4 py-3 text-gray-600 font-semibold w-12">Done</th>
             <th class="text-left px-4 py-3 text-gray-600 font-semibold">ID</th>
             <th class="text-left px-4 py-3 text-gray-600 font-semibold">Date & Time</th>
             <th class="text-left px-4 py-3 text-gray-600 font-semibold">Patient Name</th>
@@ -272,27 +337,39 @@ onMounted(fetchAppointments)
 
         <tbody>
           <tr
-            v-for="a in appointments"
+            v-for="a in filteredAppointments"
             :key="a.appointmentID"
             class="border-b border-gray-100 hover:bg-gray-50 transition"
+            :class="{ 'bg-gray-50/60': a.completed }"
           >
-            <td class="px-4 py-3 text-gray-600 font-mono text-xs">
+            <!-- NEW: checklist checkbox -->
+            <td class="px-4 py-3 text-center">
+              <input
+                type="checkbox"
+                :checked="!!a.completed"
+                @change="toggleCompleted(a)"
+                class="w-4 h-4 accent-[#8e4f70] cursor-pointer"
+                title="Mark as done"
+              />
+            </td>
+
+            <td class="px-4 py-3 text-gray-600 font-mono text-xs" :class="{ 'line-through opacity-50': a.completed }">
               APT{{ String(a.appointmentID).padStart(3, '0') }}
             </td>
 
-            <td class="px-4 py-3 text-gray-700">
+            <td class="px-4 py-3 text-gray-700" :class="{ 'line-through opacity-50': a.completed }">
               {{ formatDateTime(a.appointmentDate, a.appointmentTime) }}
             </td>
 
-            <td class="px-4 py-3 text-gray-800 font-medium">
+            <td class="px-4 py-3 text-gray-800 font-medium" :class="{ 'line-through opacity-50': a.completed }">
               {{ fullName(a) }}
             </td>
 
-            <td class="px-4 py-3 text-gray-700">
+            <td class="px-4 py-3 text-gray-700" :class="{ 'opacity-50': a.completed }">
               {{ a.age ?? '—' }}
             </td>
 
-            <td class="px-4 py-3 text-gray-700">
+            <td class="px-4 py-3 text-gray-700" :class="{ 'opacity-50': a.completed }">
               {{ a.address || '—' }}
             </td>
 
@@ -300,11 +377,18 @@ onMounted(fetchAppointments)
               <span
                 v-if="a.serviceType"
                 class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium"
+                :class="{ 'opacity-50': a.completed }"
               >
                 {{ a.serviceType }}
               </span>
 
               <span v-else class="text-gray-400">—</span>
+
+              <!-- NEW: Done badge -->
+              <span v-if="a.completed"
+                class="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                ✓ Done
+              </span>
             </td>
 
             <td class="px-4 py-3">
@@ -330,19 +414,19 @@ onMounted(fetchAppointments)
             </td>
           </tr>
 
-          <tr v-if="appointments.length === 0">
-            <td colspan="7" class="text-center py-10 text-gray-400">
-              No appointments found.
+          <tr v-if="filteredAppointments.length === 0">
+            <td colspan="8" class="text-center py-10 text-gray-400">
+              {{ statusFilter === 'All' ? 'No appointments found.' : `No ${statusFilter.toLowerCase()} appointments.` }}
             </td>
           </tr>
         </tbody>
       </table>
 
       <div
-        v-if="!loading && appointments.length > 0"
+        v-if="!loading && filteredAppointments.length > 0"
         class="px-4 py-2 bg-gray-50 border-t text-xs text-gray-400"
       >
-        {{ appointments.length }} appointment(s) total
+        {{ filteredAppointments.length }} appointment(s) shown · {{ completedCount }} completed total
       </div>
     </div>
 
@@ -426,6 +510,19 @@ onMounted(fetchAppointments)
               <option>Family Planning</option>
               <option>Immunization</option>
             </select>
+          </div>
+
+          <!-- NEW: Mark as done checkbox inside the modal too -->
+          <div class="md:col-span-2 flex items-center gap-2 pt-1">
+            <input
+              id="completedCheckbox"
+              type="checkbox"
+              v-model="form.completed"
+              class="w-4 h-4 accent-[#8e4f70] cursor-pointer"
+            />
+            <label for="completedCheckbox" class="text-sm text-gray-700 cursor-pointer">
+              Mark this appointment as done
+            </label>
           </div>
 
         </div>

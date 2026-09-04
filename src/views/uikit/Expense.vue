@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
+import { recordReport } from '@/service/reportHistory'
 
 const BASE_URL = 'http://localhost:8080/api/expenses'
 
@@ -9,6 +10,8 @@ const isEditing = ref(false)
 const editingId = ref(null)
 
 const expenses = ref([])
+const filterFrom = ref('')
+const filterTo = ref('')
 
 const form = ref({
   category: '',
@@ -17,6 +20,66 @@ const form = ref({
   payee: '',
   expenseDate: ''
 })
+
+const filteredExpenses = computed(() => expenses.value.filter(expense => {
+  const date = expense.expenseDate ? String(expense.expenseDate).slice(0, 10) : ''
+  return (!filterFrom.value || date >= filterFrom.value) &&
+    (!filterTo.value || date <= filterTo.value)
+}))
+
+const filteredTotal = computed(() => filteredExpenses.value.reduce(
+  (total, expense) => total + Number(expense.amount || 0), 0
+))
+
+function clearDateFilter() {
+  filterFrom.value = ''
+  filterTo.value = ''
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+  })[character])
+}
+
+function printReport() {
+  if (!filteredExpenses.value.length) {
+    alert('No expenses found for the selected date range.')
+    return
+  }
+
+  const range = filterFrom.value || filterTo.value
+    ? `${filterFrom.value || 'All'} to ${filterTo.value || 'All'}`
+    : 'All dates'
+  const rows = filteredExpenses.value.map((expense, index) => `<tr>
+    <td>${index + 1}</td>
+    <td>${escapeHtml(expense.expenseDate ? String(expense.expenseDate).slice(0, 10) : '—')}</td>
+    <td>${escapeHtml(expense.category)}</td>
+    <td>${escapeHtml(expense.description)}</td>
+    <td>₱${Number(expense.amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+    <td>${escapeHtml(expense.payee)}</td>
+  </tr>`).join('')
+  const win = window.open('', '_blank', 'width=1000,height=800')
+  if (!win) return
+
+  win.document.write(`<!DOCTYPE html><html><head><title>Expense Report</title><style>
+    body{font-family:Arial,sans-serif;color:#1f2937;margin:28px}h1{color:#6b21a8;margin-bottom:4px}
+    p{color:#6b7280;font-size:12px}table{width:100%;border-collapse:collapse;margin-top:20px;font-size:12px}
+    th{background:#6b21a8;color:white;text-align:left;padding:9px}td{padding:8px;border-bottom:1px solid #e5e7eb}
+    tr:nth-child(even){background:#faf5ff}.total{margin-top:18px;text-align:right;font-weight:bold;font-size:15px}
+    @media print{body{margin:12mm}}
+  </style></head><body><h1>Expense Report</h1><p>Period: ${range} | ${filteredExpenses.value.length} record(s)</p>
+  <table><thead><tr><th>#</th><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Payee</th></tr></thead>
+  <tbody>${rows}</tbody></table><div class="total">Total Expenses: ₱${filteredTotal.value.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
+  <p>Printed on ${new Date().toLocaleString('en-PH')}</p><script>window.onload=()=>{window.print();window.onafterprint=()=>window.close()}<\/script></body></html>`)
+  win.document.close()
+  recordReport({
+    name: 'Expense Report',
+    type: 'Expenses',
+    period: range,
+    details: `${filteredExpenses.value.length} record(s), total ₱${filteredTotal.value.toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
+  })
+}
 
 // Returns today's date as YYYY-MM-DD using LOCAL time, not UTC — avoids the
 // off-by-one-day bug that .toISOString() causes for PH (UTC+8) users.
@@ -130,12 +193,29 @@ onMounted(() => {
     <!-- HEADER -->
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-xl font-semibold">Expense Records</h2>
-      <button
-        @click="openAddModal"
-        class="bg-purple-700 text-white px-4 py-2 rounded-md"
-      >
-        + Add Expense
+      <div class="flex gap-2">
+        <button @click="printReport" class="border border-purple-300 text-purple-700 px-4 py-2 rounded-md hover:bg-purple-50">
+          Print Report
+        </button>
+        <button @click="openAddModal" class="bg-purple-700 text-white px-4 py-2 rounded-md">
+          + Add Expense
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-white shadow-sm rounded-lg p-4 mb-4 flex flex-col md:flex-row md:items-end gap-3">
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 mb-1">From Date</label>
+        <input v-model="filterFrom" type="date" class="border rounded px-3 py-2 text-sm" />
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 mb-1">To Date</label>
+        <input v-model="filterTo" type="date" class="border rounded px-3 py-2 text-sm" />
+      </div>
+      <button @click="clearDateFilter" :disabled="!filterFrom && !filterTo" class="px-4 py-2 text-sm border rounded text-gray-600 disabled:opacity-40">
+        Clear Filter
       </button>
+      <p class="md:ml-auto text-sm font-semibold text-gray-600">Filtered Total: ₱{{ filteredTotal.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}</p>
     </div>
 
     <!-- EXPENSE TABLE -->
@@ -154,7 +234,7 @@ onMounted(() => {
         </thead>
 
         <tbody>
-          <tr v-for="expense in expenses" :key="expense.id" class="border-t">
+          <tr v-for="expense in filteredExpenses" :key="expense.id" class="border-t">
             <td class="p-3 font-mono text-xs text-gray-500">EXP-{{ String(expense.id).padStart(5, '0') }}</td>
             <td class="p-3 text-gray-600">
               {{ expense.expenseDate ? new Date(expense.expenseDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' }}
@@ -183,6 +263,9 @@ onMounted(() => {
 
       <div v-if="expenses.length === 0" class="text-center py-8 text-gray-400 text-sm">
         No expenses recorded yet.
+      </div>
+      <div v-else-if="filteredExpenses.length === 0" class="text-center py-8 text-gray-400 text-sm">
+        No expenses found for the selected date range.
       </div>
     </div>
 

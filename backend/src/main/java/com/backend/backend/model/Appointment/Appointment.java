@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Column;
 
 @Entity
 @Table(name = "Appointment")
@@ -30,6 +31,8 @@ public class Appointment {
 
     private String address;
     private String serviceType;
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean completed = false;
 
     private Integer gravida;
     private Integer term;
@@ -121,6 +124,14 @@ public class Appointment {
 
     public void setServiceType(String serviceType) {
         this.serviceType = serviceType;
+    }
+
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public void setCompleted(boolean completed) {
+        this.completed = completed;
     }
 
     public Integer getGravida() {

@@ -34,6 +34,7 @@ const routes = [
             { path: 'uikit/Admission/:patientID/:serviceId', component: () => import('@/views/uikit/Admission.vue') },
             { path: 'uikit/Admission', component: () => import('@/views/uikit/Admission.vue') },
             { path: 'uikit/Logs', component: () => import('@/views/uikit/Logs.vue') },
+            { path: 'uikit/Reports', component: () => import('@/views/uikit/Reports.vue') },
             { path: 'uikit/AppointmentManagement', component: () => import('@/views/uikit/AppointmentManagement.vue') },
             { path: 'uikit/PatientCreateAppointment', component: () => import('@/views/uikit/PatientCreateAppointment.vue') },
             { path: 'uikit/PatientDashboard/', component: () => import('@/views/Dashboard/PatientDashboard.vue') },

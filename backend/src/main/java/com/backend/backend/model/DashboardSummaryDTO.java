@@ -2,6 +2,8 @@ package com.backend.backend.model;
 
 import java.util.List;
 
+import com.backend.backend.model.Billing.FinancialPoint;
+
 /**
  * Single DTO returned by GET /api/dashboard/summary
  * Contains all data the frontend dashboard needs in one request.
@@ -18,6 +20,9 @@ public class DashboardSummaryDTO {
     private double totalRevenue;
     private double totalExpenses;
     private double netIncome;
+
+    // NEW: day-by-day trend backing the Financial Overview line chart
+    private List<FinancialPoint> financialTrend;
 
     // ── Recent activity feed ──────────────────────────────────────────────────
     private List<ActivityItem> recentActivities;
@@ -94,6 +99,9 @@ public class DashboardSummaryDTO {
 
     public double getNetIncome()            { return netIncome; }
     public void   setNetIncome(double v)    { this.netIncome = v; }
+
+    public List<FinancialPoint> getFinancialTrend()        { return financialTrend; }
+    public void                 setFinancialTrend(List<FinancialPoint> v) { this.financialTrend = v; }
 
     public List<ActivityItem> getRecentActivities()          { return recentActivities; }
     public void               setRecentActivities(List<ActivityItem> v){ this.recentActivities = v; }

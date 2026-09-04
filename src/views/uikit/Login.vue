@@ -115,7 +115,7 @@ const handleLogin = async () => {
   color: #2a1e28;
   padding: 64px 24px 120px;
   overflow: hidden;
-  border-bottom: 3px solid #8db600;
+  border-bottom: 3px solid #8db600 ;
 }
 
 .arch-shape {

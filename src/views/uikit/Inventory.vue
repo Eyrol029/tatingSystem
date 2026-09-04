@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
+import { recordReport } from '@/service/reportHistory';
 
 const BASE = 'http://localhost:8080/api/inventory';
 
@@ -228,6 +229,12 @@ function generateInventoryReport() {
         <footer>Prepared from the Tating Maternity Clinic inventory records.</footer>
         </body></html>`);
     printWindow.document.close();
+    recordReport({
+        name: 'Inventory Report',
+        type: 'Inventory',
+        period: reportDate,
+        details: `${inventoryItems.value.length} item(s)`
+    });
     printWindow.focus();
     setTimeout(() => printWindow.print(), 300);
 }

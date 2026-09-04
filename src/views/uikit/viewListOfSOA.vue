@@ -80,6 +80,7 @@ const filteredSoaList = computed(() => {
     return [
       String(soa.patientName || ''),
       String(soa.patientId || ''),
+      String(soa.caseNumber || ''),
       String(soa.otherDiagnosis || '')
     ].some((field) => field.toLowerCase().includes(query))
   })

@@ -163,6 +163,7 @@ public class StatementOfAccountServiceImpl implements StatementOfAccountService 
             if (patientSoas.isEmpty() && !patientServices.isEmpty()) {
                 patientSoas = patientServices.stream().map(this::createDefaultSoa).toList();
             }
+            final List<StatementOfAccount> resolvedPatientSoas = patientSoas;
 
             double totalAmount = patientSoas.stream().mapToDouble(soa -> soa.getTotalAmount() == null ? 0.0 : soa.getTotalAmount()).sum();
             double amountPaid = patientSoas.stream().mapToDouble(soa -> soa.getAmountPaid() == null ? 0.0 : soa.getAmountPaid()).sum();
@@ -183,10 +184,15 @@ public class StatementOfAccountServiceImpl implements StatementOfAccountService 
             dto.setPatientServiceId(patientSoas.isEmpty() ? null : patientSoas.get(0).getPatientServiceID());
             dto.setPatientId(patient.getPatientID());
             dto.setPatientName(patient.getFName() + " " + patient.getLName());
-                dto.setCaseNumber(patientSoas.stream()
-                    .map(StatementOfAccount::getCaseNumber)
+                dto.setCaseNumber(patientServices.stream()
+                    .map(PatientService::getCaseNumber)
                     .filter(value -> value != null && !value.isBlank())
-                    .findFirst().orElse(null));
+                    .findFirst()
+                    .orElseGet(() -> resolvedPatientSoas.stream()
+                        .map(StatementOfAccount::getCaseNumber)
+                            .filter(value -> value != null && !value.isBlank())
+                            .findFirst()
+                            .orElse(null)));
             dto.setEmail(patient.getEmail());
             dto.setPhone(patient.getContactNumber());
             dto.setServiceName(serviceNames);
@@ -216,6 +222,7 @@ public class StatementOfAccountServiceImpl implements StatementOfAccountService 
         if (patientSoas.isEmpty() && !services.isEmpty()) {
             patientSoas = services.stream().map(this::createDefaultSoa).toList();
         }
+        final List<StatementOfAccount> resolvedPatientSoas = patientSoas;
 
         double totalAmount = patientSoas.stream().mapToDouble(soa -> soa.getTotalAmount() == null ? 0.0 : soa.getTotalAmount()).sum();
         double amountPaid = patientSoas.stream().mapToDouble(soa -> soa.getAmountPaid() == null ? 0.0 : soa.getAmountPaid()).sum();
@@ -232,10 +239,15 @@ public class StatementOfAccountServiceImpl implements StatementOfAccountService 
         dto.setSoaId(patientSoas.isEmpty() ? null : patientSoas.get(0).getSoaID());
         dto.setPatientId(patientId);
         dto.setPatientName(patient.getFName() + " " + patient.getLName());
-        dto.setCaseNumber(patientSoas.stream()
-            .map(StatementOfAccount::getCaseNumber)
+        dto.setCaseNumber(services.stream()
+            .map(PatientService::getCaseNumber)
             .filter(value -> value != null && !value.isBlank())
-            .findFirst().orElse(null));
+            .findFirst()
+                .orElseGet(() -> resolvedPatientSoas.stream()
+                .map(StatementOfAccount::getCaseNumber)
+                .filter(value -> value != null && !value.isBlank())
+                .findFirst()
+                .orElse(null)));
         dto.setPatientServiceId(patientSoas.isEmpty() ? null : patientSoas.get(0).getPatientServiceID());
         dto.setServiceName(serviceNames.isBlank() ? "No services" : serviceNames);
         dto.setTotalAmount(totalAmount);
@@ -269,6 +281,7 @@ public class StatementOfAccountServiceImpl implements StatementOfAccountService 
         StatementOfAccount soa = new StatementOfAccount();
         soa.setPatientServiceID(service.getPatientServiceID());
         soa.setPatientID(service.getPatientID());
+        soa.setCaseNumber(service.getCaseNumber());
         double serviceFee = service.getServiceFee() == null ? 0.0 : service.getServiceFee();
         soa.setTotalAmount(serviceFee);
         soa.setAmountPaid(service.getAmountPaid() == null ? 0.0 : service.getAmountPaid());

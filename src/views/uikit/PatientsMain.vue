@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import { recordReport } from '@/service/reportHistory';
 
 const router = useRouter();
 
@@ -56,6 +57,12 @@ async function generateReport() {
         if (reportCategoryFilter.value) url += `&category=${encodeURIComponent(reportCategoryFilter.value)}`;
         const res = await axios.get(url);
         reportData.value = res.data;
+        recordReport({
+            name: 'PhilHealth & Clinical Service Report',
+            type: 'PhilHealth',
+            period: `${reportStartDate.value} to ${reportEndDate.value}`,
+            details: `${reportData.value.patientRecords?.length || 0} patient record(s)`
+        });
     } catch (e) {
         console.error('Failed to generate report:', e);
         alert('Failed to generate report: ' + (e.response?.data?.message || e.message));

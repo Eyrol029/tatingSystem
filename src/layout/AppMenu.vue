@@ -73,6 +73,7 @@ const model = [
             { label: 'Clinic Services', icon: '', to: '/uikit/PatientService', roles: [UserRole.PATIENT] }, 
             { label: 'My Medical Records', icon: '', to: '/uikit/PatientProfileview', roles: [UserRole.PATIENT] },
             { label: 'My Statement of Account', icon: '', to: '/uikit/MySOA', roles: [UserRole.PATIENT] },
+            { label: 'Reports', icon: '', to: '/uikit/Reports', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
       ]   
     }
 ];

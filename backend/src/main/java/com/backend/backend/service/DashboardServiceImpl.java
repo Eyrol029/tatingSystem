@@ -7,6 +7,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,7 @@ import com.backend.backend.model.Billing.Revenue;
 import com.backend.backend.model.DashboardSummaryDTO;
 import com.backend.backend.model.DashboardSummaryDTO.ActivityItem;
 import com.backend.backend.model.DashboardSummaryDTO.PendingItem;
+import com.backend.backend.model.Billing.FinancialPoint;
 import com.backend.backend.model.Patient;
 import com.backend.backend.model.Prenatal.PrenatalRecord;
 import com.backend.backend.repository.AdmissionRepository;
@@ -45,6 +47,9 @@ public class DashboardServiceImpl implements DashboardService {
 
     private static final DateTimeFormatter TIME_FMT =
             DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a");
+
+    private static final DateTimeFormatter ISO_DATE_FMT =
+            DateTimeFormatter.ISO_LOCAL_DATE;
 
     @Override
     public DashboardSummaryDTO getSummary(LocalDate start, LocalDate end) {
@@ -100,6 +105,12 @@ public class DashboardServiceImpl implements DashboardService {
         dto.setTotalRevenue(revenue);
         dto.setTotalExpenses(expenses);
         dto.setNetIncome(revenue - expenses);
+
+        // NEW: day-by-day trend for the Financial Overview line chart. Reuses
+        // the same revenueInRange/expensesInRange lists above so the totals
+        // and the chart always agree, then fills in zero-value days so the
+        // line has no gaps.
+        dto.setFinancialTrend(buildFinancialTrend(revenueInRange, expensesInRange, start, end));
 
         // ── 3. Recent activities (up to 10) ──────────────────────────────────
         List<ActivityItem> activities = new ArrayList<>();
@@ -168,6 +179,7 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDate today = LocalDate.now();
         List<PendingItem> pending = appointments.stream()
                 .filter(a -> a.getAppointmentDate() != null
+                        && !a.isCompleted()
                         && !a.getAppointmentDate().isBefore(today))
                 .sorted(Comparator.comparing(Appointment::getAppointmentDate))
                 .limit(5)
@@ -232,6 +244,50 @@ public class DashboardServiceImpl implements DashboardService {
         if (start != null && date.isBefore(start)) return false;
         if (end   != null && date.isAfter(end))   return false;
         return true;
+    }
+
+    // ── Financial trend (for the Financial Overview line chart) ───────────────
+
+    /**
+     * Builds a day-by-day financial trend (revenue, expenses, net income)
+     * between start and end (inclusive), using the already-filtered revenue
+     * and expense lists so the chart always matches the totals cards.
+     *
+     * If start/end are null (e.g. "All time" filter), defaults the chart
+     * window to the last 30 days so the line has a sane, bounded range.
+     * Fills in zero-value days so the line has no gaps.
+     */
+    private List<FinancialPoint> buildFinancialTrend(
+            List<Revenue> revenueInRange,
+            List<Expense> expensesInRange,
+            LocalDate start,
+            LocalDate end) {
+
+        LocalDate rangeStart = start != null ? start : LocalDate.now().minusDays(29);
+        LocalDate rangeEnd   = end   != null ? end   : LocalDate.now();
+
+        Map<LocalDate, Double> revenueByDate = revenueInRange.stream()
+                .filter(r -> r.getRevenueDate() != null)
+                .collect(Collectors.groupingBy(
+                        Revenue::getRevenueDate,
+                        Collectors.summingDouble(r -> r.getAmount() != null ? r.getAmount() : 0.0)
+                ));
+
+        Map<LocalDate, Double> expenseByDate = expensesInRange.stream()
+                .filter(e -> e.getExpenseDate() != null)
+                .collect(Collectors.groupingBy(
+                        Expense::getExpenseDate,
+                        Collectors.summingDouble(e -> e.getAmount() != null ? e.getAmount() : 0.0)
+                ));
+
+        List<FinancialPoint> points = new ArrayList<>();
+        for (LocalDate d = rangeStart; !d.isAfter(rangeEnd); d = d.plusDays(1)) {
+            double rev = revenueByDate.getOrDefault(d, 0.0);
+            double exp = expenseByDate.getOrDefault(d, 0.0);
+            points.add(new FinancialPoint(d.format(ISO_DATE_FMT), rev, exp, rev - exp));
+        }
+
+        return points;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
