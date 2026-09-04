@@ -52,28 +52,28 @@ onUnmounted(() => {
 const model = [
     {
         label: 'Home',
-        roles: [UserRole.ADMIN, UserRole.MIDWIFE, UserRole.PATIENT]
+        roles: [UserRole.ADMIN, UserRole.PATIENT]
     },
     {
         items: [
             { label: 'Dashboard', icon: '', to: '/', roles: [UserRole.ADMIN] },
-            { label: 'Staff', icon: '', to: '/uikit/Staff', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
-            { label: 'Wards', icon: '', to: '/uikit/Wards', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
-            { label: 'Service', icon: '', to: '/uikit/Service', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
-            { label: 'Inventory', icon: '', to: '/uikit/Inventory', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
+            { label: 'Staff', icon: '', to: '/uikit/Staff', roles: [UserRole.ADMIN,] },
+            { label: 'Wards', icon: '', to: '/uikit/Wards', roles: [UserRole.ADMIN] },
+            { label: 'Service', icon: '', to: '/uikit/Service', roles: [UserRole.ADMIN] },
+            { label: 'Inventory', icon: '', to: '/uikit/Inventory', roles: [UserRole.ADMIN] },
             { label: 'Expense', icon: '', to: '/uikit/Expense', roles: [UserRole.ADMIN] },
             {label: 'Revenue', icon: '', to: '/uikit/Revenue', roles: [UserRole.ADMIN] }, 
-            {label: 'List of SOA', icon: '', to: '/uikit/viewListOfSOA', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
-            { label: 'List of Patients', icon: '', to: '/uikit/PatientsMain', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
+            {label: 'List of SOA', icon: '', to: '/uikit/viewListOfSOA', roles: [UserRole.ADMIN] },
+            { label: 'List of Patients', icon: '', to: '/uikit/PatientsMain', roles: [UserRole.ADMIN] },
             { label: 'User Account', icon: '', to: '/uikit/UserAccount', roles: [UserRole.ADMIN] },
-            { label: 'Logs', icon: '', to: '/uikit/Logs', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
-            { label: 'Appointments', icon: '', to: '/uikit/AppointmentManagement', roles: [UserRole.ADMIN, UserRole.MIDWIFE] }, // new sa appointment 
+            { label: 'Logs', icon: '', to: '/uikit/Logs', roles: [UserRole.ADMIN] },
+            { label: 'Appointments', icon: '', to: '/uikit/AppointmentManagement', roles: [UserRole.ADMIN] },
             { label: 'Calendar', icon: '', to: '/uikit/AdminCalendar', roles: [UserRole.ADMIN] },
             { label: 'Patient Dashboard', icon: '', to: '/uikit/PatientDashboard', roles: [UserRole.PATIENT] },
             { label: 'Clinic Services', icon: '', to: '/uikit/PatientService', roles: [UserRole.PATIENT] }, 
             { label: 'My Medical Records', icon: '', to: '/uikit/PatientProfileview', roles: [UserRole.PATIENT] },
             { label: 'My Statement of Account', icon: '', to: '/uikit/MySOA', roles: [UserRole.PATIENT] },
-            { label: 'Reports', icon: '', to: '/uikit/Reports', roles: [UserRole.ADMIN, UserRole.MIDWIFE] },
+            { label: 'Reports', icon: '', to: '/uikit/Reports', roles: [UserRole.ADMIN] },
       ]   
     }
 ];

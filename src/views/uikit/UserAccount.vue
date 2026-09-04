@@ -285,7 +285,6 @@ async function handleDeleteUser(userID) {
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
             >
               <option>Admin</option>
-              <option>Midwife</option>
               <option>Patient</option>
             </select>
           </div>
@@ -350,7 +349,7 @@ async function handleDeleteUser(userID) {
 </div>
         
         
-        <!-- Employee dropdown — only shown & required when role is Admin/Midwife -->
+        <!-- Employee dropdown — only shown & required for staff accounts -->
         <div v-else>
           <label class="block text-sm font-semibold mb-2">Link to Existing Employee *</label>
           <select
@@ -446,7 +445,7 @@ async function handleDeleteUser(userID) {
         </div>
       </div>
 
-      <!-- Role filter tabs — filters the table below by Patient vs Employee (Admin/Midwife) -->
+      <!-- Role filter tabs — filters the table below by Patient vs Employee -->
       <div class="flex items-center gap-2 mb-4">
         <button
           @click="setRoleFilter('')"

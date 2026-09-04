@@ -12,7 +12,6 @@ const errorMessage = ref('')
 
 const roles = [
   { name: 'Admin', desc: 'System administrator', value: UserRole.ADMIN },
-  { name: 'Midwife', desc: 'Healthcare midwife', value: UserRole.MIDWIFE },
   { name: 'Patient', desc: 'Patient user', value: UserRole.PATIENT },
 ]
 
