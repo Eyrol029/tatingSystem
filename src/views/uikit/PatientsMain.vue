@@ -26,6 +26,12 @@ const reportEndDate = ref('');
 const reportServiceFilter = ref('');  
 const reportCategoryFilter = ref('');
 
+watch(selectedServiceType, (serviceName) => {
+    if (String(serviceName || '').trim().toLowerCase() === 'prenatal') {
+        router.push('/uikit/Patient');
+    }
+});
+
 function openReportModal() {
     // Default to current month range
     const now = new Date();
@@ -131,6 +137,8 @@ function printReport() {
         <h2>Summary Statistics</h2>
         <div class="stats">
             <div class="stat-card"><div class="label">Total Patients</div><div class="value">${summary.totalUniquePatients ?? 0}</div></div>
+            <div class="stat-card"><div class="label">High-Risk Patients</div><div class="value">${summary.totalHighRiskPatients ?? 0}</div></div>
+            <div class="stat-card"><div class="label">Normal Patients</div><div class="value">${summary.totalNormalPatients ?? 0}</div></div>
             <div class="stat-card"><div class="label">Services Availed</div><div class="value">${summary.totalServicesAvailed ?? 0}</div></div>
             ${serviceStatsRows}
             <div class="stat-card"><div class="label">PhilHealth Covered</div><div class="value">${summary.totalPhilHealthCovered ?? 0}</div></div>
@@ -151,13 +159,6 @@ function printReport() {
     printWindow.focus();
     printWindow.print();
 }
-
-// Watch to route to Prenatal list when selectedServiceType is 'Prenatal'
-watch(selectedServiceType, (newVal) => {
-    if (newVal === 'Prenatal') {
-        router.push('/uikit/Patient');
-    }
-});
 
 const formData = ref({
     fName: '',
@@ -217,6 +218,17 @@ const reportServiceOptions = computed(() => {
         .sort((a, b) => a.localeCompare(b));
 });
 
+const serviceFilterOptions = computed(() => {
+    const catalogNames = clinicalServices.value
+        .map(service => service.name?.trim())
+        .filter(Boolean);
+    const patientServiceNames = patientServices.value
+        .map(service => service.serviceName?.trim())
+        .filter(Boolean);
+    return [...new Set([...catalogNames, ...patientServiceNames])]
+        .sort((a, b) => a.localeCompare(b));
+});
+
 const reportServiceStats = computed(() => {
     const records = reportData.value?.patientRecords || [];
     return reportServiceOptions.value.map((serviceName, index) => ({
@@ -244,8 +256,9 @@ const filteredPatients = computed(() => {
 
     // Filter by Service Availed first
     if (selectedServiceType.value !== 'All') {
+        const selectedService = selectedServiceType.value.trim().toLowerCase();
         const patientIdsWithService = patientServices.value
-            .filter(ps => ps.serviceName === selectedServiceType.value)
+            .filter(ps => String(ps.serviceName || '').trim().toLowerCase() === selectedService)
             .map(ps => ps.patientID);
         
         result = result.filter(patient => patientIdsWithService.includes(patient.patientID));
@@ -383,10 +396,9 @@ async function deletePatient(patient) {
                     class="px-4 py-2 bg-gray-100 border border-gray-200 rounded-full focus:ring-2 focus:ring-purple-500 focus:bg-white font-medium text-gray-700 focus:outline-none"
                 >
                     <option value="All">All Patients</option>
-                    <option value="Prenatal">Prenatal</option>
-                    <option value="Family Planning">Family Planning</option>
-                    <option value="Ultrasound Service">Ultrasound Service</option>
-                    <option value="Other Services">Other Services</option>
+                    <option v-for="serviceName in serviceFilterOptions" :key="serviceName" :value="serviceName">
+                        {{ serviceName }}
+                    </option>
                 </select>
             </div>
 
@@ -690,6 +702,14 @@ async function deletePatient(patient) {
                             <div class="border border-purple-200 bg-purple-50 rounded-lg p-3 text-center">
                                 <p class="text-xs text-purple-600 font-semibold">Total Patients</p>
                                 <p class="text-2xl font-bold text-purple-800">{{ reportData.summary?.totalUniquePatients ?? 0 }}</p>
+                            </div>
+                            <div class="border border-red-200 bg-red-50 rounded-lg p-3 text-center">
+                                <p class="text-xs text-red-600 font-semibold">High-Risk Patients</p>
+                                <p class="text-2xl font-bold text-red-800">{{ reportData.summary?.totalHighRiskPatients ?? 0 }}</p>
+                            </div>
+                            <div class="border border-green-200 bg-green-50 rounded-lg p-3 text-center">
+                                <p class="text-xs text-green-600 font-semibold">Normal Patients</p>
+                                <p class="text-2xl font-bold text-green-800">{{ reportData.summary?.totalNormalPatients ?? 0 }}</p>
                             </div>
                             <div class="border border-blue-200 bg-blue-50 rounded-lg p-3 text-center">
                                 <p class="text-xs text-blue-600 font-semibold">Services Availed</p>

@@ -315,6 +315,10 @@ const comboChart = computed(() => {
     .map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`)
     .join(' ')
 
+  // Keep the full daily series, but show only a readable number of dates on
+  // the fixed-width chart axis for long custom ranges.
+  const labelStep = Math.max(1, Math.ceil(pts.length / 8))
+
   const bars = pts.map((p, i) => {
     const barH = (p.expenses / niceMax) * (chartH - padY * 2)
     return {
@@ -322,7 +326,8 @@ const comboChart = computed(() => {
       y: chartH - padY - barH,
       height: barH,
       value: p.expenses,
-      label: fmtDate(p.date)
+      label: fmtDate(p.date),
+      showLabel: i % labelStep === 0 || i === pts.length - 1
     }
   })
 
@@ -587,7 +592,7 @@ function fmtDate(d) {
               {{ fmtMoney(bar.value) }}
             </text>
             <!-- x-axis category label -->
-            <text :x="bar.x + barWidth / 2" :y="chartH + 22" font-size="13" fill="#9ca3af"
+            <text v-if="bar.showLabel" :x="bar.x + barWidth / 2" :y="chartH + 22" font-size="13" fill="#9ca3af"
                   text-anchor="middle">
               {{ bar.label }}
             </text>

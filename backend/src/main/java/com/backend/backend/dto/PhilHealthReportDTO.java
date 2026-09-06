@@ -18,6 +18,8 @@ public class PhilHealthReportDTO {
     // ──────────────────────────────────────────────────────────────────────────
     public static class SummaryStats {
         private long totalUniquePatients;
+        private long totalHighRiskPatients;
+        private long totalNormalPatients;
         private long totalServicesAvailed;
         private long totalPrenatal;
         private long totalFamilyPlanning;
@@ -31,6 +33,12 @@ public class PhilHealthReportDTO {
 
         public long getTotalUniquePatients() { return totalUniquePatients; }
         public void setTotalUniquePatients(long totalUniquePatients) { this.totalUniquePatients = totalUniquePatients; }
+
+        public long getTotalHighRiskPatients() { return totalHighRiskPatients; }
+        public void setTotalHighRiskPatients(long totalHighRiskPatients) { this.totalHighRiskPatients = totalHighRiskPatients; }
+
+        public long getTotalNormalPatients() { return totalNormalPatients; }
+        public void setTotalNormalPatients(long totalNormalPatients) { this.totalNormalPatients = totalNormalPatients; }
 
         public long getTotalServicesAvailed() { return totalServicesAvailed; }
         public void setTotalServicesAvailed(long totalServicesAvailed) { this.totalServicesAvailed = totalServicesAvailed; }

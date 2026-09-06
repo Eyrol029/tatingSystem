@@ -8,6 +8,7 @@ import { useUserDataStore } from '@/stores/userData';
 // used elsewhere in this project. If your actual endpoints differ, update these.
 const PATIENTS_URL      = 'http://localhost:8080/api/patients';
 const APPOINTMENTS_URL  = 'http://localhost:8080/api/appointment';
+const PATIENT_SERVICES_URL = 'http://localhost:8080/api/patient-services';
 const SOA_PATIENT_URL   = 'http://localhost:8080/api/billing/soa/patient';
 const INSTALLMENTS_URL  = 'http://localhost:8080/api/billing/installments';
 
@@ -41,6 +42,7 @@ const stats = ref({
 });
 
 const appointments = ref([]);
+const patientServices = ref([]);
 const soaDetails = ref(null);
 const installments = ref([]);
 let appointmentsRefreshTimer;
@@ -60,9 +62,19 @@ function parseBreakdown(installment) {
     }
 }
 
-// Every unique service/fee name pulled out of the patient's payment history —
-// this becomes both "Services Used" count and the Records/Services tab content.
+// Clinical service records are the source of truth. Billing breakdowns are
+// kept as a fallback for older records that have no PatientService row.
 const serviceHistory = computed(() => {
+    if (patientServices.value.length) {
+        return patientServices.value.map(service => ({
+            name: service.serviceName,
+            amount: service.serviceFee || 0,
+            date: service.dateAvailed,
+            caseNumber: service.caseNumber,
+            status: service.paymentStatus
+        }));
+    }
+
     const items = [];
     installments.value.forEach((installment) => {
         if (!installment.serviceBreakdown) return;
@@ -112,6 +124,23 @@ function setActiveTab(tab) {
     activeTab.value = tab;
 }
 
+// Appointment dates are calendar dates, not UTC instants. Parsing a YYYY-MM-DD
+// string with new Date() treats it as UTC and can display the previous day.
+function parseAppointmentDate(value) {
+    if (!value) return null;
+    const dateValue = String(value).trim();
+    const dateOnly = dateValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnly) {
+        return new Date(
+            Number(dateOnly[1]),
+            Number(dateOnly[2]) - 1,
+            Number(dateOnly[3])
+        );
+    }
+    const parsed = new Date(dateValue);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 // ── Load real data ────────────────────────────────────────────────────────────
 async function fetchPatient() {
     try {
@@ -124,13 +153,24 @@ async function fetchPatient() {
     }
 }
 
+async function fetchPatientServices() {
+    try {
+        const res = await axios.get(`${PATIENT_SERVICES_URL}/patient/${patientId.value}`);
+        patientServices.value = Array.isArray(res.data) ? res.data : [];
+    } catch (error) {
+        console.error('Failed to load patient service records', error);
+        patientServices.value = [];
+    }
+}
+
 async function fetchAppointments() {
     try {
         const res = await axios.get(APPOINTMENTS_URL);
         appointments.value = (res.data || []).filter(a => a.patientID === patientId.value);
         stats.value.upcomingAppointments = appointments.value.filter(a => {
             if (!a.appointmentDate) return false;
-            return new Date(a.appointmentDate) >= new Date(new Date().setHours(0, 0, 0, 0));
+            const appointmentDate = parseAppointmentDate(a.appointmentDate);
+            return appointmentDate && appointmentDate >= new Date(new Date().setHours(0, 0, 0, 0));
         }).length;
     } catch (error) {
         console.error('Failed to load appointments', error);
@@ -158,7 +198,7 @@ async function loadAll() {
         return;
     }
     loading.value = true;
-    await Promise.all([fetchPatient(), fetchAppointments(), fetchBilling()]);
+    await Promise.all([fetchPatient(), fetchPatientServices(), fetchAppointments(), fetchBilling()]);
     stats.value.servicesUsed = uniqueServiceNames.value.length;
     stats.value.medicalRecords = serviceHistory.value.length;
     loading.value = false;
@@ -225,11 +265,16 @@ function prevMonth() { currentDate.value = new Date(currentYear.value, currentMo
 const calendarEvents = computed(() => {
     return appointments.value
         .filter(a => a.appointmentDate)
-        .map(a => ({
-            date: new Date(a.appointmentDate),
-            title: a.serviceType || 'Appointment',
-            type: (a.serviceType || '').toLowerCase().includes('delivery') ? 'labor' : 'checkup'
-        }));
+        .map(a => {
+            const date = parseAppointmentDate(a.appointmentDate);
+            if (!date) return null;
+            return {
+                date,
+                title: a.serviceType || 'Appointment',
+                type: (a.serviceType || '').toLowerCase().includes('delivery') ? 'labor' : 'checkup'
+            };
+        })
+        .filter(Boolean);
 });
 
 function getEventsForDay(day) {

@@ -33,11 +33,47 @@ async function loadPatients() {
       try {
         const svcRes  = await axios.get(`${PATIENT_SVC}/patient/${p.patientID}`)
         const services= Array.isArray(svcRes.data) ? svcRes.data : []
+        const referralRes = await axios.get(`${BASE}/referrals?patientId=${p.patientID}`)
+        const referrals = Array.isArray(referralRes.data) ? referralRes.data : []
+        let localReferral = null
+        try {
+          const storedReferral = localStorage.getItem('referral_patient')
+          localReferral = storedReferral ? JSON.parse(storedReferral) : null
+        } catch {}
+        const localReferralMatches = Number(localReferral?.id || localReferral?.patientID) === Number(p.patientID)
+        const localReferralReasons = localReferralMatches && Array.isArray(localReferral?.riskFactors)
+          ? localReferral.riskFactors
+          : []
+        const referralReasons = referrals
+          .flatMap(referral => String(referral.riskFactors || '').split(','))
+          .map(reason => reason.trim())
+          .filter(Boolean)
+        const allReferralReasons = [...referralReasons, ...localReferralReasons].filter(Boolean)
+        const hasPersistedReferral = referrals.length > 0 || localReferralMatches
         const prenatalSvcs = services.filter(
           s => s.serviceName?.toLowerCase() === 'prenatal'
         )
 
-        if (!prenatalSvcs.length) return null  // not a prenatal patient
+        if (!prenatalSvcs.length) {
+          return hasPersistedReferral ? {
+            id: String(p.patientID),
+            patientCode: p.patientCode || '',
+            patientID: p.patientID,
+            prenatalRecordID: null,
+            name: buildName(p),
+            age: p.age ?? computeAge(p.birthDate || p.dob || p.dateOfBirth),
+            numberOfPregnancy: p.numberOfPregnancy ?? 0,
+            contact: p.contactNo || p.contact || '—',
+            gestationalWeek: null,
+            vitals: {},
+            riskStatus: 'high-risk',
+            backendRiskReasons: allReferralReasons.length ? allReferralReasons : ['Patient referral recorded'],
+            lastVisit: '—',
+            medicalHistory: [],
+            deliveryType: null,
+            referralNeeded: true
+          } : null
+        }
 
         // Get the latest prenatal record across all prenatal services
         let latestRecord = null
@@ -52,7 +88,28 @@ async function loadPatients() {
           } catch {}
         }
 
-        if (!latestRecord) return null
+        if (!latestRecord) {
+          return {
+            id: String(p.patientID),
+            patientCode: p.patientCode || '',
+            patientID: p.patientID,
+            prenatalRecordID: null,
+            name: buildName(p),
+            age: p.age ?? computeAge(p.birthDate || p.dob || p.dateOfBirth),
+            numberOfPregnancy: p.numberOfPregnancy ?? 0,
+            contact: p.contactNo || p.contact || '—',
+            gestationalWeek: null,
+            vitals: {},
+            riskStatus: hasPersistedReferral ? 'high-risk' : 'normal',
+            backendRiskReasons: hasPersistedReferral
+              ? (allReferralReasons.length ? allReferralReasons : ['Patient referral recorded'])
+              : [],
+            lastVisit: '—',
+            medicalHistory: [],
+            deliveryType: null,
+            referralNeeded: hasPersistedReferral
+          }
+        }
 
         const prenatalRecordID = latestRecord.prenatalrecordID
 
@@ -178,6 +235,7 @@ async function loadPatients() {
         const frontendHighRisk = checkFrontendHighRisk(vitals, obstetricRisks, medHistory, latestRecord)
 
         const isHighRisk = backendHighRisk || frontendHighRisk
+          || hasPersistedReferral
 
         // Parse AOG from edc/lmp
         const aog = computeAOG(latestRecord.edc || latestRecord.expectedDeliveryDate)
@@ -194,7 +252,7 @@ async function loadPatients() {
           gestationalWeek: aog,
           vitals:          vitals || {},
           riskStatus:      isHighRisk ? 'high-risk' : 'normal',
-          backendRiskReasons,
+          backendRiskReasons: [...backendRiskReasons, ...allReferralReasons],
           lastVisit:       formatRawDate(latestVisitDate),
           medicalHistory:  [...medHistory, ...obstetricRisks],
           deliveryType:    latestRecord.typeOfDelivery   || null,
@@ -348,7 +406,7 @@ onMounted(loadPatients)
           <div>
             <button @click="router.push('/uikit/PatientsMain')"
               class="text-purple-700 hover:text-purple-900 font-bold flex items-center gap-1.5 transition mb-3">
-              ← Back to Patient Management
+              Back to Patient Management
             </button>
             <h1 class="text-3xl font-bold text-gray-900">Patient Dashboard</h1>
             <p class="text-gray-500 mt-1">Prenatal patients pulled from medical records</p>
@@ -362,10 +420,6 @@ onMounted(loadPatients)
               <span class="text-2xl font-bold text-green-600">{{ normalCount }}</span>
               <span class="text-sm text-gray-600">Normal</span>
             </div>
-            <button @click="loadPatients" :disabled="loading"
-              class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1 transition">
-              <span :class="loading ? 'animate-spin inline-block' : ''">↻</span> Refresh
-            </button>
           </div>
         </div>
       </div>
@@ -415,8 +469,6 @@ onMounted(loadPatients)
                 <th class="px-6 py-4 text-left text-base font-semibold text-gray-800">AOG</th>
                 <th class="px-6 py-4 text-left text-base font-semibold text-gray-800">BP / FHT</th>
                 <th class="px-6 py-4 text-left text-base font-semibold text-gray-800">Status</th>
-                <th class="px-6 py-4 text-left text-base font-semibold text-gray-800">Last Visit</th>
-                <th class="px-6 py-4 text-center text-base font-semibold text-gray-800">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -491,20 +543,6 @@ onMounted(loadPatients)
                 <!-- Last visit -->
                 <td class="px-6 py-5 text-gray-700 text-sm">{{ patient.lastVisit }}</td>
 
-                <!-- Actions -->
-                <td class="px-6 py-5">
-                  <div class="flex justify-center gap-3">
-                    <button @click="handleViewPatientDetails(patient)"
-                      class="text-blue-600 hover:text-blue-800 font-medium text-sm hover:underline">
-                      View
-                    </button>
-                    <button v-if="patient.riskStatus === 'high-risk'"
-                      @click="handleGenerateReferral(patient.id)"
-                      class="text-red-600 hover:text-red-800 font-medium text-sm hover:underline">
-                      Refer
-                    </button>
-                  </div>
-                </td>
               </tr>
             </tbody>
           </table>

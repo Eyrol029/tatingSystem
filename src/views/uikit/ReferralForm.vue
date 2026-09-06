@@ -1,10 +1,14 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios'
+import { useUserDataStore, UserRole } from '@/stores/userData'
 
 const REFERRAL_API_URL = 'http://localhost:8080/api/referrals'
 const PATIENT_API_URL = 'http://localhost:8080/api/patients'
+const userStore = useUserDataStore()
+if (!userStore.user) userStore.init()
+const isReadOnly = computed(() => userStore.userRole === UserRole.PATIENT)
 
 function parsePatientPayload(value) {
   if (!value) return null
@@ -51,7 +55,7 @@ async function fetchPatientById(id) {
 }
 
 async function handleSaveReferral() {
-  if (!patient.value) return
+    if (isReadOnly.value || !patient.value) return
 
   const payload = {
     patientId: patient.value.id,
@@ -105,6 +109,7 @@ function handlePrintReferral() {
 }
 
 function handleSendNotification() {
+    if (isReadOnly.value) return;
     // Simulate sending notification
     showSuccessMessage.value = true;
     successMessage.value = 'Notification sent to the OB-GYN contact.';
@@ -249,6 +254,10 @@ onMounted(() => {
                     <div v-else class="text-sm text-gray-500">No identified risk factors.</div>
                 </div>
 
+                <div v-if="isReadOnly" class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-sm font-semibold text-indigo-700">
+                    View Only: Patients can view and print this referral.
+                </div>
+
                 <!-- Referral Information Form -->
                 <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-600">
                     <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -257,7 +266,8 @@ onMounted(() => {
                         </svg>
                         Referral Details (Auto-filled)
                     </h2>
-                    <form class="space-y-4">
+                    <form class="space-y-4" @submit.prevent>
+                        <fieldset :disabled="isReadOnly" style="border:none;padding:0;margin:0;min-width:0;">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Hospital Name</label>
@@ -281,6 +291,7 @@ onMounted(() => {
                                 ></textarea>
                             </div>
                         </div>
+                        </fieldset>
                     </form>
                 </div>
 
@@ -293,14 +304,14 @@ onMounted(() => {
                             </svg>
                             Print Referral
                         </button>
-                        <button @click="handleSendNotification" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2">
+                        <button v-if="!isReadOnly" @click="handleSendNotification" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2">
                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
                                 <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
                             </svg>
                             Send Notification
                         </button>
-                        <button @click="handleSaveReferral" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2">
+                        <button v-if="!isReadOnly" @click="handleSaveReferral" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2">
                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M5.5 13a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.3A4.5 4.5 0 1113.5 13H11V9.413l1.293 1.293a1 1 0 001.414-1.414l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13H5.5z" />
                             </svg>

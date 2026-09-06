@@ -1,9 +1,15 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useUserDataStore, UserRole } from '@/stores/userData'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserDataStore()
+if (!userStore.user) {
+  userStore.init()
+}
+const isReadOnly = computed(() => userStore.userRole === UserRole.PATIENT)
 
 function getPatientId() {
   const direct = route.params.patientId || route.params.id || route.query.patientId || route.query.id
@@ -66,6 +72,14 @@ function applyPatientContext() {
 
   if (patientPayload.age != null && patientPayload.age !== '') {
     form.value.age = String(patientPayload.age)
+  }
+
+  const riskFactors = Array.isArray(patientPayload.riskFactors)
+    ? patientPayload.riskFactors.filter(Boolean)
+    : []
+  if (riskFactors.length) {
+    form.value.medicalHistory = `High-risk factors: ${riskFactors.join('; ')}`
+    form.value.impression = 'High-risk pregnancy'
   }
 }
 
@@ -192,7 +206,7 @@ onMounted(() => {
       </svg>
       Back
     </button>
-    <button @click="saveAndReturn"
+    <button v-if="!isReadOnly" @click="saveAndReturn"
       class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow transition">
       <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 3" />
@@ -211,6 +225,10 @@ onMounted(() => {
 
   <!-- Printable form -->
   <div id="printable-area" class="max-w-screen mx-auto p-6 bg-white shadow-lg rounded-lg my-4 border border-gray-100">
+    <div v-if="isReadOnly" class="no-print mb-4 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700">
+      View Only: Patients can view and print this referral form.
+    </div>
+    <fieldset :disabled="isReadOnly" style="border:none;padding:0;margin:0;min-width:0;">
 
     <!-- Header -->
     <div class="text-center border-b-2 border-gray-800 pb-4 mb-5">
@@ -427,6 +445,7 @@ onMounted(() => {
         </div>
       </div>
     </div>
+    </fieldset>
 
     <!-- ACKNOWLEDGEMENT RECEIPT -->
     <div class="border-t-4 border-gray-800 pt-6">

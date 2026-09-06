@@ -31,15 +31,29 @@ function goBack() {
     router.back();
 }
 
-function handleReferPatient() {
+async function handleReferPatient() {
     const patientPayload = {
         id: route.params.patientID || formData.value.clientId || null,
+        sourceServiceId: serviceId || null,
+        sourceServiceName: 'Family Planning',
         name: patientName.value || `Client ${route.params.patientID || formData.value.clientId || 'Unknown'}`,
         age: formData.value.age ? Number(formData.value.age) : null,
         contact: '',
         gestationalWeek: '',
-        riskFactors: []
+        riskFactors: ['High risk identified']
     };
+
+    try {
+        await axios.post('http://localhost:8080/api/referrals', {
+            patientId: patientPayload.id,
+            patientName: patientPayload.name,
+            age: patientPayload.age,
+            riskFactors: patientPayload.riskFactors.join(', '),
+            notes: 'High-risk referral from Family Planning'
+        });
+    } catch (e) {
+        console.error('Could not save family planning referral for reports', e);
+    }
 
     try {
         localStorage.setItem('referral_patient', JSON.stringify(patientPayload));

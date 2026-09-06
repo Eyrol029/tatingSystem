@@ -37,6 +37,8 @@ const patientData = reactive({
 const loading = ref(true);
 const error = ref('');
 const services = ref([]);
+const patientHighRisk = ref(false);
+const highRiskReasons = ref([]);
 
 async function fetchPatient() {
     const id = userStore.user?.patientID;
@@ -67,10 +69,64 @@ async function fetchServices() {
             ward: item.wardName ?? '---',
             dateAvailed: item.dateAvailed,
             caseNumber: item.caseNumber ?? '---',
-            remarks: item.remarks ?? '---'
+            remarks: item.remarks ?? '---',
+            isHighRisk: patientHighRisk.value,
+            riskReasons: [...highRiskReasons.value]
+        }));
+
+        await Promise.all(services.value
+            .filter(service => service.service?.toLowerCase().includes('prenatal'))
+            .map(async service => {
+                try {
+                    const recordsRes = await axios.get(`http://localhost:8080/api/prenatal/records/service/${service.id}`);
+                    const records = Array.isArray(recordsRes.data) ? recordsRes.data : [];
+                    const latest = records.reduce((current, record) =>
+                        !current || record.prenatalrecordID > current.prenatalrecordID ? record : current, null);
+                    if (!latest?.prenatalrecordID) return;
+
+                    const riskRes = await axios.get(`http://localhost:8080/api/prenatal/high-risk-assessment/${latest.prenatalrecordID}`);
+                    if (riskRes.data?.highRisk) {
+                        patientHighRisk.value = true;
+                        highRiskReasons.value.push(...(riskRes.data.reasons || []));
+                    }
+                } catch (riskError) {
+                    console.error('Failed to load prenatal risk status.', riskError);
+                }
+            }));
+
+        services.value = services.value.map(service => ({
+            ...service,
+            isHighRisk: patientHighRisk.value,
+            riskReasons: [...new Set(highRiskReasons.value)]
         }));
     } catch (e) {
         console.error('Failed to load services data.', e);
+    }
+}
+
+async function fetchPatientRiskStatus() {
+    const id = userStore.user?.patientID;
+    if (!id) return;
+
+    try {
+        const [referralsRes, admissionsRes] = await Promise.all([
+            axios.get(`http://localhost:8080/api/referrals?patientId=${id}`),
+            axios.get('http://localhost:8080/api/admissions')
+        ]);
+        const referrals = Array.isArray(referralsRes.data) ? referralsRes.data : [];
+        const admissions = Array.isArray(admissionsRes.data) ? admissionsRes.data : [];
+        const patientAdmissions = admissions.filter(admission => Number(admission.patientID) === Number(id));
+
+        if (referrals.length || patientAdmissions.some(admission => admission.isHighRisk === true)) {
+            patientHighRisk.value = true;
+            highRiskReasons.value.push(
+                ...referrals.flatMap(referral => String(referral.riskFactors || '').split(',')),
+                ...patientAdmissions.filter(admission => admission.isHighRisk === true).map(() => 'High risk identified during Admission')
+            );
+            highRiskReasons.value = [...new Set(highRiskReasons.value.map(reason => reason.trim()).filter(Boolean))];
+        }
+    } catch (riskError) {
+        console.error('Failed to load patient risk status.', riskError);
     }
 }
 
@@ -100,7 +156,7 @@ function viewService(service) {
 
 onMounted(() => {
     fetchPatient();
-    fetchServices();
+    fetchPatientRiskStatus().then(fetchServices);
 });
 </script>
 
@@ -123,6 +179,12 @@ onMounted(() => {
                         ←
                     </button>
                     <h1 class="text-2xl font-semibold text-gray-800">My Profile & Records</h1>
+                    <span v-if="patientHighRisk"
+                        :title="highRiskReasons.join(', ')"
+                        class="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700 border border-red-200">
+                        <span class="h-2 w-2 rounded-full bg-red-600"></span>
+                        HIGH RISK PATIENT
+                    </span>
                 </div>
                 <button @click="printServices"
                     class="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition flex items-center gap-2">
@@ -213,7 +275,17 @@ onMounted(() => {
                     </thead>
                     <tbody>
                         <tr v-for="service in services" :key="service.id" class="border-b hover:bg-gray-50">
-                            <td class="td font-medium text-gray-900">{{ service.service }}</td>
+                            <td class="td font-medium text-gray-900">
+                                <div class="flex items-center gap-2">
+                                    <span>{{ service.service }}</span>
+                                    <span v-if="service.isHighRisk"
+                                        :title="service.riskReasons.join(', ')"
+                                        class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 border border-red-200">
+                                        <span class="h-2 w-2 rounded-full bg-red-600"></span>
+                                        HIGH RISK
+                                    </span>
+                                </div>
+                            </td>
                             <td class="td">{{ service.employee }}</td>
                             <td class="td">{{ service.ward }}</td>
                             <td class="td">{{ service.dateAvailed }}</td>

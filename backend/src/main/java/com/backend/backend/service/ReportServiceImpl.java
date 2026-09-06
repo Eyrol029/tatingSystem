@@ -17,11 +17,13 @@ import com.backend.backend.model.FamilyPlanning.FamilyPlanningRecord;
 import com.backend.backend.model.Patient;
 import com.backend.backend.model.PatientService;
 import com.backend.backend.model.Prenatal.PrenatalRecord;
+import com.backend.backend.model.Referral;
 import com.backend.backend.repository.AdmissionRepository;
 import com.backend.backend.repository.ClinicalServiceRepository;
 import com.backend.backend.repository.FamilyPlanning.FamilyPlanningRecordRepository;
 import com.backend.backend.repository.PatientRepository;
 import com.backend.backend.repository.PatientServiceRepository;
+import com.backend.backend.repository.ReferralRepository;
 import com.backend.backend.service.Prenatal.HighRiskAssessmentService;
 import com.backend.backend.service.Prenatal.PrenatalRecordService;
 
@@ -49,6 +51,9 @@ public class ReportServiceImpl implements ReportService {
     @Autowired
     private HighRiskAssessmentService highRiskAssessmentService;
 
+    @Autowired
+    private ReferralRepository referralRepository;
+
     @Override
     public PhilHealthReportDTO getPhilHealthSummary(LocalDate start, LocalDate end, String filterService, String filterCategory) {
         PhilHealthReportDTO report = new PhilHealthReportDTO();
@@ -71,6 +76,20 @@ public class ReportServiceImpl implements ReportService {
         for (Admission adm : allAdmissions) {
             if (Boolean.TRUE.equals(adm.getHasPhilHealth()) && adm.getPatientID() != null) {
                 philHealthPatientIds.add(adm.getPatientID());
+            }
+        }
+
+        // High-risk is a patient-level status. A referral or a high-risk
+        // admission applies to every service row for that patient.
+        Set<Integer> highRiskPatientIds = new HashSet<>();
+        for (Admission adm : allAdmissions) {
+            if (Boolean.TRUE.equals(adm.getIsHighRisk()) && adm.getPatientID() != null) {
+                highRiskPatientIds.add(adm.getPatientID());
+            }
+        }
+        for (Referral referral : referralRepository.findAll()) {
+            if (referral.getPatientId() != null) {
+                highRiskPatientIds.add(referral.getPatientId().intValue());
             }
         }
 
@@ -175,7 +194,7 @@ public class ReportServiceImpl implements ReportService {
             item.setPaymentStatus(ps.getPaymentStatus() != null ? ps.getPaymentStatus() : "Completed");
             item.setHasPhilHealth(hasPhilHealth);
             item.setPhilHealthNumber(philHealthNo.isEmpty() ? "None" : philHealthNo);
-            item.setRiskStatus(determineRiskStatus(ps, serviceName));
+            item.setRiskStatus(determineRiskStatus(ps, serviceName, highRiskPatientIds));
             item.setRemarks(ps.getRemarks() != null ? ps.getRemarks() : "");
 
             items.add(item);
@@ -196,6 +215,7 @@ public class ReportServiceImpl implements ReportService {
         // 4. Calculate Summary Statistics
         SummaryStats stats = new SummaryStats();
         Set<Integer> uniquePatients = new HashSet<>();
+        Set<Integer> highRiskPatients = new HashSet<>();
         long totalPrenatal = 0;
         long totalFP = 0;
         long totalDeliveries = 0;
@@ -208,6 +228,9 @@ public class ReportServiceImpl implements ReportService {
         for (PatientReportItem item : items) {
             if (item.getPatientID() != null) {
                 uniquePatients.add(item.getPatientID());
+                if ("High Risk".equalsIgnoreCase(item.getRiskStatus())) {
+                    highRiskPatients.add(item.getPatientID());
+                }
             }
             if (Boolean.TRUE.equals(item.getHasPhilHealth())) {
                 totalPhilHealth++;
@@ -234,6 +257,8 @@ public class ReportServiceImpl implements ReportService {
         }
 
         stats.setTotalUniquePatients(uniquePatients.size());
+        stats.setTotalHighRiskPatients(highRiskPatients.size());
+        stats.setTotalNormalPatients(uniquePatients.size() - highRiskPatients.size());
         stats.setTotalServicesAvailed(items.size());
         stats.setTotalPrenatal(totalPrenatal);
         stats.setTotalFamilyPlanning(totalFP);
@@ -338,7 +363,13 @@ public class ReportServiceImpl implements ReportService {
         return "General Consultation";
     }
 
-    private String determineRiskStatus(PatientService patientService, String serviceName) {
+    private String determineRiskStatus(PatientService patientService, String serviceName,
+            Set<Integer> highRiskPatientIds) {
+        if (patientService.getPatientID() != null
+                && highRiskPatientIds.contains(patientService.getPatientID())) {
+            return "High Risk";
+        }
+
         if (!serviceName.toLowerCase().contains("prenatal")) return "Normal";
 
         try {

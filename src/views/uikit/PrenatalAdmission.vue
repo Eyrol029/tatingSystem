@@ -28,9 +28,11 @@ const serviceId = route.params.serviceId  // ← specific service record
 
 
 function goBack() { router.back() }
-function handleReferPatient() {
+async function handleReferPatient() {
   const patientPayload = {
     id: clientId ? Number(clientId) : null,
+    sourceServiceId: serviceID.value || serviceId || null,
+    sourceServiceName: 'Prenatal',
     name: patientName.value || `Client ${clientId || 'Unknown'}`,
     age: null,
     contact: '',
@@ -42,6 +44,19 @@ function handleReferPatient() {
       ...(referralHighRisk.value ? ['Referral hospital marked'] : []),
       ...(visitHighRisk.value ? ['Abnormal follow-up visit findings'] : [])
     ]
+  }
+
+  try {
+    await axios.post('http://localhost:8080/api/referrals', {
+      patientId: patientPayload.id,
+      patientName: patientPayload.name,
+      age: patientPayload.age,
+      gestationalWeek: patientPayload.gestationalWeek,
+      riskFactors: patientPayload.riskFactors.join(', '),
+      notes: 'High-risk referral from Prenatal'
+    })
+  } catch (e) {
+    console.error('Could not save prenatal referral for reports', e)
   }
 
   try {

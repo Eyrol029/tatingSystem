@@ -84,14 +84,51 @@ async function fetchServices() {
     try {
         const id = route.params.id;
         const res = await axios.get(`http://localhost:8080/api/patient-services/patient/${id}`);
-        services.value = res.data.map(item => ({
-            id: item.patientServiceID,
-            service: item.serviceName,
-            employee: item.employeeName ?? '---',
-            ward: item.wardName ?? '---',
-            dateAvailed: item.dateAvailed,
-            caseNumber: item.caseNumber ?? '---',
-            remarks: item.remarks ?? '---'
+        let referralContext = null;
+        try {
+            const storedReferral = localStorage.getItem('referral_patient');
+            referralContext = storedReferral ? JSON.parse(storedReferral) : null;
+        } catch (storageError) {
+            console.warn('Failed to load referral context.', storageError);
+        }
+        const patientHasReferral = Number(referralContext?.id) === Number(id)
+            && ((Array.isArray(referralContext?.riskFactors) && referralContext.riskFactors.length > 0)
+                || referralContext?.sourceServiceId);
+
+        services.value = await Promise.all(res.data.map(async item => {
+            const serviceName = item.serviceName || '';
+            const service = {
+                id: item.patientServiceID,
+                service: serviceName,
+                employee: item.employeeName ?? '---',
+                ward: item.wardName ?? '---',
+                dateAvailed: item.dateAvailed,
+                caseNumber: item.caseNumber ?? '---',
+                remarks: item.remarks ?? '---',
+                isHighRisk: patientHasReferral,
+                riskReasons: patientHasReferral
+                    ? (referralContext.riskFactors ?? ['Patient referred as high risk'])
+                    : []
+            };
+
+            if (!serviceName.toLowerCase().includes('prenatal')) return service;
+
+            try {
+                const recordsRes = await axios.get(`http://localhost:8080/api/prenatal/records/service/${item.patientServiceID}`);
+                const records = Array.isArray(recordsRes.data) ? recordsRes.data : [];
+                const latestRecord = records.reduce((latest, record) =>
+                    !latest || record.prenatalrecordID > latest.prenatalrecordID ? record : latest, null);
+
+                if (latestRecord?.prenatalrecordID) {
+                    const riskRes = await axios.get(`http://localhost:8080/api/prenatal/high-risk-assessment/${latestRecord.prenatalrecordID}`);
+                    service.isHighRisk = !!riskRes.data?.highRisk;
+                    service.riskReasons = riskRes.data?.reasons ?? [];
+                }
+            } catch (riskError) {
+                console.error('Failed to load prenatal risk status.', riskError);
+            }
+
+            return service;
         }));
     } catch (e) {
         console.error('Failed to load services data.', e);
@@ -266,6 +303,38 @@ function viewService(service) {
     } else {
         alert(`No dedicated view page for "${service.service}" yet.`);
     }
+}
+
+function viewReferral(service) {
+    try {
+        localStorage.setItem('referral_patient', JSON.stringify({
+            id: Number(route.params.id),
+            sourceServiceId: service.id,
+            sourceServiceName: service.service,
+            name: `${patientData.fName || ''} ${patientData.lName || ''}`.trim(),
+            age: patientData.age,
+            contact: patientData.contactNumber || '',
+            gestationalWeek: '',
+            riskFactors: service.riskReasons
+        }));
+    } catch (storageError) {
+        console.warn('Could not persist referral patient context', storageError);
+    }
+
+    router.push({
+        path: '/uikit/ClinicalReferralform',
+        query: {
+            patientId: route.params.id,
+            patient: JSON.stringify({
+                id: Number(route.params.id),
+                name: `${patientData.fName || ''} ${patientData.lName || ''}`.trim(),
+                age: patientData.age,
+                contact: patientData.contactNumber || '',
+                gestationalWeek: '',
+                riskFactors: service.riskReasons
+            })
+        }
+    });
 }
 
 async function handleSubmit() {
@@ -493,7 +562,17 @@ async function handleSubmit() {
                     </thead>
                     <tbody>
                         <tr v-for="service in services" :key="service.id" class="border-b hover:bg-gray-50">
-                            <td class="td font-medium text-gray-900">{{ service.service }}</td>
+                            <td class="td font-medium text-gray-900">
+                                <div class="flex items-center gap-2">
+                                    <span>{{ service.service }}</span>
+                                    <span v-if="service.isHighRisk"
+                                        :title="service.riskReasons.join(', ')"
+                                        class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 border border-red-200">
+                                        <span class="h-2 w-2 rounded-full bg-red-600"></span>
+                                        HIGH RISK
+                                    </span>
+                                </div>
+                            </td>
                             <td class="td">{{ service.employee }}</td>
                             <td class="td">{{ service.ward }}</td>
                             <td class="td">{{ service.dateAvailed }}</td>
@@ -509,6 +588,10 @@ async function handleSubmit() {
                                     <button @click="viewService(service)"
                                         class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm hover:bg-blue-700">
                                         View
+                                    </button>
+                                    <button v-if="service.isHighRisk" @click="viewReferral(service)"
+                                        class="bg-red-600 text-white px-3 py-1.5 rounded text-sm hover:bg-red-700">
+                                        Referral
                                     </button>
                                     <button @click="promptDeleteService(service)"
                                         class="bg-red-50 text-red-700 px-3 py-1.5 rounded text-sm hover:bg-red-100 font-semibold border border-red-200">

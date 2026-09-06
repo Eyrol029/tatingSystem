@@ -492,16 +492,31 @@ async function scheduleFollowUp() {
     }
 }
 
-function handleHighRiskReferral() {
+async function handleHighRiskReferral() {
     const patientName = `${patientData.value.firstName || ''} ${patientData.value.lastName || ''}`.trim();
     const referralPayload = {
         id: patientId.value || patientID || null,
+        sourceServiceId: serviceId || null,
+        sourceServiceName: 'Admission',
         name: patientName || 'Patient',
         age: patientData.value.age || null,
         contact: '',
         gestationalWeek: patientData.value.gestationalAge || '',
         riskFactors: ['High risk identified']
     };
+
+    try {
+        await axios.post('http://localhost:8080/api/referrals', {
+            patientId: referralPayload.id,
+            patientName: referralPayload.name,
+            age: referralPayload.age,
+            gestationalWeek: referralPayload.gestationalWeek,
+            riskFactors: referralPayload.riskFactors.join(', '),
+            notes: 'High-risk referral from Admission'
+        });
+    } catch (e) {
+        console.error('Could not save admission referral for reports', e);
+    }
 
     try {
         localStorage.setItem('referral_patient', JSON.stringify(referralPayload));
