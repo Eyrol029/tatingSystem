@@ -1,6 +1,7 @@
 package com.backend.backend.controller;
 
 import java.util.List;
+import java.time.Instant;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -77,5 +78,10 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Invalid email or password.");
         }
+    }
+
+    @PostMapping("/user/{id}/heartbeat")
+    public User heartbeat(@PathVariable("id") long id) {
+        return userService.updateLastSeen(id, Instant.now());
     }
 }

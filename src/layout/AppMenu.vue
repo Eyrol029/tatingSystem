@@ -13,7 +13,9 @@ const loggedInUser = computed(() => userStore.user);
 // manual events, etc.) that fall on today's date, and shows the count as a
 // red badge on the Calendar menu item so admins notice at a glance.
 const CALENDAR_URL = 'http://localhost:8080/api/calendar';
+const APPOINTMENTS_URL = 'http://localhost:8080/api/appointment';
 const todayEventCount = ref(0);
+const pendingAppointmentCount = ref(0);
 
 function formatLocalDate(date) {
     const d = date instanceof Date ? date : new Date(date);
@@ -36,12 +38,33 @@ async function fetchTodayEventCount() {
     }
 }
 
+async function fetchPendingAppointmentCount() {
+    if (!loggedInUser.value || loggedInUser.value.role !== UserRole.ADMIN) {
+        pendingAppointmentCount.value = 0;
+        return;
+    }
+
+    try {
+        const res = await axios.get(APPOINTMENTS_URL);
+        pendingAppointmentCount.value = Array.isArray(res.data)
+            ? res.data.filter(appointment => (appointment.status || 'PENDING') === 'PENDING').length
+            : 0;
+    } catch (e) {
+        console.error('Failed to fetch pending appointment count', e);
+        pendingAppointmentCount.value = 0;
+    }
+}
+
 let refreshTimer = null;
 
 onMounted(() => {
     fetchTodayEventCount();
-    // Keep the badge reasonably fresh without needing a page reload.
-    refreshTimer = setInterval(fetchTodayEventCount, 5 * 60 * 1000);
+    fetchPendingAppointmentCount();
+    // Keep both notification badges fresh without needing a page reload.
+    refreshTimer = setInterval(() => {
+        fetchTodayEventCount();
+        fetchPendingAppointmentCount();
+    }, 30 * 1000);
 });
 
 onUnmounted(() => {
@@ -72,14 +95,13 @@ const model = [
             { label: 'Patient Dashboard', icon: '', to: '/uikit/PatientDashboard', roles: [UserRole.PATIENT] },
             { label: 'Clinic Services', icon: '', to: '/uikit/PatientService', roles: [UserRole.PATIENT] }, 
             { label: 'My Medical Records', icon: '', to: '/uikit/PatientProfileview', roles: [UserRole.PATIENT] },
-            { label: 'My Statement of Account', icon: '', to: '/uikit/MySOA', roles: [UserRole.PATIENT] },
             { label: 'Reports', icon: '', to: '/uikit/Reports', roles: [UserRole.ADMIN] },
       ]   
     }
 ];
 
 // Filter model based on logged-in user's role, and attach the live
-// today-event count as a `badge` onto the Calendar item specifically.
+// today-event and pending-appointment counts as badges on their menu items.
 const filteredModel = computed(() => {
     if (!loggedInUser.value) return [];
 
@@ -90,6 +112,9 @@ const filteredModel = computed(() => {
                 .map(item => {
                     if (item.label === 'Calendar' && todayEventCount.value > 0) {
                         return { ...item, badge: todayEventCount.value };
+                    }
+                    if (item.label === 'Appointments' && pendingAppointmentCount.value > 0) {
+                        return { ...item, badge: pendingAppointmentCount.value };
                     }
                     return item;
                 });

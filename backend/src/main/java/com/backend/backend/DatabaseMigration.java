@@ -52,6 +52,12 @@ public class DatabaseMigration {
                 "ALTER TABLE \"Patient\" ADD COLUMN IF NOT EXISTS \"numberOfPregnancy\" INT DEFAULT 0"
             );
             jdbcTemplate.execute(
+                "ALTER TABLE \"Appointment\" ADD COLUMN IF NOT EXISTS \"status\" VARCHAR(20) DEFAULT 'PENDING'"
+            );
+            jdbcTemplate.execute(
+                "UPDATE \"Appointment\" SET \"status\" = 'PENDING' WHERE \"status\" IS NULL"
+            );
+            jdbcTemplate.execute(
                 "UPDATE \"Patient\" SET \"numberOfPregnancy\" = 0 WHERE \"numberOfPregnancy\" IS NULL"
             );
             jdbcTemplate.execute(

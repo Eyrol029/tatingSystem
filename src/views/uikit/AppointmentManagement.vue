@@ -20,6 +20,7 @@ const emptyForm = {
   appointmentID:   null,
   appointmentDate: '',
   appointmentTime: '',
+  patientID: null,
   fName:           '',
   lName:           '',
   middleI:         '',
@@ -155,6 +156,22 @@ async function deleteAppointment(id) {
   }
 }
 
+async function updateApprovalStatus(appointment, status) {
+  error.value = ''
+
+  try {
+    const res = await axios.put(`${BASE}/${appointment.appointmentID}/status/${status}`)
+    const index = appointments.value.findIndex(a => a.appointmentID === appointment.appointmentID)
+    if (index !== -1) appointments.value[index] = res.data
+    successMsg.value = status === 'ACCEPTED'
+      ? 'Appointment accepted. The patient will be notified.'
+      : 'Appointment request rejected.'
+    setTimeout(() => { successMsg.value = '' }, 3000)
+  } catch (e) {
+    error.value = 'Failed to update appointment request: ' + (e?.response?.data?.message ?? e.message)
+  }
+}
+
 // ─── Toggle Done (checklist) ──────────────────────────────────────────────────
 // NEW: flips the "completed" flag for one appointment. Updates the UI right
 // away (optimistic), then saves the whole record via the existing PUT
@@ -176,6 +193,8 @@ async function toggleCompleted(appointment) {
       age:         appointment.age ? Number(appointment.age) : null,
       address:     appointment.address || null,
       serviceType: appointment.serviceType || null,
+      patientID: appointment.patientID ?? null,
+      status: appointment.status || 'PENDING',
       completed:   appointment.completed
     }
 
@@ -205,6 +224,8 @@ function buildPayload() {
     age:         form.value.age ? Number(form.value.age) : null,
     address:     form.value.address || null,
     serviceType: form.value.serviceType || null,
+    patientID:   form.value.patientID ?? null,
+    status:      form.value.status || 'PENDING',
     completed:   !!form.value.completed // NEW
   }
 }
@@ -331,6 +352,7 @@ onMounted(fetchAppointments)
             <th class="text-left px-4 py-3 text-gray-600 font-semibold">Age</th>
             <th class="text-left px-4 py-3 text-gray-600 font-semibold">Address</th>
             <th class="text-left px-4 py-3 text-gray-600 font-semibold">Service Type</th>
+            <th class="text-left px-4 py-3 text-gray-600 font-semibold">Request Status</th>
             <th class="text-left px-4 py-3 text-gray-600 font-semibold">Actions</th>
           </tr>
         </thead>
@@ -392,7 +414,34 @@ onMounted(fetchAppointments)
             </td>
 
             <td class="px-4 py-3">
+              <span
+                class="px-2 py-1 rounded text-xs font-semibold"
+                :class="a.status === 'ACCEPTED' ? 'bg-green-100 text-green-700' : a.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'"
+              >
+                {{ a.status || 'PENDING' }}
+              </span>
+            </td>
+
+            <td class="px-4 py-3">
               <div class="flex gap-2">
+
+                <button
+                  v-if="(a.status || 'PENDING') === 'PENDING'"
+                  @click="updateApprovalStatus(a, 'ACCEPTED')"
+                  class="text-green-600 hover:text-green-800 transition"
+                  title="Accept appointment request"
+                >
+                  Accept
+                </button>
+
+                <button
+                  v-if="(a.status || 'PENDING') === 'PENDING'"
+                  @click="updateApprovalStatus(a, 'REJECTED')"
+                  class="text-orange-600 hover:text-orange-800 transition"
+                  title="Reject appointment request"
+                >
+                  Reject
+                </button>
 
                 <button
                   @click="openEditModal(a)"
@@ -415,7 +464,7 @@ onMounted(fetchAppointments)
           </tr>
 
           <tr v-if="filteredAppointments.length === 0">
-            <td colspan="8" class="text-center py-10 text-gray-400">
+            <td colspan="9" class="text-center py-10 text-gray-400">
               {{ statusFilter === 'All' ? 'No appointments found.' : `No ${statusFilter.toLowerCase()} appointments.` }}
             </td>
           </tr>

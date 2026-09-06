@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 
 @Entity
 @Table(name = "UserAccount")
@@ -43,6 +44,9 @@ public class User {
     @Column(name = "status", length = 20)
     private String status = "Active"; // 'Active', 'Inactive'
 
+    @Column(name = "lastSeen")
+    private Instant lastSeen;
+
     // Getters and Setters
     public long getUserID() { return userID; }
     public void setUserID(long userID) { this.userID = userID; }
@@ -70,4 +74,7 @@ public class User {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public Instant getLastSeen() { return lastSeen; }
+    public void setLastSeen(Instant lastSeen) { this.lastSeen = lastSeen; }
 }

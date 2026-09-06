@@ -34,6 +34,9 @@ public class Appointment {
     @Column(nullable = false, columnDefinition = "boolean default false")
     private boolean completed = false;
 
+    @Column(length = 20)
+    private String status = "PENDING";
+
     private Integer gravida;
     private Integer term;
     private Integer preterm;
@@ -132,6 +135,14 @@ public class Appointment {
 
     public void setCompleted(boolean completed) {
         this.completed = completed;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public Integer getGravida() {

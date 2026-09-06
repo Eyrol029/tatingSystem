@@ -13,6 +13,26 @@ export const UserRole = {
 export const useUserDataStore = defineStore('userData', () => {
     const user = ref(null)
     const isLoading = ref(false)
+    let heartbeatTimer = null
+
+    function startHeartbeat() {
+        stopHeartbeat()
+        if (!user.value?.userID) return
+
+        const sendHeartbeat = () => {
+            axios.post(`${BASE_URL}/user/${user.value.userID}/heartbeat`).catch(() => {})
+        }
+
+        sendHeartbeat()
+        heartbeatTimer = window.setInterval(sendHeartbeat, 60 * 1000)
+    }
+
+    function stopHeartbeat() {
+        if (heartbeatTimer) {
+            window.clearInterval(heartbeatTimer)
+            heartbeatTimer = null
+        }
+    }
 
     // ✅ Check if user is logged in
     const isLoggedIn = computed(() => !!user.value)
@@ -37,6 +57,7 @@ export const useUserDataStore = defineStore('userData', () => {
             // Save user data
             user.value = res.data
             localStorage.setItem('user', JSON.stringify(res.data))
+            startHeartbeat()
 
             return true
         } catch (e) {
@@ -48,6 +69,7 @@ export const useUserDataStore = defineStore('userData', () => {
     }
 
     function logout() {
+        stopHeartbeat()
         user.value = null
         localStorage.removeItem('user')
     }
@@ -57,6 +79,7 @@ export const useUserDataStore = defineStore('userData', () => {
         const stored = localStorage.getItem('user')
         if (stored) {
             user.value = JSON.parse(stored)
+            startHeartbeat()
         }
     }
 

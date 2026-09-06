@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 
 const BASE_URL = 'http://localhost:8080';
@@ -9,6 +9,9 @@ const selectedUser = ref(null);
 const users = ref([]);
 const searchQuery = ref('');
 const roleFilter = ref('');
+let usersRefreshTimer;
+
+const ONLINE_WINDOW_MS = 2 * 60 * 1000;
 
 // Lists of EXISTING patients/employees — used so a User Account can only ever
 // be linked to a record that already exists, never a free-typed ID.
@@ -64,7 +67,29 @@ onMounted(() => {
   fetchUsers();
   fetchPatients();
   fetchEmployees();
+  usersRefreshTimer = window.setInterval(fetchUsers, 30 * 1000);
 });
+
+onUnmounted(() => {
+  window.clearInterval(usersRefreshTimer);
+});
+
+function isUserOnline(user) {
+  if (!user.lastSeen || user.status !== 'Active') return false;
+  return Date.now() - new Date(user.lastSeen).getTime() <= ONLINE_WINDOW_MS;
+}
+
+const onlineCount = computed(() => users.value.filter(isUserOnline).length);
+
+function getPatientCaseNumber(user) {
+  if (!user.patientID) return '—';
+
+  const patient = patientsList.value.find(
+    item => String(item.patientID) === String(user.patientID)
+  );
+
+  return patient?.patientCode || user.patientID;
+}
 
 const filteredUsers = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
@@ -419,7 +444,9 @@ async function handleDeleteUser(userID) {
       <div class="flex justify-between items-center mb-6">
         <div>
           <h3 class="text-2xl font-bold text-gray-800">Staff Accounts</h3>
-          <p class="text-sm text-gray-500 mt-1">Manage Staff Users</p>
+          <p class="text-sm text-gray-500 mt-1">
+            Manage Staff Users · <span class="font-semibold text-green-600">{{ onlineCount }} online</span>
+          </p>
         </div>
         <div class="flex items-center gap-4">
           <div class="relative">
@@ -492,8 +519,9 @@ async function handleDeleteUser(userID) {
                 <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Email</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Role</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Employee ID</th>
-                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Patient ID</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Patient Case No.</th>
                 <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
+                <th class="px-6 py-4 text-left text-sm font-semibold text-gray-700">Online</th>
                 <th class="px-6 py-4 text-center text-sm font-semibold text-gray-700">Actions</th>
               </tr>
             </thead>
@@ -505,7 +533,7 @@ async function handleDeleteUser(userID) {
                 <td class="px-6 py-4 text-sm text-gray-900">{{ user.email }}</td>
                 <td class="px-6 py-4 text-sm text-gray-900">{{ user.role }}</td>
                 <td class="px-6 py-4 text-sm text-gray-900">{{ user.employeeID ?? '—' }}</td>
-                <td class="px-6 py-4 text-sm text-gray-900">{{ user.patientID ?? '—' }}</td>
+                <td class="px-6 py-4 text-sm text-gray-900">{{ getPatientCaseNumber(user) }}</td>
                 <td class="px-6 py-4">
                   <span
                     :class="[
@@ -515,6 +543,21 @@ async function handleDeleteUser(userID) {
                   >
                     {{ user.status }}
                   </span>
+                </td>
+                <td class="px-6 py-4">
+                  <span
+                    class="inline-flex items-center gap-2 text-sm font-semibold"
+                    :class="isUserOnline(user) ? 'text-green-600' : 'text-red-600'"
+                  >
+                    <span
+                      class="h-2.5 w-2.5 rounded-full"
+                      :class="isUserOnline(user) ? 'bg-green-500' : 'bg-red-500'"
+                    ></span>
+                    {{ isUserOnline(user) ? 'Online' : 'Offline' }}
+                  </span>
+                  <div v-if="user.lastSeen" class="text-xs text-gray-400 mt-1">
+                    {{ new Date(user.lastSeen).toLocaleString() }}
+                  </div>
                 </td>
                 <td class="px-6 py-4">
                   <div class="flex justify-center gap-2">

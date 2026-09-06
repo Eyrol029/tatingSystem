@@ -114,6 +114,7 @@ const submitStatus = ref({
 
 const failedSections = ref([]);
 const patientName = ref('');
+const patientCaseNumber = ref('');
 const originalFollowUpDate = ref('');
 
 async function fetchPatientName(clientId) {
@@ -121,6 +122,7 @@ async function fetchPatientName(clientId) {
         const res = await axios.get(`${PATIENTS_BASE}/${clientId}`);
         const p = res.data;
         patientName.value = `${p.fName || ''} ${p.lName || ''}`.trim();
+        patientCaseNumber.value = p.patientCode || String(clientId);
     } catch (e) {
         console.error('Failed to fetch patient name for calendar sync', e);
     }
@@ -1116,7 +1118,7 @@ onMounted(async () => {
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm font-medium mb-1">Client ID</label>
-                        <input v-model="formData.clientId" type="text" readonly
+                        <input :value="patientCaseNumber || formData.clientId" type="text" readonly
                             class="w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded cursor-not-allowed" />
                     </div>
                     <div>

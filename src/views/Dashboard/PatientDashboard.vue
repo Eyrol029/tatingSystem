@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 import { useUserDataStore } from '@/stores/userData';
 
@@ -43,6 +43,11 @@ const stats = ref({
 const appointments = ref([]);
 const soaDetails = ref(null);
 const installments = ref([]);
+let appointmentsRefreshTimer;
+
+const acceptedAppointments = computed(() =>
+    appointments.value.filter(appointment => appointment.status === 'ACCEPTED')
+);
 
 // Safely parses an installment's serviceBreakdown JSON for display —
 // returns [] if missing/unparsable rather than throwing.
@@ -174,7 +179,8 @@ async function submitAppointment() {
             lName: rest.join(' ') || '',
             appointmentDate: appointmentForm.value.date,
             serviceType: appointmentForm.value.serviceType,
-            notes: appointmentForm.value.notes
+            notes: appointmentForm.value.notes,
+            status: 'PENDING'
         });
 
         alert('Appointment request submitted successfully!');
@@ -252,6 +258,11 @@ const upcomingEventsList = computed(() => {
 
 onMounted(() => {
     loadAll();
+    appointmentsRefreshTimer = window.setInterval(fetchAppointments, 30 * 1000);
+});
+
+onUnmounted(() => {
+    window.clearInterval(appointmentsRefreshTimer);
 });
 </script>
 
@@ -263,6 +274,10 @@ onMounted(() => {
         </div>
     </div>
     <div v-else class="min-h-screen bg-gray-50">
+        <div v-if="acceptedAppointments.length" class="mx-8 mt-6 rounded-lg border border-green-200 bg-green-50 px-5 py-4 text-green-800">
+            <p class="font-semibold">Your appointment has been accepted.</p>
+            <p class="mt-1 text-sm">{{ acceptedAppointments[acceptedAppointments.length - 1].serviceType || 'Appointment' }} request confirmed for {{ acceptedAppointments[acceptedAppointments.length - 1].appointmentDate }}.</p>
+        </div>
         <!-- Header -->
         <div class="bg-white border-b border-gray-200 px-8 py-6">
             <div class="flex items-start justify-between">

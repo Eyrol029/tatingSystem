@@ -89,6 +89,8 @@ function viewService(service) {
         router.push(`/uikit/FamilyPlanningAdmission/${patientId}/${serviceId}`);
     } else if (name === 'ultrasound') {
         router.push(`/uikit/UltrasoundAdmission/${patientId}/${serviceId}`);
+    } else if (name.includes('laboratory') || name.includes('lab')) {
+        router.push(`/uikit/Laboratoryform/${patientId}/${serviceId}`);
     } else if (name.includes('admis') || name.includes('lying-in') || name.includes('admission')) {
         router.push(`/uikit/Admission/${patientId}/${serviceId}`);
     } else {

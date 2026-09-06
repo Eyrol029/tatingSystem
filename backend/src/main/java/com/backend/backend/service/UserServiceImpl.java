@@ -1,6 +1,7 @@
 package com.backend.backend.service;
 
 import java.util.List;
+import java.time.Instant;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -88,6 +89,14 @@ public class UserServiceImpl implements UserService {
         throw new RuntimeException("Account is inactive.");
     }
 
-    return user;
+    user.setLastSeen(Instant.now());
+    return userRepository.save(user);
 }
+
+    @Override
+    public User updateLastSeen(long id, Instant lastSeen) {
+        User user = getUserById(id);
+        user.setLastSeen(lastSeen);
+        return userRepository.save(user);
+    }
 }

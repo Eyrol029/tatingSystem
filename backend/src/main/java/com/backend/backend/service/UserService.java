@@ -1,6 +1,7 @@
 package com.backend.backend.service;
 
 import java.util.List;
+import java.time.Instant;
 
 import com.backend.backend.model.User;
 
@@ -30,4 +31,6 @@ public interface UserService {
     List<User> getUsersByEmployeeID(Integer employeeID);
     
     User login(String email, String password, String role);
+
+    User updateLastSeen(long id, Instant lastSeen);
 }

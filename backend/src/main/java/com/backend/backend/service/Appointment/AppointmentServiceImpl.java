@@ -36,6 +36,13 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     @Override
+    public Appointment updateStatus(Integer id, String status) {
+        Appointment appointment = getById(id);
+        appointment.setStatus(status);
+        return repository.save(appointment);
+    }
+
+    @Override
     public void delete(Integer id) {
         repository.deleteById(id);
     }

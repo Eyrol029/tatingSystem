@@ -39,6 +39,14 @@ public class AppointmentController {
         return service.update(appointment);
     }
 
+    @PutMapping("/{id}/status/{status}")
+    public Appointment updateStatus(@PathVariable Integer id, @PathVariable String status) {
+        if (!status.equals("PENDING") && !status.equals("ACCEPTED") && !status.equals("REJECTED")) {
+            throw new IllegalArgumentException("Invalid appointment status");
+        }
+        return service.updateStatus(id, status);
+    }
+
     // DELETE
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Integer id) {
