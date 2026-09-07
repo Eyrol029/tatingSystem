@@ -555,7 +555,7 @@ function fmtDate(d) {
         <div class="flex items-center gap-2">
           <span class="text-xl">💰</span>
           <h3 class="font-bold text-gray-800">
-            Income &amp; Expense Comparison
+            Clinic Income &amp; Expense 
             <span class="text-sm font-normal text-gray-400 ml-1">— {{ dateFilter }}</span>
           </h3>
         </div>

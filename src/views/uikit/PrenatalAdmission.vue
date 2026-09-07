@@ -54,7 +54,7 @@ async function handleReferPatient() {
       age: patientPayload.age,
       gestationalWeek: patientPayload.gestationalWeek,
       riskFactors: patientPayload.riskFactors.join(', '),
-      notes: 'High-risk referral from Prenatal'
+      notes: 'Prenatal warning requiring clinic review'
     })
   } catch (e) {
     console.error('Could not save prenatal referral for reports', e)
@@ -353,7 +353,7 @@ const ruleRiskReasons = computed(() => {
   if (medicalHighRisk.value) reasons.push('Medical/surgical risk condition(s) checked')
   if (leopoldFhtHighRisk.value) reasons.push('Abnormal fetal heart tone')
   if (labHighRisk.value) reasons.push('Abnormal laboratory findings')
-  if (ultrasoundHighRisk.value) reasons.push('Ultrasound findings indicate high risk')
+  if (ultrasoundHighRisk.value) reasons.push('Ultrasound findings require clinical review')
   if (referralHighRisk.value) reasons.push('Referral hospital is required')
   if (visitHighRisk.value) reasons.push('Follow-up visit(s) show abnormal findings')
 
@@ -1158,45 +1158,47 @@ async function submitForm() {
     </div>
 
 
-    <!-- HIGH-RISK / LOW-RISK BANNER (live) -->
+    <!-- WARNING / REVIEW BANNER (live) -->
     <div v-if="!riskResult && (isHighRiskByRules || isLowRiskByRules)" class="no-print mb-4 rounded-lg border-2 p-4"
-      :class="isHighRiskByRules ? 'border-red-500 bg-red-50' : 'border-green-500 bg-green-50'">
+      :class="isHighRiskByRules ? 'border-amber-500 bg-amber-50' : 'border-green-500 bg-green-50'">
       <div class="flex items-center gap-2 mb-2">
-        <span class="text-2xl">{{ isHighRiskByRules ? '🚨' : '✅' }}</span>
-        <span class="font-bold text-lg" :class="isHighRiskByRules ? 'text-red-700' : 'text-green-700'">
-          {{ isHighRiskByRules ? 'HIGH RISK PATIENT DETECTED' : 'LOW RISK PATIENT' }}
+        <span class="text-2xl">{{ isHighRiskByRules ? '⚠️' : '✅' }}</span>
+        <span class="font-bold text-lg" :class="isHighRiskByRules ? 'text-amber-700' : 'text-green-700'">
+          {{ isHighRiskByRules ? 'WARNING: CLINICAL REVIEW REQUIRED' : 'NO WARNING INDICATORS DETECTED' }}
         </span>
-        <span class="ml-auto text-xs italic" :class="isHighRiskByRules ? 'text-red-500' : 'text-green-500'">
-          PhilHealth / DOH rule check
+        <span class="ml-auto text-xs italic" :class="isHighRiskByRules ? 'text-amber-600' : 'text-green-500'">
+          Screening indicators only
         </span>
       </div>
-      <ul v-if="isHighRiskByRules" class="list-disc list-inside text-sm text-red-700 space-y-1">
+      <ul v-if="isHighRiskByRules" class="list-disc list-inside text-sm text-amber-700 space-y-1">
         <li v-for="reason in ruleRiskReasons" :key="reason">{{ reason }}</li>
       </ul>
       <p v-else class="text-sm text-green-700">
-        Low risk: age 19–35, pregnancy count 2–4, and no high-risk conditions or multiple pregnancy.
+        No warning indicators were detected by the screening rules. The clinic makes the final assessment.
       </p>
+      <p class="mt-2 text-sm font-semibold text-gray-700">Final risk judgment must be made by the clinic.</p>
     </div>
 
 
-    <!-- HIGH-RISK BANNER (confirmed from backend) -->
+    <!-- CLINICAL REVIEW BANNER (server indicators) -->
     <div v-if="riskResult" class="no-print mb-4 rounded-lg border-2 p-4"
-      :class="riskResult.highRisk ? 'border-red-500 bg-red-50' : 'border-green-500 bg-green-50'">
+      :class="riskResult.highRisk ? 'border-amber-500 bg-amber-50' : 'border-green-500 bg-green-50'">
       <div class="flex items-center gap-2 mb-2">
-        <span class="text-2xl">{{ riskResult.highRisk ? '🚨' : '✅' }}</span>
+        <span class="text-2xl">{{ riskResult.highRisk ? '⚠️' : '✅' }}</span>
         <span class="font-bold text-lg"
-          :class="riskResult.highRisk ? 'text-red-700' : 'text-green-700'">
-          {{ riskResult.highRisk ? 'HIGH RISK PATIENT' : 'LOW RISK PATIENT' }}
+          :class="riskResult.highRisk ? 'text-amber-700' : 'text-green-700'">
+          {{ riskResult.highRisk ? 'WARNING: CLINICAL REVIEW REQUIRED' : 'NO WARNING INDICATORS DETECTED' }}
         </span>
         <span class="ml-auto text-xs italic"
-          :class="riskResult.highRisk ? 'text-red-500' : 'text-green-500'">
-          Assessed by server
+          :class="riskResult.highRisk ? 'text-amber-600' : 'text-green-500'">
+          Screening indicators only
         </span>
       </div>
-      <ul v-if="riskResult.highRisk" class="list-disc list-inside text-sm text-red-700 space-y-1">
+      <ul v-if="riskResult.highRisk" class="list-disc list-inside text-sm text-amber-700 space-y-1">
         <li v-for="reason in riskResult.reasons" :key="reason">{{ reason }}</li>
       </ul>
-      <p v-else class="text-sm text-green-700">No high-risk factors detected in this record.</p>
+      <p v-else class="text-sm text-green-700">No warning indicators were detected in this record.</p>
+      <p class="mt-2 text-sm font-semibold text-gray-700">Final risk judgment must be made by the clinic.</p>
     </div>
 
 
@@ -1249,7 +1251,7 @@ async function submitForm() {
       <div>
         <h3 class="section-title flex items-center gap-2">
           Obstetric Risk Factors
-          <span v-if="obstetricHighRisk" class="text-xs font-bold text-white bg-red-500 rounded px-2 py-0.5">HIGH RISK</span>
+          <span v-if="obstetricHighRisk" class="text-xs font-bold text-white bg-amber-500 rounded px-2 py-0.5">WARNING</span>
         </h3>
         <div class="space-y-1">
           <label class="cb" :class="form.obstetricRisk.multiplePregnancy ? 'text-red-600 font-semibold' : ''">
@@ -1276,7 +1278,7 @@ async function submitForm() {
       <div>
         <h3 class="section-title flex items-center gap-2">
           Medical / Surgical History
-          <span v-if="medicalHighRisk" class="text-xs font-bold text-white bg-red-500 rounded px-2 py-0.5">HIGH RISK</span>
+          <span v-if="medicalHighRisk" class="text-xs font-bold text-white bg-amber-500 rounded px-2 py-0.5">WARNING</span>
         </h3>
         <div class="space-y-1">
           <label class="cb" :class="form.medical.hypertension ? 'text-red-600 font-semibold' : ''">
@@ -1382,19 +1384,19 @@ async function submitForm() {
           <label class="field-label flex items-center gap-1">
             Type of Delivery
             <span v-if="isLiveHighRisk || riskResult?.highRisk"
-              class="text-xs font-bold text-white bg-red-500 rounded px-1.5 py-0.5">⚠ HIGH RISK</span>
+              class="text-xs font-bold text-white bg-amber-500 rounded px-1.5 py-0.5">⚠ WARNING</span>
           </label>
           <select v-model="form.deliveryDetails.type" class="select-field w-full"
             :class="(isLiveHighRisk || riskResult?.highRisk) ? 'select-risk' : ''">
             <option value="">— Select —</option>
             <option>Normal Spontaneous Vaginal Delivery</option>
-            <option>High Risk Delivery</option>
+            <option value="High Risk Delivery">Requires Clinical Review</option>
           </select>
         </div>
         <div class="flex items-center gap-3">
           <label class="field-label flex items-center gap-1">
             Referral Hospital?
-            <span v-if="referralHighRisk" class="text-red-600 font-bold text-xs ml-1">⚠ HIGH RISK</span>
+            <span v-if="referralHighRisk" class="text-amber-600 font-bold text-xs ml-1">⚠ WARNING</span>
           </label>
           <input type="checkbox" v-model="form.deliveryDetails.referralHospitalNeeded" class="accent-red-500" />
           <input v-if="form.deliveryDetails.referralHospitalNeeded" type="text"

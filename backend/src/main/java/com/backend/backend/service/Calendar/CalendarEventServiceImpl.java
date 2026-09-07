@@ -94,6 +94,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
     private List<CalendarEventDto> loadAppointmentEvents(LocalDate start, LocalDate end) {
         return appointmentRepository.findAll().stream()
                 .filter(a -> a.getAppointmentDate() != null)
+            .filter(a -> "ACCEPTED".equalsIgnoreCase(a.getStatus()))
                 .map(this::mapAppointmentToDto)
                 .filter(event -> isInRange(event.getEventDate(), start, end))
                 .collect(Collectors.toList());
@@ -281,6 +282,7 @@ public class CalendarEventServiceImpl implements CalendarEventService {
                 ? "Time: " + appointment.getAppointmentTime().toString()
                 : "Scheduled appointment");
         dto.setSource("appointment");
+        dto.setStatus(appointment.getStatus());
         return dto;
     }
 

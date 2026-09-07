@@ -256,8 +256,8 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-gray-50 p-6">
-        <div class="max-w-4xl mx-auto">
+    <div class="min-h-screen bg-gray-50 p-4 lg:p-6">
+        <div class="w-full max-w-6xl mx-auto">
 
             <!-- Toolbar -->
             <div class="mb-4 no-print">
@@ -271,9 +271,9 @@ onMounted(async () => {
             </div>
 
             <!-- Header -->
-            <div class="flex justify-between items-center mb-6 no-print">
+            <div class="flex flex-wrap justify-between items-center gap-3 mb-4 no-print">
                 <h1 class="text-2xl font-bold text-gray-800">{{ patientDisplayName }}</h1>
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-2">
                     <button @click="openSmsModal"
                         class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition flex items-center gap-2 shadow-sm font-medium">
                         💬 Send SMS
@@ -303,7 +303,7 @@ onMounted(async () => {
 
             <div v-else>
                 <!-- Patient info -->
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5 mb-4">
                     <div class="flex justify-between items-start">
                         <div>
                             <p class="text-sm text-gray-500">Patient</p>
@@ -323,7 +323,7 @@ onMounted(async () => {
                 </div>
 
                 <!-- Totals -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                     <div class="bg-orange-50 rounded-lg p-4">
                         <p class="text-gray-500 text-sm mb-1">Total Bill</p>
                         <p class="text-2xl font-bold text-orange-500">{{ formatCurrency(soaDetails.totalAmount) }}</p>

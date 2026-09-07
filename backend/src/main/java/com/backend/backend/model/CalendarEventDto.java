@@ -12,6 +12,7 @@ public class CalendarEventDto {
     private String patientName;
     private String description;
     private String source;
+    private String status;
 
     public Integer getEventID() {
         return eventID;
@@ -75,5 +76,13 @@ public class CalendarEventDto {
 
     public void setSource(String source) {
         this.source = source;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

@@ -1,3 +1,4 @@
+
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -522,7 +523,7 @@ onMounted(() => {
       </div>
       <button
         @click="openCaseNumberModal"
-        class="bg-teal-600 text-white px-4 py-2 rounded hover:bg-teal-700"
+        class="bg-teal-600 text-white px-4 py-2 hover:bg-teal-700"
       >
         Add Case Number
       </button>
@@ -534,18 +535,18 @@ onMounted(() => {
         @keyup.enter="searchPatient"
         type="text"
         placeholder="Search patient name, ID, or diagnosis"
-        class="w-full border rounded px-4 py-2"
+        class="w-full border px-4 py-2"
       />
       <div class="flex gap-2">
         <button
           @click="searchPatient"
-          class="bg-blue-600 text-white px-4 py-2 rounded w-full"
+          class="bg-blue-600 text-white px-4 py-2 w-full"
         >
           Search
         </button>
         <button
           @click="clearSearch"
-          class="bg-gray-200 text-gray-700 px-4 py-2 rounded w-full"
+          class="bg-gray-200 text-gray-700 px-4 py-2 w-full"
         >
           Clear
         </button>
@@ -553,39 +554,52 @@ onMounted(() => {
     </div>
 
     <!-- SOA LIST -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div v-for="soa in filteredSoaList" :key="soa.id" class="bg-white p-4 rounded shadow">
-        <div class="flex justify-between">
-          <div>
-            <p class="font-semibold">{{ soa.patientName }}</p>
-            <p class="text-sm text-gray-500">{{ soa.date }}</p>
-            <p v-if="soa.caseNumber" class="text-sm font-medium text-teal-700">Case: {{ soa.caseNumber }}</p>
-          </div>
-          <div class="space-x-3">
-            <button
-              @click="goToMySoa(soa)"
-              class="text-blue-600 hover:underline"
-            >
-              View
-            </button>
-            <button
-              @click="openAddPayment(soa)"
-              class="text-indigo-600 hover:underline"
-            >
-              Add Payment
-            </button>
-          </div>
-        </div>
-
-        <p class="mt-2 text-sm">Total: {{ formatCurrency(soa.totalAmount) }}</p>
-        <p class="text-sm text-gray-600">Paid: {{ formatCurrency(soa.amountPaid) }}</p>
-        <p class="text-sm text-gray-600">Balance: {{ formatCurrency(soa.balanceAmount) }}</p>
-      </div>
+    <div class="bg-white border border-gray-200 overflow-x-auto">
+      <table class="w-full min-w-[900px]">
+        <thead class="bg-gray-50 border-b border-gray-200">
+          <tr>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Case No.</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Patient Name</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Diagnosis / Service</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Total</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Paid</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Balance</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="filteredSoaList.length === 0">
+            <td colspan="8" class="px-4 py-8 text-center text-sm text-gray-500">
+              No statements of account found.
+            </td>
+          </tr>
+          <tr
+            v-for="soa in filteredSoaList"
+            :key="soa.id"
+            class="border-b border-gray-200 hover:bg-gray-50"
+          >
+            <td class="px-4 py-4 text-sm font-semibold text-teal-700">{{ soa.caseNumber || '—' }}</td>
+            <td class="px-4 py-4 text-sm text-gray-900">{{ soa.patientName }}</td>
+            <td class="px-4 py-4 text-sm text-gray-600">{{ soa.date || '—' }}</td>
+            <td class="px-4 py-4 text-sm text-gray-900">{{ soa.otherDiagnosis || soa.serviceName || '—' }}</td>
+            <td class="px-4 py-4 text-sm text-gray-900">{{ formatCurrency(soa.totalAmount) }}</td>
+            <td class="px-4 py-4 text-sm text-gray-600">{{ formatCurrency(soa.amountPaid) }}</td>
+            <td class="px-4 py-4 text-sm font-semibold text-red-600">{{ formatCurrency(soa.balanceAmount) }}</td>
+            <td class="px-4 py-4">
+              <div class="flex items-center gap-3 whitespace-nowrap">
+                <button @click="goToMySoa(soa)" class="text-blue-600 hover:underline text-sm">View</button>
+                <button @click="openAddPayment(soa)" class="text-indigo-600 hover:underline text-sm">Add Payment</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- VIEW SOA MODAL (UPDATE: Pareho na ang sulod ug function sa SOA Modal) -->
     <div v-if="showViewModal && selectedSOA" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div class="bg-white p-6 rounded-lg w-full max-w-md border-2 border-blue-600 shadow-xl">
+      <div class="bg-white p-6 w-full max-w-md border-2 border-blue-600 shadow-xl">
         <h2 class="text-xl font-bold mb-2">Statement Of Account</h2>
         <p class="text-sm text-gray-600 mb-4">Patient Statement & Billing Summary</p>
 
@@ -599,7 +613,7 @@ onMounted(() => {
             <span>{{ selectedSOA.patientId }}</span>
           </div>
 
-          <div v-if="availedServices.length" class="border rounded my-2">
+          <div v-if="availedServices.length" class="border my-2">
             <div class="bg-gray-100 px-3 py-1 font-semibold text-xs border-b">Availed Services</div>
             <div
               v-for="(s, i) in availedServices"
@@ -638,10 +652,10 @@ onMounted(() => {
         </div>
 
         <div class="flex justify-end gap-3 mt-6">
-          <button @click="printReceipt" class="bg-purple-600 text-white px-4 py-2 rounded text-sm hover:bg-purple-700">
+          <button @click="printReceipt" class="bg-purple-600 text-white px-4 py-2 text-sm hover:bg-purple-700">
             Print SOA
           </button>
-          <button @click="closeView" class="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300">
+          <button @click="closeView" class="bg-gray-200 text-gray-700 px-4 py-2 text-sm hover:bg-gray-300">
             Close
           </button>
         </div>
@@ -650,7 +664,7 @@ onMounted(() => {
 
     <!-- SOA MODAL (from within payment) -->
     <div v-if="showSOAModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div class="bg-white p-6 rounded-lg w-full max-w-md border-2 border-blue-600">
+      <div class="bg-white p-6 w-full max-w-md border-2 border-blue-600">
         <h2 class="text-xl font-bold mb-4">Statement Of Account</h2>
         <p class="text-sm text-gray-600 mb-3">This is the statement of account for the current payment details.</p>
 
@@ -660,7 +674,7 @@ onMounted(() => {
             <span>{{ selectedSOA?.patientName }}</span>
           </div>
 
-          <div v-if="availedServices.length" class="border rounded">
+          <div v-if="availedServices.length" class="border">
             <div class="bg-gray-100 px-3 py-1 font-semibold text-xs">Availed Services</div>
             <div
               v-for="(s, i) in availedServices"
@@ -704,15 +718,15 @@ onMounted(() => {
         </div>
 
         <div class="flex justify-end gap-3 mt-6">
-          <button @click="printReceipt" class="bg-purple-600 text-white px-4 py-2 rounded">Print SOA</button>
-          <button @click="closeSOAModal" class="bg-gray-200 text-gray-700 px-4 py-2 rounded">Close</button>
+          <button @click="printReceipt" class="bg-purple-600 text-white px-4 py-2">Print SOA</button>
+          <button @click="closeSOAModal" class="bg-gray-200 text-gray-700 px-4 py-2">Close</button>
         </div>
       </div>
     </div>
 
     <!-- ADD PAYMENT MODAL -->
     <div v-if="showPaymentModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div class="bg-white p-6 rounded-lg w-full max-w-2xl">
+      <div class="bg-white p-6 w-full max-w-2xl">
         <h2 class="text-xl font-bold mb-4">Patient Receipt Payment</h2>
         <p class="mb-4 text-sm text-gray-600">Patient: {{ selectedSOA?.patientName }}</p>
 
@@ -724,7 +738,7 @@ onMounted(() => {
                 v-model="paymentForm.totalAmount"
                 type="text"
                 inputmode="decimal"
-                class="w-full border rounded px-4 py-2"
+                class="w-full border px-4 py-2"
                 placeholder="Enter total amount"
               />
             </label>
@@ -735,7 +749,7 @@ onMounted(() => {
                 :value="formatCurrency(selectedSOA ? selectedSOA.amountPaid : 0)"
                 type="text"
                 readonly
-                class="w-full border bg-gray-100 rounded px-4 py-2"
+                class="w-full border bg-gray-100 px-4 py-2"
               />
             </label>
 
@@ -745,7 +759,7 @@ onMounted(() => {
                 v-model="paymentForm.paidAmount"
                 type="text"
                 inputmode="decimal"
-                class="w-full border rounded px-4 py-2"
+                class="w-full border px-4 py-2"
                 placeholder="Enter amount"
               />
             </label>
@@ -756,7 +770,7 @@ onMounted(() => {
                 :value="formatCurrency(paymentBalance)"
                 type="text"
                 readonly
-                class="w-full border bg-gray-100 rounded px-4 py-2"
+                class="w-full border bg-gray-100 px-4 py-2"
               />
             </label>
           </div>
@@ -768,7 +782,7 @@ onMounted(() => {
               <input
                 v-model="paymentForm.discountName"
                 type="text"
-                class="w-full border rounded px-4 py-2"
+                class="w-full border px-4 py-2"
                 placeholder="e.g. Senior Citizen, PWD, PhilHealth"
               />
             </label>
@@ -779,7 +793,7 @@ onMounted(() => {
                 v-model="paymentForm.discountAmount"
                 type="text"
                 inputmode="decimal"
-                class="w-full border rounded px-4 py-2"
+                class="w-full border px-4 py-2"
                 placeholder="Enter discount amount"
               />
             </label>
@@ -790,7 +804,7 @@ onMounted(() => {
                 :value="formatCurrency(totalNewBalanceAfterDiscount)"
                 type="text"
                 readonly
-                class="w-full border bg-gray-100 rounded px-4 py-2 font-semibold"
+                class="w-full border bg-gray-100 px-4 py-2 font-semibold"
               />
             </label>
           </div>
@@ -798,7 +812,7 @@ onMounted(() => {
           <button
             type="button"
             @click="addDiscount"
-            class="bg-red-600 text-white px-4 py-2 rounded text-sm w-fit"
+            class="bg-red-600 text-white px-4 py-2 text-sm w-fit"
           >
             + Add Discount
           </button>
@@ -808,7 +822,7 @@ onMounted(() => {
             <select
               v-model="selectedServiceId"
               @change="onPaymentServiceChange"
-              class="w-full border rounded px-4 py-2"
+              class="w-full border px-4 py-2"
             >
               <option value="" disabled>Select a service</option>
               <option v-for="service in servicesList" :key="service.id" :value="service.id">
@@ -820,28 +834,28 @@ onMounted(() => {
               v-if="selectedServiceId === 'custom'"
               v-model="paymentForm.serviceName"
               type="text"
-              class="w-full border rounded px-4 py-2 mt-2"
+              class="w-full border px-4 py-2 mt-2"
               placeholder="Enter custom service name"
             />
             <input
               v-if="selectedServiceId === 'custom'"
               v-model="paymentForm.totalAmount"
               type="number"
-              class="w-full border rounded px-4 py-2 mt-2"
+              class="w-full border px-4 py-2 mt-2"
               placeholder="Enter amount"
             />
 
             <button
               type="button"
               @click="addAvailedService"
-              class="mt-2 bg-indigo-600 text-white px-4 py-2 rounded text-sm"
+              class="mt-2 bg-indigo-600 text-white px-4 py-2 text-sm"
             >
               + Add New Availed Service
             </button>
           </label>
 
           <!-- AVAILED SERVICES LIST -->
-          <div class="border rounded">
+          <div class="border">
             <div class="bg-gray-100 px-4 py-2 font-semibold text-sm flex justify-between">
               <span>Availed Services</span>
               <span>{{ formatCurrency(availedServicesTotal) }}</span>
@@ -871,7 +885,7 @@ onMounted(() => {
             <input
               v-model="paymentForm.diagnosis"
               type="text"
-              class="w-full border rounded px-4 py-2"
+              class="w-full border px-4 py-2"
               placeholder="Diagnosis"
             />
           </label>
@@ -881,16 +895,16 @@ onMounted(() => {
             <input
               v-model="paymentForm.paymentDate"
               type="date"
-              class="w-full border rounded px-4 py-2"
+              class="w-full border px-4 py-2"
             />
           </label>
         </div>
 
         <div class="flex flex-col sm:flex-row items-center gap-3 mt-4">
-          <button @click="addPayment" class="bg-green-600 text-white px-4 py-2 rounded">Save Payment</button>
-          <button @click="printReceipt" class="bg-purple-600 text-white px-4 py-2 rounded">Print Receipt</button>
-          <button @click="openSOAModal" class="bg-blue-600 text-white px-4 py-2 rounded">SOA</button>
-          <button @click="closePaymentModal" class="bg-gray-200 text-gray-700 px-4 py-2 rounded">Cancel</button>
+          <button @click="addPayment" class="bg-green-600 text-white px-4 py-2">Save Payment</button>
+          <button @click="printReceipt" class="bg-purple-600 text-white px-4 py-2">Print Receipt</button>
+          <button @click="openSOAModal" class="bg-blue-600 text-white px-4 py-2">SOA</button>
+          <button @click="closePaymentModal" class="bg-gray-200 text-gray-700 px-4 py-2">Cancel</button>
         </div>
 
         <p v-if="paymentMessage" class="mt-4 text-sm text-gray-700">{{ paymentMessage }}</p>
@@ -899,7 +913,7 @@ onMounted(() => {
 
     <!-- ADD SOA MODAL -->
     <div v-if="showAddModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div class="bg-white w-full max-w-md p-6 rounded-lg">
+      <div class="bg-white w-full max-w-md p-6">
         <h2 class="text-xl font-bold mb-2">Add SOA Case Number</h2>
         <p class="mb-4 text-sm text-gray-600">
           This case number will be applied to all SOA records for all patients.
@@ -911,14 +925,14 @@ onMounted(() => {
             v-model="caseNumberInput"
             type="text"
             placeholder="Enter case number"
-            class="w-full border p-2 rounded"
+            class="w-full border p-2"
           />
         </label>
         <p v-if="caseNumberMessage" class="mt-2 text-sm text-red-600">{{ caseNumberMessage }}</p>
 
         <div class="flex justify-end mt-4 gap-3">
-          <button @click="showAddModal = false" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
-          <button @click="saveCaseNumber" class="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
+          <button @click="showAddModal = false" class="px-4 py-2 bg-gray-300">Cancel</button>
+          <button @click="saveCaseNumber" class="px-4 py-2 bg-blue-600 text-white">Save</button>
         </div>
       </div>
     </div>

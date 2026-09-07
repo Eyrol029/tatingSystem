@@ -9,6 +9,7 @@ import { useUserDataStore } from '@/stores/userData';
 const PATIENTS_URL      = 'http://localhost:8080/api/patients';
 const APPOINTMENTS_URL  = 'http://localhost:8080/api/appointment';
 const PATIENT_SERVICES_URL = 'http://localhost:8080/api/patient-services';
+const CLINICAL_SERVICES_URL = 'http://localhost:8080/api/clinical-services';
 const SOA_PATIENT_URL   = 'http://localhost:8080/api/billing/soa/patient';
 const INSTALLMENTS_URL  = 'http://localhost:8080/api/billing/installments';
 
@@ -45,11 +46,22 @@ const appointments = ref([]);
 const patientServices = ref([]);
 const soaDetails = ref(null);
 const installments = ref([]);
+const clinicalServices = ref([]);
+const servicesLoading = ref(false);
+const servicesError = ref('');
 let appointmentsRefreshTimer;
 
 const acceptedAppointments = computed(() =>
-    appointments.value.filter(appointment => appointment.status === 'ACCEPTED')
+    appointments.value.filter(appointment => String(appointment.status || '').toUpperCase() === 'ACCEPTED')
 );
+
+const rejectedAppointments = computed(() =>
+    appointments.value.filter(appointment => String(appointment.status || '').toUpperCase() === 'REJECTED')
+);
+
+function isAcceptedAppointment(appointment) {
+    return String(appointment?.status || '').toUpperCase() === 'ACCEPTED';
+}
 
 // Safely parses an installment's serviceBreakdown JSON for display —
 // returns [] if missing/unparsable rather than throwing.
@@ -111,10 +123,32 @@ const appointmentForm = ref({
     notes: ''
 });
 
-const serviceTypes = ref([
-    'Prenatal Checkup', 'Postnatal Care', 'Family Planning',
-    'Immunization', 'General Checkup', 'Normal Delivery', 'Other'
-]);
+const selectedClinicalService = computed(() =>
+    clinicalServices.value.find(service => service.name === appointmentForm.value.serviceType) || null
+);
+
+function isUltrasoundService(service) {
+    const normalizedName = String(service?.name || '').toLowerCase().replace(/[^a-z]/g, '');
+    const normalizedCategory = String(service?.category || '').toLowerCase().replace(/[^a-z]/g, '');
+    return normalizedName.includes('ultrasound') || normalizedCategory === 'ultrasound';
+}
+
+const isUltrasoundSelected = computed(() => {
+    return isUltrasoundService(selectedClinicalService.value);
+});
+
+const isSelectedDateThursday = computed(() => {
+    if (!appointmentForm.value.date) return false;
+    const [year, month, day] = appointmentForm.value.date.split('-').map(Number);
+    return new Date(year, month - 1, day).getDay() === 4;
+});
+
+function validateAppointmentDate() {
+    if (isUltrasoundSelected.value && appointmentForm.value.date && !isSelectedDateThursday.value) {
+        appointmentForm.value.date = '';
+        alert('Ultrasound appointments are available every Thursday only. Please select a Thursday.');
+    }
+}
 
 function formatCurrency(amount) {
     return '₱' + Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -163,11 +197,27 @@ async function fetchPatientServices() {
     }
 }
 
+async function fetchClinicalServices() {
+    servicesLoading.value = true;
+    servicesError.value = '';
+    try {
+        const res = await axios.get(CLINICAL_SERVICES_URL);
+        clinicalServices.value = Array.isArray(res.data) ? res.data : [];
+    } catch (error) {
+        console.error('Failed to load clinic services', error);
+        clinicalServices.value = [];
+        servicesError.value = 'Could not load the clinic services. Please try again later.';
+    } finally {
+        servicesLoading.value = false;
+    }
+}
+
 async function fetchAppointments() {
     try {
         const res = await axios.get(APPOINTMENTS_URL);
         appointments.value = (res.data || []).filter(a => a.patientID === patientId.value);
         stats.value.upcomingAppointments = appointments.value.filter(a => {
+            if (!isAcceptedAppointment(a)) return false;
             if (!a.appointmentDate) return false;
             const appointmentDate = parseAppointmentDate(a.appointmentDate);
             return appointmentDate && appointmentDate >= new Date(new Date().setHours(0, 0, 0, 0));
@@ -198,7 +248,7 @@ async function loadAll() {
         return;
     }
     loading.value = true;
-    await Promise.all([fetchPatient(), fetchPatientServices(), fetchAppointments(), fetchBilling()]);
+    await Promise.all([fetchPatient(), fetchPatientServices(), fetchAppointments(), fetchBilling(), fetchClinicalServices()]);
     stats.value.servicesUsed = uniqueServiceNames.value.length;
     stats.value.medicalRecords = serviceHistory.value.length;
     loading.value = false;
@@ -208,6 +258,11 @@ async function loadAll() {
 async function submitAppointment() {
     if (!appointmentForm.value.date || !appointmentForm.value.serviceType) {
         alert('Please fill in all required fields (Date and Service Type)');
+        return;
+    }
+
+    if (isUltrasoundSelected.value && !isSelectedDateThursday.value) {
+        alert('Ultrasound appointments are available every Thursday only. Please select a Thursday.');
         return;
     }
 
@@ -264,6 +319,7 @@ function prevMonth() { currentDate.value = new Date(currentYear.value, currentMo
 // Real appointment events for the calendar — replaces the old mock data
 const calendarEvents = computed(() => {
     return appointments.value
+        .filter(isAcceptedAppointment)
         .filter(a => a.appointmentDate)
         .map(a => {
             const date = parseAppointmentDate(a.appointmentDate);
@@ -322,6 +378,10 @@ onUnmounted(() => {
         <div v-if="acceptedAppointments.length" class="mx-8 mt-6 rounded-lg border border-green-200 bg-green-50 px-5 py-4 text-green-800">
             <p class="font-semibold">Your appointment has been accepted.</p>
             <p class="mt-1 text-sm">{{ acceptedAppointments[acceptedAppointments.length - 1].serviceType || 'Appointment' }} request confirmed for {{ acceptedAppointments[acceptedAppointments.length - 1].appointmentDate }}.</p>
+        </div>
+        <div v-if="rejectedAppointments.length" class="mx-8 mt-6 rounded-lg border border-red-200 bg-red-50 px-5 py-4 text-red-800">
+            <p class="font-semibold">Your appointment request was rejected.</p>
+            <p class="mt-1 text-sm">{{ rejectedAppointments[rejectedAppointments.length - 1].serviceType || 'Appointment' }} request for {{ rejectedAppointments[rejectedAppointments.length - 1].appointmentDate }} was not approved by the clinic. Please submit a new request or contact the clinic.</p>
         </div>
         <!-- Header -->
         <div class="bg-white border-b border-gray-200 px-8 py-6">
@@ -543,16 +603,33 @@ onUnmounted(() => {
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Appointment Date</label>
                         <input v-model="appointmentForm.date" type="date"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            :class="isUltrasoundSelected && appointmentForm.date && !isSelectedDateThursday ? 'border-red-500' : ''"
+                            @change="validateAppointmentDate" />
+                        <p v-if="isUltrasoundSelected" class="mt-2 text-sm text-amber-700">
+                            Ultrasound appointments are available every Thursday only.
+                        </p>
+                        <p v-if="isUltrasoundSelected && appointmentForm.date && !isSelectedDateThursday" class="mt-1 text-sm text-red-600">
+                            Please select a Thursday for Ultrasound.
+                        </p>
                     </div>
 
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Service Type</label>
                         <select v-model="appointmentForm.serviceType"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white">
-                            <option value="">Select a service</option>
-                            <option v-for="service in serviceTypes" :key="service" :value="service">{{ service }}</option>
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+                            @change="validateAppointmentDate">
+                            <option value="" disabled>
+                                {{ servicesLoading ? 'Loading clinic services...' : 'Select a service' }}
+                            </option>
+                            <option v-for="service in clinicalServices" :key="service.id" :value="service.name">
+                                {{ service.name }}
+                            </option>
                         </select>
+                        <p v-if="servicesError" class="mt-2 text-sm text-red-600">{{ servicesError }}</p>
+                        <p v-else-if="!servicesLoading && clinicalServices.length === 0" class="mt-2 text-sm text-gray-500">
+                            No clinic services are currently available.
+                        </p>
                     </div>
 
                     <div>

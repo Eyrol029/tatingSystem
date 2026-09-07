@@ -107,7 +107,8 @@ function normalizeEvent(raw) {
     patientId:   raw.patientId    || raw.patientID || null,
     patientName: hasMeaningfulPatientName ? normalizedPatientName : '—',
     description: raw.description  || '',
-    source:      raw.source       || 'manual'
+    source:      raw.source       || 'manual',
+    status:      raw.status       || ''
   }
 }
 
@@ -120,7 +121,13 @@ async function fetchEventsForMonth() {
   try {
     const res = await axios.get(`${BASE}/events`, { params: { start, end } })
     calendarEvents.value = Array.isArray(res.data)
-      ? res.data.map(normalizeEvent)
+      ? res.data
+          .filter(event => {
+            const source = String(event.source || event.eventType || '').toLowerCase()
+            if (source !== 'appointment') return true
+            return String(event.status || '').toUpperCase() === 'ACCEPTED'
+          })
+          .map(normalizeEvent)
       : []
   } catch (e) {
     errorMsg.value = 'Failed to load calendar events.'
