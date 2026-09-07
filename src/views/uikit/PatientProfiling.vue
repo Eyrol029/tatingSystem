@@ -83,7 +83,12 @@ async function fetchPatient() {
 async function fetchServices() {
     try {
         const id = route.params.id;
-        const res = await axios.get(`http://localhost:8080/api/patient-services/patient/${id}`);
+        const [servicesRes, referralsRes] = await Promise.all([
+            axios.get(`http://localhost:8080/api/patient-services/patient/${id}`),
+            axios.get(`http://localhost:8080/api/referrals?patientId=${id}`)
+        ]);
+        const res = servicesRes;
+        const referrals = Array.isArray(referralsRes.data) ? referralsRes.data : [];
         let referralContext = null;
         try {
             const storedReferral = localStorage.getItem('referral_patient');
@@ -91,12 +96,22 @@ async function fetchServices() {
         } catch (storageError) {
             console.warn('Failed to load referral context.', storageError);
         }
-        const patientHasReferral = Number(referralContext?.id) === Number(id)
-            && ((Array.isArray(referralContext?.riskFactors) && referralContext.riskFactors.length > 0)
-                || referralContext?.sourceServiceId);
+        const referralByServiceId = new Map(
+            referrals
+                .filter(referral => Number.isFinite(Number(referral.sourceServiceId)))
+                .map(referral => [Number(referral.sourceServiceId), referral])
+        );
+        if (Number(referralContext?.id) === Number(id) && referralContext?.sourceServiceId) {
+            referralByServiceId.set(Number(referralContext.sourceServiceId), {
+                sourceServiceId: referralContext.sourceServiceId,
+                riskFactors: (referralContext.riskFactors || []).join(', ')
+            });
+        }
 
         services.value = await Promise.all(res.data.map(async item => {
             const serviceName = item.serviceName || '';
+            const matchingReferral = referralByServiceId.get(Number(item.patientServiceID));
+            const isReferredService = Boolean(matchingReferral);
             const service = {
                 id: item.patientServiceID,
                 service: serviceName,
@@ -105,9 +120,10 @@ async function fetchServices() {
                 dateAvailed: item.dateAvailed,
                 caseNumber: item.caseNumber ?? '---',
                 remarks: item.remarks ?? '---',
-                isHighRisk: patientHasReferral,
-                riskReasons: patientHasReferral
-                    ? (referralContext.riskFactors ?? ['Patient referred as high risk'])
+                isHighRisk: isReferredService,
+                riskReasons: isReferredService
+                    ? (matchingReferral?.riskFactors?.split(',').map(reason => reason.trim()).filter(Boolean)
+                        || ['Patient referred as high risk'])
                     : []
             };
 
@@ -121,8 +137,10 @@ async function fetchServices() {
 
                 if (latestRecord?.prenatalrecordID) {
                     const riskRes = await axios.get(`http://localhost:8080/api/prenatal/high-risk-assessment/${latestRecord.prenatalrecordID}`);
-                    service.isHighRisk = !!riskRes.data?.highRisk;
-                    service.riskReasons = riskRes.data?.reasons ?? [];
+                    if (riskRes.data?.highRisk) {
+                        service.isHighRisk = true;
+                        service.riskReasons = riskRes.data?.reasons ?? [];
+                    }
                 }
             } catch (riskError) {
                 console.error('Failed to load prenatal risk status.', riskError);

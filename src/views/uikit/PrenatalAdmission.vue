@@ -49,6 +49,7 @@ async function handleReferPatient() {
   try {
     await axios.post('http://localhost:8080/api/referrals', {
       patientId: patientPayload.id,
+      sourceServiceId: patientPayload.sourceServiceId,
       patientName: patientPayload.name,
       age: patientPayload.age,
       gestationalWeek: patientPayload.gestationalWeek,

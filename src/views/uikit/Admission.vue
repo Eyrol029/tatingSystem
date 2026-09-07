@@ -508,6 +508,7 @@ async function handleHighRiskReferral() {
     try {
         await axios.post('http://localhost:8080/api/referrals', {
             patientId: referralPayload.id,
+            sourceServiceId: referralPayload.sourceServiceId,
             patientName: referralPayload.name,
             age: referralPayload.age,
             gestationalWeek: referralPayload.gestationalWeek,

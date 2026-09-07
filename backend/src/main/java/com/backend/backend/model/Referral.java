@@ -20,6 +20,7 @@ public class Referral {
 
     // Link or reference to Patient
     private Long patientId;
+    private Long sourceServiceId;
     private String patientName;
     private Integer age;
     private String contact;
@@ -69,6 +70,14 @@ public class Referral {
 
     public void setPatientId(Long patientId) {
         this.patientId = patientId;
+    }
+
+    public Long getSourceServiceId() {
+        return sourceServiceId;
+    }
+
+    public void setSourceServiceId(Long sourceServiceId) {
+        this.sourceServiceId = sourceServiceId;
     }
 
     public String getPatientName() {
