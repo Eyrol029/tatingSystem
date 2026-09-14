@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { useRoute, useRouter } from 'vue-router';
 import { useUserDataStore } from '@/stores/userData';
-import PromissoryLetter from './PromissoryLetter.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -49,8 +48,60 @@ const loading = ref(true);
 const error = ref('');
 const soaDetails = ref(null);
 const installments = ref([]);
-const showPromissoryModal = ref(false);
 const employeeList = ref([]);
+
+const showDueDateModal = ref(false);
+const dueDateInput = ref('');
+const dueDateStaff = ref('');
+const savingDueDate = ref(false);
+const dueDateError = ref('');
+const dueDateSuccess = ref('');
+
+function openDueDateModal() {
+    dueDateInput.value = soaDetails.value?.dueDate
+        ? new Date(soaDetails.value.dueDate).toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10);
+    dueDateStaff.value = employeeList.value[0]?.name || userStore.user?.firstname || '';
+    dueDateError.value = '';
+    dueDateSuccess.value = '';
+    showDueDateModal.value = true;
+}
+
+async function saveDueDate() {
+    if (!dueDateInput.value) {
+        dueDateError.value = 'Please select a valid due date.';
+        return;
+    }
+    const soaId = soaDetails.value?.soaId ?? soaDetails.value?.soaID ?? null;
+    if (!soaId) {
+        dueDateError.value = 'No Statement of Account record found.';
+        return;
+    }
+
+    savingDueDate.value = true;
+    dueDateError.value = '';
+    dueDateSuccess.value = '';
+    try {
+        await axios.post(`http://localhost:8080/api/billing/soa/${soaId}/promissory-letter`, {
+            dueDate: dueDateInput.value,
+            staffName: (dueDateStaff.value || 'Staff').trim(),
+            patientId: Number(patientId.value),
+            patientName: patientDisplayName.value || 'Patient'
+        });
+
+        dueDateSuccess.value = 'Due date saved successfully!';
+        await loadSOA();
+        setTimeout(() => {
+            showDueDateModal.value = false;
+            dueDateSuccess.value = '';
+        }, 1200);
+    } catch (e) {
+        console.error('Failed to set due date', e);
+        dueDateError.value = e?.response?.data?.message || 'Failed to save due date. Please try again.';
+    } finally {
+        savingDueDate.value = false;
+    }
+}
 
 function getEmployeeFullName(employee) {
     if (!employee) return '';
@@ -278,9 +329,9 @@ onMounted(async () => {
                         class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition flex items-center gap-2 shadow-sm font-medium">
                         💬 Send SMS
                     </button>
-                    <button @click="showPromissoryModal = true"
+                    <button @click="openDueDateModal"
                         class="bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700 transition flex items-center gap-2 shadow-sm font-medium">
-                        � Set Due Date
+                        Set Due Date
                     </button>
                     <button @click="printSOA"
                         class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 shadow-sm font-medium">
@@ -308,6 +359,9 @@ onMounted(async () => {
                         <div>
                             <p class="text-sm text-gray-500">Patient</p>
                             <p class="font-semibold text-gray-900 text-lg">{{ soaDetails.patientName || '—' }}</p>
+                            <p v-if="soaDetails.dueDate" class="text-xs text-violet-700 font-medium mt-1">
+                                📅 <strong>Due Date:</strong> {{ formatDate(soaDetails.dueDate) }}
+                            </p>
                         </div>
                         <span
                             class="px-3 py-1 rounded-full text-xs font-semibold"
@@ -378,15 +432,92 @@ onMounted(async () => {
             </div>
         </div>
 
-        <PromissoryLetter
-            v-if="showPromissoryModal"
-            :patient-id="patientId"
-            :patient-name="patientDisplayName"
-            :soa-details="soaDetails"
-            :employee-list="employeeList"
-            @close="showPromissoryModal = false"
-            @saved="showPromissoryModal = false"
-        />
+        <!-- Set Due Date Modal -->
+        <div v-if="showDueDateModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 no-print">
+            <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-gray-200">
+                <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
+                    <div class="flex items-center gap-2">
+                        <div class="p-2 bg-violet-100 text-violet-600 rounded-lg">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <h2 class="text-xl font-bold text-gray-800">Set Due Date</h2>
+                    </div>
+                    <button @click="showDueDateModal = false" class="text-gray-400 hover:text-gray-600 transition text-2xl leading-none">
+                        &times;
+                    </button>
+                </div>
+
+                <div v-if="dueDateSuccess" class="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-lg flex items-center gap-2">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    <span>{{ dueDateSuccess }}</span>
+                </div>
+
+                <div v-if="dueDateError" class="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+                    {{ dueDateError }}
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">
+                            Due Date
+                        </label>
+                        <input
+                            v-model="dueDateInput"
+                            type="date"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:outline-none"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">
+                            Handled By (Staff)
+                        </label>
+                        <input
+                            v-if="!employeeList.length"
+                            v-model="dueDateStaff"
+                            type="text"
+                            placeholder="Staff name"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:outline-none"
+                        />
+                        <select
+                            v-else
+                            v-model="dueDateStaff"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 focus:outline-none"
+                        >
+                            <option v-for="emp in employeeList" :key="emp.id" :value="emp.name">
+                                {{ emp.name }}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex justify-end items-center mt-6 pt-4 border-t border-gray-100 gap-2">
+                    <button
+                        @click="showDueDateModal = false"
+                        type="button"
+                        class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        @click="saveDueDate"
+                        :disabled="savingDueDate"
+                        type="button"
+                        class="px-5 py-2 text-sm font-medium text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50 rounded-lg shadow transition flex items-center gap-2"
+                    >
+                        <svg v-if="savingDueDate" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                        </svg>
+                        <span>{{ savingDueDate ? 'Saving...' : 'Save Due Date' }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <!-- SMS Modal -->
         <div v-if="showSmsModal" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 no-print">

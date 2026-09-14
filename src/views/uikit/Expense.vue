@@ -197,7 +197,10 @@ onMounted(() => {
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-xl font-semibold">Expense Records</h2>
       <div class="flex gap-2">
-        <button @click="printReport" class="border border-purple-300 text-purple-700 px-4 py-2 rounded-md hover:bg-purple-50">
+        <button
+          @click="printReport"
+          class="border border-purple-300 text-purple-700 bg-white hover:bg-purple-50 px-4 py-2 rounded-md text-sm font-medium shadow-sm transition"
+        >
           Print Report
         </button>
         <button @click="openAddModal" class="bg-purple-700 text-white px-4 py-2 rounded-md">

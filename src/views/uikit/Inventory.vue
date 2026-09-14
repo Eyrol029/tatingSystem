@@ -260,8 +260,8 @@ function generateInventoryReport() {
                     ← Back to Inventory
                 </button>
                 <button v-if="view === 'list'" @click="generateInventoryReport"
-                    class="px-5 py-2.5 bg-slate-700 hover:bg-slate-800 text-white rounded-xl font-semibold flex items-center gap-2 shadow-lg shadow-slate-700/20 transition-all">
-                    🖨️ Generate Report
+                    class="border border-purple-300 text-purple-700 bg-white hover:bg-purple-50 px-4 py-2 rounded-md text-sm font-medium shadow-sm transition">
+                    Print Report
                 </button>
                 <button v-if="view === 'list'" @click="view = 'add'"
                     class="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-semibold flex items-center gap-2 shadow-lg shadow-teal-600/20 transform hover:-translate-y-0.5 transition-all">

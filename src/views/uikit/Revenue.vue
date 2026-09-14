@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
+import { recordReport } from '@/service/reportHistory'
 import { useConfirmDelete } from '@/composables/useConfirmDelete'
 
 const { confirmDelete } = useConfirmDelete()
@@ -10,20 +11,28 @@ const SOA_PATIENT_URL = 'http://localhost:8080/api/billing/soa/patient'
 
 const revenues = ref([])
 const showModal = ref(false)
-const tableSearchQuery = ref('')
+const filterFrom = ref('')
+const filterTo = ref('')
 
-// Filters the Revenue Records table by dealer name, patient ID, or description.
+function clearDateFilter() {
+  filterFrom.value = ''
+  filterTo.value = ''
+}
+
+// Filters the Revenue Records table by date range.
 const filteredRevenues = computed(() => {
-  const q = tableSearchQuery.value.trim().toLowerCase()
-  if (!q) return revenues.value
   return revenues.value.filter((rev) => {
-    return (
-      String(rev.dealer || '').toLowerCase().includes(q) ||
-      String(getPatientCaseNumber(rev.patientID)).toLowerCase().includes(q) ||
-      String(rev.description || '').toLowerCase().includes(q) ||
-      `REV-${String(rev.id).padStart(5, '0')}`.toLowerCase().includes(q)
-    )
+    const dateStr = rev.revenueDate ? String(rev.revenueDate).slice(0, 10) : ''
+    return (!filterFrom.value || dateStr >= filterFrom.value) &&
+      (!filterTo.value || dateStr <= filterTo.value)
   })
+})
+
+const filteredTotal = computed(() => {
+  return filteredRevenues.value.reduce(
+    (sum, rev) => sum + Number(rev.amount || 0),
+    0
+  )
 })
 
 // List of existing patients — lets revenue be traced to a real billing record
@@ -189,6 +198,230 @@ async function deleteRevenue(id) {
   }
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+  })[character])
+}
+
+function printReport() {
+  if (!filteredRevenues.value.length) {
+    alert('No revenue records found for the selected filter.')
+    return
+  }
+
+  const range = filterFrom.value || filterTo.value
+    ? `${filterFrom.value || 'Beginning'} to ${filterTo.value || 'Present'}`
+    : 'All dates'
+
+  const formattedTotal = Number(filteredTotal.value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })
+  const reportDate = new Date().toLocaleString('en-PH', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  })
+
+  const rows = filteredRevenues.value.map((rev, index) => {
+    const revId = `REV-${String(rev.id).padStart(5, '0')}`
+    const dateStr = rev.revenueDate
+      ? new Date(rev.revenueDate).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
+      : '—'
+    const caseNumber = getPatientCaseNumber(rev.patientID)
+    const amountStr = `₱${Number(rev.amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
+
+    return `<tr>
+      <td style="text-align: center;">${index + 1}</td>
+      <td style="font-family: monospace; font-weight: 600;">${escapeHtml(revId)}</td>
+      <td>${escapeHtml(dateStr)}</td>
+      <td><strong>${escapeHtml(rev.dealer || '—')}</strong></td>
+      <td>${escapeHtml(caseNumber)}</td>
+      <td>${escapeHtml(rev.description || '—')}</td>
+      <td style="text-align: right; font-weight: 600;">${escapeHtml(amountStr)}</td>
+    </tr>`
+  }).join('')
+
+  const printWindow = window.open('', '_blank', 'width=1000,height=850')
+  if (!printWindow) {
+    alert('Please allow pop-ups to print the report.')
+    return
+  }
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Revenue Report - Tating Maternity Clinic</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #1f2937;
+      margin: 28px;
+      line-height: 1.4;
+    }
+    .header {
+      border-bottom: 2px solid #6b21a8;
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .clinic-name {
+      font-size: 22px;
+      font-weight: bold;
+      color: #6b21a8;
+      margin: 0;
+    }
+    .report-title {
+      font-size: 13px;
+      color: #4b5563;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .meta {
+      font-size: 12px;
+      color: #6b7280;
+      text-align: right;
+    }
+    .summary-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #faf5ff;
+      border: 1px solid #e9d5ff;
+      border-radius: 6px;
+      padding: 10px 16px;
+      margin-bottom: 16px;
+      font-size: 12px;
+      color: #581c87;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th {
+      background: #6b21a8;
+      color: #ffffff;
+      text-align: left;
+      padding: 10px 8px;
+      font-weight: 600;
+    }
+    td {
+      padding: 8px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    tr:nth-child(even) {
+      background: #faf5ff;
+    }
+    .total-container {
+      margin-top: 20px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .total-box {
+      background: #f3e8ff;
+      border: 1px solid #d8b4fe;
+      border-radius: 6px;
+      padding: 12px 24px;
+      text-align: right;
+      min-width: 220px;
+    }
+    .total-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: bold;
+      color: #6b21a8;
+      letter-spacing: 0.05em;
+    }
+    .total-amount {
+      font-size: 20px;
+      font-weight: bold;
+      color: #581c87;
+      margin-top: 2px;
+    }
+    .footer {
+      margin-top: 36px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 12px;
+      font-size: 11px;
+      color: #9ca3af;
+      display: flex;
+      justify-content: space-between;
+    }
+    @media print {
+      body { margin: 12mm; }
+      @page { size: auto; margin: 10mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="clinic-name">Tating Maternity Clinic</div>
+      <div class="report-title">Revenue & Income Report</div>
+    </div>
+    <div class="meta">
+      <div><strong>Date Generated:</strong> ${reportDate}</div>
+    </div>
+  </div>
+
+  <div class="summary-bar">
+    <div><strong>Period:</strong> ${escapeHtml(range)}</div>
+    <div><strong>Total Transactions:</strong> ${filteredRevenues.value.length} record(s)</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 35px; text-align: center;">#</th>
+        <th>Revenue ID / Invoice</th>
+        <th>Date Paid</th>
+        <th>Paid By</th>
+        <th>Patient Case No.</th>
+        <th>Description</th>
+        <th style="text-align: right;">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows}
+    </tbody>
+  </table>
+
+  <div class="total-container">
+    <div class="total-box">
+      <div class="total-label">Total Revenue</div>
+      <div class="total-amount">₱${formattedTotal}</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div>Generated from Tating Maternity Clinic Financial Management System</div>
+    <div>Official Report</div>
+  </div>
+
+  <script>
+    window.onload = () => {
+      window.focus();
+      window.print();
+      window.onafterprint = () => window.close();
+    };
+  <\/script>
+</body>
+</html>`
+
+  printWindow.document.open()
+  printWindow.document.write(html)
+  printWindow.document.close()
+
+  recordReport({
+    name: 'Revenue Report',
+    type: 'Revenue',
+    period: range,
+    details: `${filteredRevenues.value.length} record(s), total ₱${formattedTotal}`
+  })
+}
+
 onMounted(() => {
   fetchRevenues()
   fetchPatients()
@@ -200,29 +433,44 @@ onMounted(() => {
   <div class="p-6 bg-gray-100 min-h-screen">
 
     <!-- HEADER -->
-    <div class="flex justify-between items-center mb-6">
-      <h2 class="text-xl font-semibold">Revenue Records</h2>
-      <button
-        @click="openModal"
-        class="bg-purple-700 text-white px-4 py-2 rounded-md"
-      >
-        + Add Revenue
-      </button>
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+      <h2 class="text-xl font-semibold text-gray-800">Revenue Records</h2>
+      <div class="flex items-center gap-2">
+        <button
+          @click="printReport"
+          class="border border-purple-300 text-purple-700 bg-white hover:bg-purple-50 px-4 py-2 rounded-md text-sm font-medium shadow-sm transition"
+        >
+          Print Report
+        </button>
+        <button
+          @click="openModal"
+          class="bg-purple-700 hover:bg-purple-800 text-white px-4 py-2 rounded-md text-sm font-medium shadow-sm transition"
+        >
+          + Add Revenue
+        </button>
+      </div>
     </div>
 
-    <!-- SEARCH BAR -->
-    <div class="relative mb-4 max-w-md">
-      <input
-        v-model="tableSearchQuery"
-        type="text"
-        placeholder="Search by patient name, ID, or description…"
-        class="w-full border rounded px-4 py-2 pr-8"
-      />
+    <!-- DATE FILTERS -->
+    <div class="bg-white shadow-sm rounded-lg p-4 mb-4 flex flex-col md:flex-row md:items-end gap-3">
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 mb-1">From Date</label>
+        <input v-model="filterFrom" type="date" class="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500" />
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 mb-1">To Date</label>
+        <input v-model="filterTo" type="date" class="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-purple-500" />
+      </div>
       <button
-        v-if="tableSearchQuery"
-        @click="tableSearchQuery = ''"
-        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-      >×</button>
+        @click="clearDateFilter"
+        :disabled="!filterFrom && !filterTo"
+        class="px-4 py-2 text-sm border rounded text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+      >
+        Clear Filter
+      </button>
+      <div class="md:ml-auto text-sm font-semibold text-purple-900 bg-purple-50 px-3 py-2 rounded border border-purple-200">
+        Filtered Total: ₱{{ filteredTotal.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}
+      </div>
     </div>
 
     <!-- TABLE -->
@@ -232,7 +480,7 @@ onMounted(() => {
           <tr>
             <th class="p-3 text-left">Revenue ID / Invoice No.</th>
             <th class="p-3 text-left">Paid by</th>
-            <th class="p-3 text-left">Patient ID</th>
+            <th class="p-3 text-left">Patient Case No.</th>
             <th class="p-3 text-left">Date Paid</th>
             <th class="p-3 text-left">Description</th>
             <th class="p-3 text-left">Amount</th>
@@ -242,14 +490,14 @@ onMounted(() => {
 
         <tbody>
           <tr v-for="rev in filteredRevenues" :key="rev.id" class="border-t">
-            <td class="p-3 font-mono text-xs text-gray-500">REV-{{ String(rev.id).padStart(5, '0') }}</td>
-            <td class="p-3">{{ rev.dealer }}</td>
-            <td class="p-3 text-gray-500">{{ getPatientCaseNumber(rev.patientID) }}</td>
+            <td class="p-3 font-mono text-xs text-gray-500 font-semibold">REV-{{ String(rev.id).padStart(5, '0') }}</td>
+            <td class="p-3 font-medium">{{ rev.dealer }}</td>
+            <td class="p-3 text-gray-600">{{ getPatientCaseNumber(rev.patientID) }}</td>
             <td class="p-3 text-gray-600">
               {{ rev.revenueDate ? new Date(rev.revenueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' }}
             </td>
             <td class="p-3">{{ rev.description }}</td>
-            <td class="p-3 font-semibold">₱{{ rev.amount }}</td>
+            <td class="p-3 font-semibold text-purple-950">₱{{ Number(rev.amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}</td>
             <td class="p-3">
               <button
                 @click="deleteRevenue(rev.id)"
@@ -266,7 +514,7 @@ onMounted(() => {
         No revenue records yet.
       </div>
       <div v-else-if="filteredRevenues.length === 0" class="text-center py-8 text-gray-400 text-sm">
-        No revenue records match "{{ tableSearchQuery }}".
+        No revenue records match the selected filters.
       </div>
     </div>
 

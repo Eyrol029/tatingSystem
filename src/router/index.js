@@ -42,7 +42,6 @@ const routes = [
             { path: 'uikit/Expense', component: () => import('@/views/uikit/Expense.vue') },
             { path: 'uikit/Revenue', component: () => import('@/views/uikit/Revenue.vue') },
             { path: 'uikit/AdminCalendar', component: () => import('@/views/uikit/AdminCalendar.vue') },
-            { path: 'uikit/MidwifeDashboard', component: () => import('@/views/Dashboard/MidwifeDashboard.vue') },
             { path: 'uikit/PatientProfileview', component: () => import('@/views/uikit/PatientProfileview.vue') },
             { path: 'uikit/UltrasoundAdmission/:patientID/:serviceId', component: () => import('@/views/uikit/UltrasoundAdmission.vue') },
             { path: 'uikit/MySOA/:patientID/', component: () => import('@/views/uikit/MySOA.vue') },

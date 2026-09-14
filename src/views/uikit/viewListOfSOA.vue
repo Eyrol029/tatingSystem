@@ -521,12 +521,6 @@ onMounted(() => {
       <div>
         <h2 class="text-2xl font-bold">Statement of Account</h2>
       </div>
-      <button
-        @click="openCaseNumberModal"
-        class="bg-teal-600 text-white px-4 py-2 hover:bg-teal-700"
-      >
-        Add Case Number
-      </button>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-[1.5fr_auto] gap-3 mb-6">

@@ -241,9 +241,11 @@ onMounted(fetchLogs)
           <div class="flex gap-2 items-center">
 
             <!-- Print report -->
-            <button @click="downloadPDF"
-              class="px-4 py-2 border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 text-sm flex items-center gap-1 transition font-semibold">
-              🖨️ Print Report
+            <button
+              @click="downloadPDF"
+              class="border border-purple-300 text-purple-700 bg-white hover:bg-purple-50 px-4 py-2 rounded-md text-sm font-medium shadow-sm transition"
+            >
+              Print Report
             </button>
 
             <!-- Add Log -->
