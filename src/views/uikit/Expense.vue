@@ -2,6 +2,9 @@
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import { recordReport } from '@/service/reportHistory'
+import { useConfirmDelete } from '@/composables/useConfirmDelete'
+
+const { confirmDelete } = useConfirmDelete()
 
 const BASE_URL = 'http://localhost:8080/api/expenses'
 
@@ -171,7 +174,7 @@ async function saveExpense() {
 }
 
 async function deleteExpense(id) {
-  if (!confirm('Are you sure you want to delete this expense?')) return
+  if (!await confirmDelete()) return
 
   try {
     await axios.delete(`${BASE_URL}/${id}`)

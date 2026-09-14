@@ -1,6 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
+import { useConfirmDelete } from '@/composables/useConfirmDelete'
+
+const { confirmDelete } = useConfirmDelete()
 
 const BASE = 'http://localhost:8080/api/appointment'
 
@@ -140,7 +143,7 @@ async function saveAppointment() {
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
 async function deleteAppointment(id) {
-  if (!confirm('Delete this appointment?')) return
+  if (!await confirmDelete()) return
 
   error.value = ''
 

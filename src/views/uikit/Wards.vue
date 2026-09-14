@@ -1,5 +1,8 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue';
+import { useConfirmDelete } from '@/composables/useConfirmDelete';
+
+const { confirmDelete } = useConfirmDelete();
 
 const API_URL = 'http://localhost:8080/api/wards';
 
@@ -77,7 +80,7 @@ async function handleEditWard() {
 
 async function handleDeleteWard(id) {
     if (!id) return;
-    if (!confirm('Are you sure you want to delete this ward? This action cannot be undone.')) return;
+    if (!await confirmDelete()) return;
     errorMsg.value = '';
     try {
         const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });

@@ -1,5 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
+import { useConfirmDelete } from '@/composables/useConfirmDelete';
+
+const { confirmDelete } = useConfirmDelete();
 
 const API_URL = 'http://localhost:8080/api/clinical-services';
 
@@ -84,7 +87,7 @@ async function handleEditService() {
 }
 
 async function handleDeleteService(id) {
-    if (!confirm('Are you sure you want to delete this service?')) return;
+    if (!await confirmDelete()) return;
     errorMsg.value = '';
     try {
         const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });

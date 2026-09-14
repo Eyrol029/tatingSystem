@@ -1,6 +1,9 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { clearReports, readReports, removeReport } from '@/service/reportHistory'
+import { useConfirmDelete } from '@/composables/useConfirmDelete'
+
+const { confirmDelete } = useConfirmDelete()
 
 const reports = ref([])
 const searchQuery = ref('')
@@ -26,7 +29,8 @@ function formatDate(value) {
   })
 }
 
-function deleteReport(id) {
+async function deleteReport(id) {
+  if (!await confirmDelete()) return
   removeReport(id)
   refreshReports()
 }
@@ -39,8 +43,8 @@ function closeReport() {
   selectedReport.value = null
 }
 
-function clearHistory() {
-  if (!reports.value.length || !confirm('Clear all generated report history?')) return
+async function clearHistory() {
+  if (!reports.value.length || !await confirmDelete()) return
   clearReports()
   refreshReports()
 }

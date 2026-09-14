@@ -1,6 +1,9 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
+import { useConfirmDelete } from '@/composables/useConfirmDelete';
+
+const { confirmDelete } = useConfirmDelete();
 
 const BASE_URL = 'http://localhost:8080';
 
@@ -259,7 +262,7 @@ async function handleDeleteUser(userID) {
     alert('Cannot delete system administrator');
     return;
   }
-  if (confirm('Are you sure you want to delete this user?')) {
+  if (await confirmDelete()) {
     try {
       await axios.delete(`${BASE_URL}/user/${userID}`);
       await fetchUsers();

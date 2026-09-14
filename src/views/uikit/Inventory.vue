@@ -2,6 +2,9 @@
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { recordReport } from '@/service/reportHistory';
+import { useConfirmDelete } from '@/composables/useConfirmDelete';
+
+const { confirmDelete } = useConfirmDelete();
 
 const BASE = 'http://localhost:8080/api/inventory';
 
@@ -140,7 +143,7 @@ async function decrementQuantity(item) {
 
 // DELETE
 async function handleDeleteTool(toolId) {
-    if (!window.confirm('Are you sure you want to remove this clinical tool? This action is permanent.')) return;
+    if (!await confirmDelete()) return;
     try {
         await axios.delete(`${BASE}/${toolId}`);
         await fetchTools();

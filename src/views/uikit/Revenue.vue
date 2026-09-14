@@ -1,6 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
+import { useConfirmDelete } from '@/composables/useConfirmDelete'
+
+const { confirmDelete } = useConfirmDelete()
 
 const BASE_URL = 'http://localhost:8080/api/revenue'
 const SOA_PATIENT_URL = 'http://localhost:8080/api/billing/soa/patient'
@@ -175,7 +178,7 @@ async function saveRevenue() {
 }
 
 async function deleteRevenue(id) {
-  if (!confirm('Are you sure you want to delete this record?')) return
+  if (!await confirmDelete()) return
 
   try {
     await axios.delete(`${BASE_URL}/${id}`)

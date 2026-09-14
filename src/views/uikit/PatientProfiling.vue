@@ -630,21 +630,16 @@ async function handleSubmit() {
         <div v-if="showDeleteConfirm" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
                 <div class="flex items-center gap-3 mb-4">
-                    <div class="bg-red-100 p-2 rounded-full">
+                    <div class="bg-red-100 p-2 rounded-full shrink-0">
                         <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                         </svg>
                     </div>
-                    <h3 class="text-lg font-bold text-gray-900">Delete Service Record?</h3>
+                    <h3 class="text-lg font-bold text-gray-900">Are you sure you want to delete this?</h3>
                 </div>
-                <p class="text-gray-600 mb-1">You are about to delete:</p>
-                <p class="font-semibold text-gray-800 mb-4 bg-gray-100 px-3 py-2 rounded-lg">
-                    {{ serviceToDelete?.service }}
-                </p>
-                <p class="text-sm text-gray-500 mb-4">This action cannot be undone. The service record and any linked admission data will be removed.</p>
                 <p v-if="deleteError" class="text-sm text-red-600 mb-3">{{ deleteError }}</p>
-                <div class="flex gap-3 justify-end">
+                <div class="flex gap-3 justify-end mt-6">
                     <button @click="cancelDelete" :disabled="deleting"
                         class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition disabled:opacity-50">
                         Cancel

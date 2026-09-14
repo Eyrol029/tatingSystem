@@ -1,5 +1,6 @@
-npm<script setup>
+<script setup>
 import { useUserDataStore } from '@/stores/userData'
+import DeleteConfirmModal from '@/components/DeleteConfirmModal.vue'
 
 const userStore = useUserDataStore()
 userStore.init() 
@@ -7,5 +8,5 @@ userStore.init()
 
 <template>
   <router-view />
+  <DeleteConfirmModal />
 </template>
-

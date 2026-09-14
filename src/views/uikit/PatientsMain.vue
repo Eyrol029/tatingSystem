@@ -3,6 +3,9 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import { recordReport } from '@/service/reportHistory';
+import { useConfirmDelete } from '@/composables/useConfirmDelete';
+
+const { confirmDelete } = useConfirmDelete();
 
 const router = useRouter();
 
@@ -360,7 +363,7 @@ async function handleAddPatient() {
 }
 
 async function deletePatient(patient) {
-    if (confirm(`Are you sure you want to delete ${patient.fName} ${patient.lName}?`)) {
+    if (await confirmDelete()) {
         try {
             await axios.delete(`${BASE_URL}/${patient.patientID}`);
             await fetchPatients();

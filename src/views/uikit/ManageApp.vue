@@ -1,5 +1,8 @@
 <script setup>
 import { ref, computed } from 'vue';
+import { useConfirmDelete } from '@/composables/useConfirmDelete';
+
+const { confirmDelete } = useConfirmDelete();
 
 const showAddModal = ref(false);
 
@@ -116,8 +119,8 @@ function editAppointment(id) {
     // In a real app, open edit modal with appointment data
 }
 
-function deleteAppointment(id) {
-    if (confirm('Are you sure you want to delete this appointment?')) {
+async function deleteAppointment(id) {
+    if (await confirmDelete()) {
         appointments.value = appointments.value.filter(apt => apt.id !== id);
     }
 }

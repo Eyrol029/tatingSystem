@@ -2,6 +2,9 @@
 import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import { recordReport } from '@/service/reportHistory'
+import { useConfirmDelete } from '@/composables/useConfirmDelete'
+
+const { confirmDelete } = useConfirmDelete()
 
 const BASE  = 'http://localhost:8080/api/clinic-logs'
 
@@ -70,7 +73,7 @@ async function addLog() {
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
 async function deleteLog(id) {
-  if (!confirm('Are you sure you want to delete this log?')) return
+  if (!await confirmDelete()) return
   errorMsg.value = ''
   try {
     await axios.delete(`${BASE}/${id}`)

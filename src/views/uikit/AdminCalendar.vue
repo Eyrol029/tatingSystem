@@ -2,6 +2,9 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
+import { useConfirmDelete } from '@/composables/useConfirmDelete'
+
+const { confirmDelete } = useConfirmDelete()
 
 const router = useRouter()
 const BASE = 'http://localhost:8080/api/calendar'
@@ -358,7 +361,7 @@ async function deleteSelectedEvents() {
   const msg   = count === 1
     ? `Delete manual event "${manualSelectedDayEvents.value[0].title}"?`
     : `Delete ${count} manual events for this day?`
-  if (!confirm(msg)) return
+  if (!await confirmDelete()) return
   try {
     await Promise.all(manualSelectedDayEvents.value.map(e => axios.delete(`${BASE}/manual/${e.id}`)))
     await fetchEventsForMonth()

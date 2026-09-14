@@ -1,6 +1,9 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import axios from 'axios'
+import { useConfirmDelete } from '@/composables/useConfirmDelete'
+
+const { confirmDelete } = useConfirmDelete()
 
 const BASE = 'http://localhost:8080/api/employees'
 
@@ -110,7 +113,7 @@ async function handleEditEmployee() {
 
 // ─── DELETE ───────────────────────────────────────────────────────────────────
 async function handleDeleteEmployee(employeeID) {
-  if (!confirm('Are you sure you want to delete this employee record?')) return
+  if (!await confirmDelete()) return
   errorMsg.value = ''
   try {
     await axios.delete(`${BASE}/${employeeID}`)
